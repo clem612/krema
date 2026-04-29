@@ -4,6 +4,7 @@
 #include "settingswindow.h"
 
 #include "dockview.h"
+#include "dockvisibilitycontroller.h"
 #include "krema.h"
 
 #include <KLocalizedQmlContext>
@@ -52,7 +53,8 @@ void SettingsWindow::show()
 
     // Find the ConfigurationView and call open()
     auto *root = m_engine->rootObjects().first();
-    auto *configView = root->findChild<QObject *>(QStringLiteral("configuration"));
+    auto *configView = (root->objectName() == QStringLiteral("configuration")) ? root : root->findChild<QObject *>(QStringLiteral("configuration"));
+
     if (configView) {
         QMetaObject::invokeMethod(configView, "open", Q_ARG(QVariant, QVariant()));
         trackConfigWindow(configView);
@@ -83,10 +85,13 @@ void SettingsWindow::show(const QString &defaultModule)
     }
 
     auto *root = m_engine->rootObjects().first();
-    auto *configView = root->findChild<QObject *>(QStringLiteral("configuration"));
+    auto *configView = (root->objectName() == QStringLiteral("configuration")) ? root : root->findChild<QObject *>(QStringLiteral("configuration"));
+
     if (configView) {
         QMetaObject::invokeMethod(configView, "open", Q_ARG(QVariant, defaultModule));
         trackConfigWindow(configView);
+    } else {
+        qCWarning(lcSettingsWindow) << "ConfigurationView not found in SettingsDialog.qml";
     }
 }
 
@@ -99,9 +104,11 @@ void SettingsWindow::ensureEngine()
     m_engine = new QQmlApplicationEngine(this);
     KLocalization::setupLocalizedContext(m_engine);
 
-    // Expose DockView as context property so settings QML can access
-    // DockView.isStyleAvailable() etc. without process-global singleton registration.
+    // Expose DockView and DockVisibility as context properties
     m_engine->rootContext()->setContextProperty(QStringLiteral("DockView"), m_dockView);
+
+    // Use the correct class name for the singleton instance
+    m_engine->rootContext()->setContextProperty(QStringLiteral("DockVisibility"), m_dockView->visibilityController());
 }
 
 void SettingsWindow::trackConfigWindow(QObject *configView)

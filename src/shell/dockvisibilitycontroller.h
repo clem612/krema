@@ -38,6 +38,8 @@ class DockVisibilityController : public QObject
 
     Q_PROPERTY(bool dockVisible READ isDockVisible NOTIFY dockVisibleChanged)
     Q_PROPERTY(int mode READ mode WRITE setMode NOTIFY modeChanged)
+    Q_PROPERTY(bool interacting READ isInteracting NOTIFY interactingChanged)
+    Q_PROPERTY(bool liveEditMode READ isLiveEditMode WRITE setLiveEditMode NOTIFY liveEditModeChanged)
 public:
     explicit DockVisibilityController(DockPlatform *platform,
                                       TaskManager::TasksModel *tasksModel,
@@ -48,6 +50,10 @@ public:
     ~DockVisibilityController() override;
 
     [[nodiscard]] bool isDockVisible() const;
+    bool isInteracting() const;
+
+    [[nodiscard]] bool isLiveEditMode() const;
+    void setLiveEditMode(bool edit);
 
     [[nodiscard]] int mode() const;
     void setMode(int mode);
@@ -89,11 +95,15 @@ public:
 
     /// Set whether DodgeWindows mode only dodges the active window.
     void setDodgeActiveOnly(bool activeOnly);
+    void setReserveSpace(bool reserve);
+    void setFloatingPadding(int padding);
 
 Q_SIGNALS:
     void dockVisibleChanged();
     void modeChanged();
     void panelRectChanged();
+    void interactingChanged();
+    void liveEditModeChanged();
 
 private:
     void evaluateVisibility();
@@ -122,6 +132,7 @@ private:
     /// Layer-shell surfaces don't report screen position via QWindow::geometry(),
     /// so we compute it from screen geometry + edge + panel position.
     [[nodiscard]] QRect dockScreenRect() const;
+    bool m_liveEditMode = false;
 
     DockPlatform::VisibilityMode m_mode = DockPlatform::VisibilityMode::AlwaysVisible;
     bool m_visible = true;
@@ -149,6 +160,8 @@ private:
 
     // DodgeWindows sub-option: true = dodge active window only, false = dodge all
     bool m_dodgeActiveOnly = false;
+    bool m_reserveSpace = true;
+    int m_floatingPadding = 0;
 
     // Show timer: fires after mouse dwells in trigger area for showDelay ms
     QTimer m_showTimer;

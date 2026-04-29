@@ -198,10 +198,8 @@ void DockView::updateSize()
         // Layer-shell: 0 on double-anchored axis (Top+Bottom) lets compositor decide
         m_platform->setSize(QSize(h, 0));
     } else {
-        // Horizontal dock: screen width becomes width, h becomes height
         setWidth(screenGeo.width());
         setHeight(h);
-        // Layer-shell: 0 on double-anchored axis (Left+Right) lets compositor decide
         m_platform->setSize(QSize(0, h));
     }
 

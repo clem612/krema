@@ -458,16 +458,31 @@ Item {
         onReleased: function(mouse) {
             dragHoldTimer.stop()
 
-            if (root._dragActive) {
-                // Execute reorder
+            if (root._dragActive) {           
+                // Execute reorder with Auto-Sort
                 if (root._dragTargetIndex >= 0 && root._dragTargetIndex !== root._dragSourceIndex) {
-                    let item = dockRepeater.itemAt(root._dragSourceIndex)
-                    let name = item ? item.displayName : ""
-                    DockActions.moveTask(root._dragSourceIndex, root._dragTargetIndex)
-                    Accessible.announce(
-                        i18n("Moved %1 to position %2", name, root._dragTargetIndex + 1),
-                        Accessible.Polite)
-                }
+                    let sourceIsPinned = DockModel.isPinned(root._dragSourceIndex);
+                    let targetIsPinned = DockModel.isPinned(root._dragTargetIndex);
+                    let finalTarget = root._dragTargetIndex;
+                        
+                    // Enforce the boundary
+                    if (sourceIsPinned && !targetIsPinned) {
+                        for (let i = dockRepeater.count - 1; i >= 0; i--) {
+                             if (DockModel.isPinned(i)) { finalTarget = i; break; }
+                        }
+                        } else if (!sourceIsPinned && targetIsPinned) {
+                            for (let i = 0; i < dockRepeater.count; i++) {
+                                if (!DockModel.isPinned(i)) { finalTarget = i; break; }
+                            }
+                          }
+
+                        if (finalTarget !== root._dragSourceIndex) {
+                            let item = dockRepeater.itemAt(root._dragSourceIndex);
+                            let name = item ? item.displayName : "";
+                            DockActions.moveTask(root._dragSourceIndex, finalTarget);
+                            Accessible.announce(i18n("Moved %1 to position %2", name, finalTarget + 1), Accessible.Polite);
+                        }
+                    }
                 // Reset drag state
                 root._dragActive = false
                 root._dragPending = false
@@ -620,41 +635,95 @@ Item {
         fragmentShader: "qrc:/qml/shaders/outer_shadow.frag.qsb"
     }
 
-    // The visible dock panel (positioned per edge, fits content)
-    Rectangle {
-        id: dockPanel
+    // --- INDEPENDENT GHOST BLUEPRINT ---
+        // Separate from the dock, 50% larger, and non-clickable
+        Item {
+            id: blueprintGhost
+            visible: dockPanel.isEditMode
+            z: dockPanel.z - 1 // Sits exactly behind the dock
 
-        // Panel size: primary axis stretches to content, secondary axis = icon + padding
-        width: DockView.isVertical
-            ? (DockSettings.iconSize + Kirigami.Units.largeSpacing * 2)
-            : Math.max(dockRow.implicitWidth + Kirigami.Units.largeSpacing * 2, Kirigami.Units.gridUnit * 6)
-        height: DockView.isVertical
-            ? Math.max(dockRow.implicitHeight + Kirigami.Units.largeSpacing * 2, Kirigami.Units.gridUnit * 6)
-            : (DockSettings.iconSize + Kirigami.Units.largeSpacing * 2)
-        radius: DockSettings.cornerRadius
-        color: DockView.backgroundStyleType === 3
-               ? "transparent"
-               : DockView.backgroundColor
+            // "Half the size larger" logic
+            width: dockPanel.width * 1.5
+            height: dockPanel.height * 1.5
 
-        // Position: center on the non-edge axis, slide on the edge axis
-        x: DockView.isVertical ? _panelEdgePos : (parent.width - width) / 2
-        y: DockView.isVertical ? (parent.height - height) / 2 : _panelEdgePos
+            // Centers itself perfectly behind the dock pill
+            x: dockPanel.x - (width - dockPanel.width) / 2
+            y: dockPanel.y - (height - dockPanel.height) / 2
 
-        property real _panelEdgePos: {
-            let fp = DockView.floatingPadding
-            let sp = Kirigami.Units.largeSpacing
-            switch (DockView.edge) {
-            case 0: // Top
-                return DockVisibility.dockVisible ? fp : -height - sp
-            case 1: // Bottom
-                return DockVisibility.dockVisible ? parent.height - height - fp : parent.height + sp
-            case 2: // Left
-                return DockVisibility.dockVisible ? fp : -width - sp
-            case 3: // Right
-                return DockVisibility.dockVisible ? parent.width - width - fp : parent.width + sp
+            // Crucial: Enabled false makes it non-clickable (ghost layer)
+            enabled: false
+	    clip: false
+
+            Rectangle {
+                anchors.fill: parent
+		color: "#990A2540" // Translucent glass blueprint background
+                radius: 12
+		border.color: Qt.rgba(1, 1, 1, 0.3)
+                border.width: 1
+
+                Canvas {
+                    anchors.fill: parent
+                    opacity: 0.4
+                    onPaint: {
+                        var ctx = getContext("2d");
+                        ctx.clearRect(0, 0, width, height);
+			ctx.strokeStyle = "white";
+                        ctx.lineWidth = 1;
+                        ctx.setLineDash([4, 4]); // Professional dashed drafting lines
+                        ctx.beginPath();
+                        let gridSize = 20;
+                        for (let x = 0; x <= width; x += gridSize) { ctx.moveTo(x, 0); ctx.lineTo(x, height); }
+                        for (let y = 0; y <= height; y += gridSize) { ctx.moveTo(0, y); ctx.lineTo(width, y); }
+                        ctx.stroke();
+                    }
+                }
             }
-            return 0
         }
+
+    // The visible dock panel (positioned per edge, fits content)
+        Rectangle {
+	    id: dockPanel
+
+            // --- LATTE LIVE EDITING TRACKER ---
+            // We flip this to true via C++ when SettingsDialog opens
+	    property bool isEditMode: DockVisibility.liveEditMode
+
+	    // Use root.width/height (the screen size) instead of parent to avoid the feedback loop
+            width: DockView.isVertical
+	        ? (DockSettings.iconSize + Kirigami.Units.largeSpacing * 2)
+		: Math.max(dockRow.implicitWidth + Kirigami.Units.largeSpacing * 2, Kirigami.Units.gridUnit * 6)
+            
+            height: DockView.isVertical
+	        ? Math.max(dockRow.implicitHeight + Kirigami.Units.largeSpacing * 2, Kirigami.Units.gridUnit * 6)
+                : (DockSettings.iconSize + Kirigami.Units.largeSpacing * 2)
+            
+            // Flatten the corners when expanded so it sits flush against the screen edges
+	    radius: DockSettings.cornerRadius
+
+            // Change the main dock color to become slightly transparent during Edit Mode
+            color: dockPanel.isEditMode 
+                   ? Qt.rgba(DockView.backgroundColor.r, DockView.backgroundColor.g, DockView.backgroundColor.b, 0.4) 
+                   : (DockView.backgroundStyleType === 3 ? "transparent" : DockView.backgroundColor)
+
+		// Position: center on the non-edge axis, slide on the edge axis
+                x: DockView.isVertical ? _panelEdgePos : (parent.width - width) / 2
+                y: DockView.isVertical ? (parent.height - height) / 2 : _panelEdgePos
+
+            property real _panelEdgePos: {
+                let fp = DockView.floatingPadding
+                let sp = Kirigami.Units.largeSpacing
+                switch (DockView.edge) {
+                case 0: // Top
+                    return DockVisibility.dockVisible ? fp : -height - sp
+                case 1: // Bottom
+                    return DockVisibility.dockVisible ? parent.height - height - fp : parent.height + sp
+                case 2: // Left
+                    return DockVisibility.dockVisible ? fp : -width - sp
+                case 3: // Right
+                    return DockVisibility.dockVisible ? parent.width - width - fp : parent.width + sp
+                }
+                return 0
+            }
 
         // Acrylic overlay: tint + noise via GPU shader, composited over KWin blur.
         // Shader handles rounded corners via SDF mask — no clip wrapper needed.
@@ -725,11 +794,15 @@ Item {
         // Zoom is disabled during drag so all icons return to base scale.
         property bool mouseInside: mouseX >= 0 && root._zoomActive && !root._dragActive
 
-        // Report panel geometry to visibility controller for input region
-        onXChanged: DockVisibility.setPanelRect(x, y, width, height)
-        onWidthChanged: DockVisibility.setPanelRect(x, y, width, height)
-        onYChanged: DockVisibility.setPanelRect(x, y, width, height)
-        onHeightChanged: DockVisibility.setPanelRect(x, y, width, height)
+	// This calculates the size of ONLY the icons + padding
+            property real _actualContentWidth: Math.max(dockRow.implicitWidth + Kirigami.Units.largeSpacing * 2, Kirigami.Units.gridUnit * 6)
+            property real _actualContentHeight: Math.max(dockRow.implicitHeight + Kirigami.Units.largeSpacing * 2, Kirigami.Units.gridUnit * 6)
+
+            // Only report the ICON area as interactive to the system
+	    onXChanged: DockVisibility.setPanelRect(x, y, width, height)
+            onWidthChanged: DockVisibility.setPanelRect(x, y, width, height)
+            onYChanged: DockVisibility.setPanelRect(x, y, width, height)
+            onHeightChanged: DockVisibility.setPanelRect(x, y, width, height)
 
         // Main icon layout (Flow switches between horizontal/vertical)
         Flow {
@@ -754,12 +827,12 @@ Item {
                     easing.type: Easing.InOutQuad
                 }
             }
-            x: DockView.isVertical
-                ? (parent.width - animatedContentWidth) / 2
-                : (parent.width - animatedContentWidth) / 2
+	    x: DockView.isVertical
+                    ? (parent.width - animatedContentWidth) / 2
+                    : (parent.width - animatedContentWidth) / 2
             y: DockView.isVertical
-                ? (parent.height - animatedContentHeight) / 2
-                : (parent.height - animatedContentHeight) / 2
+                    ? (parent.height - animatedContentHeight) / 2
+                    : (parent.height - animatedContentHeight) / 2
 
             // Animate existing items displaced by add/remove within the Flow.
             // Disabled during hover zoom (mouseInside) to avoid lagging sibling
@@ -801,7 +874,70 @@ Item {
                                           && externalDropArea.dropTargetIndex === index
                 }
             }
-        }
+    } // This brace closes the Flow (dockRow)
+
+        // --- The Independent Separator (Strict Split Mode) ---
+            Item {
+                id: pinnedSeparator
+                
+                // This forces the line to redraw every time the model changes
+                property int _refreshTrigger: 0
+                Connections {
+                    target: DockModel.tasksModel
+                    function onLayoutChanged() { pinnedSeparator._refreshTrigger++ }
+                    function onModelReset() { pinnedSeparator._refreshTrigger++ }
+                    function onRowsInserted() { pinnedSeparator._refreshTrigger++ }
+                    function onRowsRemoved() { pinnedSeparator._refreshTrigger++ }
+                }
+
+                property int boundaryIndex: {
+                    let _poke = _refreshTrigger
+                    let lastPinned = -1;
+                    for (let i = 0; i < dockRepeater.count; i++) {
+                        if (DockModel.isPinned(i)) lastPinned = i;
+                        else break; // In SeparateLaunchers mode, the first unpinned stops the zone
+                    }
+                    return lastPinned;
+                }
+
+                // Only show if there's a Pinned zone AND an Active zone
+                visible: boundaryIndex >= 0 && boundaryIndex < (dockRepeater.count - 1)
+
+                width: DockView.isVertical ? (DockSettings.iconSize * 0.5) : 3
+                height: DockView.isVertical ? 3 : (DockSettings.iconSize * 0.5)
+
+                // Positioning Math: Sibling of dockRow, so we must add dockRow.x/y
+                x: {
+                    if (!visible) return 0;
+                    let item = dockRepeater.itemAt(boundaryIndex);
+                    if (!item) return 0;
+                    return DockView.isVertical 
+                        ? dockRow.x + item.x + (item.width - width) / 2 
+                        : dockRow.x + item.x + item.width + (DockSettings.iconSpacing / 2) - (width / 2);
+                }
+                y: {
+                    if (!visible) return 0;
+                    let item = dockRepeater.itemAt(boundaryIndex);
+                    if (!item) return 0;
+                    return DockView.isVertical 
+                        ? dockRow.y + item.y + item.height + (DockSettings.iconSpacing / 2) - (height / 2)
+                        : dockRow.y + item.y + (item.height - height) / 2;
+                }
+                
+                Behavior on x { NumberAnimation { duration: Kirigami.Units.shortDuration; easing.type: Easing.OutCubic } }
+                Behavior on y { NumberAnimation { duration: Kirigami.Units.shortDuration; easing.type: Easing.OutCubic } }
+
+                Rectangle {
+                    anchors.fill: parent
+                    color: "black"; opacity: 0.25; radius: 2
+                }
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.leftMargin: DockView.isVertical ? 0 : 1
+                    anchors.topMargin: DockView.isVertical ? 1 : 0
+                    color: "white"; opacity: 0.15; radius: 2
+                }
+            }
 
         // External drag and drop (files, .desktop, URLs from other apps)
         DropArea {
@@ -855,7 +991,7 @@ Item {
     }
 
     // Floating drag ghost icon (follows cursor during internal reorder drag)
-    Image {
+    Kirigami.Icon {
         id: dragGhost
         Accessible.ignored: true
         visible: root._dragActive && root._dragSourceIndex >= 0
@@ -863,10 +999,8 @@ Item {
         height: DockSettings.iconSize
         source: {
             if (!visible) return ""
-            let name = DockModel.iconName(root._dragSourceIndex)
-            return (name && name.length > 0) ? "image://icon/" + name + "?v=" + DockView.iconCacheVersion : ""
+            return DockModel.iconData(root._dragSourceIndex)
         }
-        sourceSize: Qt.size(DockSettings.iconSize, DockSettings.iconSize)
         x: root._dragCurrentX - width / 2
         y: root._dragCurrentY - height / 2
         opacity: 0.8

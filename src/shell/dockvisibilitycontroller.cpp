@@ -5,6 +5,7 @@
 
 #include "utils/inputregion.h"
 
+#include "krema.h"
 #include <taskmanager/abstracttasksmodel.h>
 #include <taskmanager/activityinfo.h>
 #include <taskmanager/regionfiltermode.h>
@@ -184,35 +185,42 @@ void DockVisibilityController::setHovered(bool hovered)
 
 void DockVisibilityController::evaluateVisibility()
 {
-    qCDebug(lcVisibility) << "evaluateVisibility: mode=" << static_cast<int>(m_mode) << "hovered=" << m_hovered << "interacting=" << m_interactingCount;
-
-    // If interacting (context menu / settings open), always show
-    if (m_interactingCount > 0) {
+    // 1. Force visibility if interacting or hovering
+    if (m_interactingCount > 0 || m_keyboardActive || m_hovered) {
         setVisible(true);
+    }
+
+    // 2. Handle the "Wall" (Reserved Space)
+    if (m_platform) {
+        if (m_mode == DockPlatform::VisibilityMode::AlwaysVisible && m_reserveSpace && m_panelHeight > 0) {
+            // Get the edge as an integer to avoid declaration errors
+            // 0=Top, 1=Bottom, 2=Left, 3=Right
+            int edgeIndex = static_cast<int>(m_platform->edge());
+            bool isOnSide = (edgeIndex == 2 || edgeIndex == 3);
+
+            // If on Left/Right, reserve WIDTH. If on Top/Bottom, reserve HEIGHT.
+            int thickness = isOnSide ? m_panelWidth : m_panelHeight;
+
+            qCDebug(lcVisibility) << "RESERVING SPACE:" << (thickness + m_floatingPadding);
+            m_platform->setExclusiveZone(thickness + m_floatingPadding);
+        } else {
+            m_platform->setExclusiveZone(0);
+        }
+    }
+
+    // 3. Skip hide logic if we are currently using the dock
+    if (m_interactingCount > 0 || m_keyboardActive || m_hovered) {
         return;
     }
 
-    // If keyboard navigation is active, always show
-    if (m_keyboardActive) {
-        setVisible(true);
-        return;
-    }
-
-    // If hovered, always show
-    if (m_hovered) {
-        setVisible(true);
-        return;
-    }
-
+    // 4. Mode-based visibility
     switch (m_mode) {
     case DockPlatform::VisibilityMode::AlwaysVisible:
         setVisible(true);
         break;
-
     case DockPlatform::VisibilityMode::AutoHide:
         setVisible(false);
         break;
-
     case DockPlatform::VisibilityMode::DodgeWindows:
         setVisible(!hasOverlappingWindow(m_dodgeActiveOnly));
         break;
@@ -252,6 +260,8 @@ void DockVisibilityController::setPanelRect(qreal x, qreal y, qreal width, qreal
 
     // Update overlap model's region geometry for SmartHide/DodgeWindows
     updateRegionGeometry();
+
+    m_evaluateTimer.start();
 
     Q_EMIT panelRectChanged();
 }
@@ -323,6 +333,7 @@ void DockVisibilityController::setInteracting(bool interacting)
             }
         }
     }
+    Q_EMIT interactingChanged();
 }
 
 void DockVisibilityController::setVisible(bool visible)
@@ -364,8 +375,12 @@ void DockVisibilityController::applyInputRegion()
     params.panelWidth = m_panelWidth;
     params.panelHeight = m_panelHeight;
     params.zoomOverflowHeight = m_zoomOverflowHeight;
+
+    // THE REAL FIX: If the dock is visually on screen, tell the input region
+    // it is being fully hovered. This disables the 1-pixel "wake up" sliver.
     params.visible = m_visible;
-    params.hovered = m_hovered;
+    params.hovered = m_visible ? true : m_hovered;
+
     params.edge = static_cast<int>(m_platform->edge());
 
     m_platform->setInputRegion(computeDockInputRegion(params));
@@ -471,6 +486,47 @@ void DockVisibilityController::updateRegionGeometry()
     }
     qCDebug(lcVisibility) << "updateRegionGeometry:" << rect;
     m_overlapModel->setRegionGeometry(rect);
+}
+
+void DockVisibilityController::setReserveSpace(bool reserve)
+{
+    if (m_reserveSpace == reserve) {
+        return;
+    }
+    m_reserveSpace = reserve;
+    if (m_mode == DockPlatform::VisibilityMode::AlwaysVisible) {
+        m_evaluateTimer.start();
+    }
+}
+void DockVisibilityController::setFloatingPadding(int padding)
+{
+    if (m_floatingPadding == padding) {
+        return;
+    }
+    m_floatingPadding = padding;
+    // If we are in AlwaysVisible mode, we need to re-apply the zone immediately
+    if (m_mode == DockPlatform::VisibilityMode::AlwaysVisible) {
+        m_evaluateTimer.start();
+    }
+}
+
+bool DockVisibilityController::isInteracting() const
+{
+    return m_interactingCount > 0;
+}
+
+bool DockVisibilityController::isLiveEditMode() const
+{
+    return m_liveEditMode;
+}
+
+void DockVisibilityController::setLiveEditMode(bool edit)
+{
+    if (m_liveEditMode == edit) {
+        return;
+    }
+    m_liveEditMode = edit;
+    Q_EMIT liveEditModeChanged();
 }
 
 } // namespace krema

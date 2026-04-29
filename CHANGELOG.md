@@ -15,11 +15,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Virtual desktop filtering: show windows from current desktop only, or all desktops with dimmed icons for other desktops
 - Fedora (COPR), openSUSE (OBS), Debian, and Ubuntu packaging support
 - Compile-time LayerShellQt API detection for cross-distribution compatibility
+- "Reserve screen space" toggle for Always Visible mode, allowing the dock to physically block maximized windows (Exclusive Zone) or allow them to slide underneath (Latte-style "Windows Can Cover")
+- "Reserve screen space" toggle for Always Visible mode, which dynamically adapts to floating padding to ensure maximized windows stop exactly at the dock's edge
+- Strict "Split Mode" task management: creates two distinct zones for pinned launchers and unpinned running windows
+- Reactive etched-glass separator pill that dynamically centers itself in the gap between pinned and active zones
+- Auto-Sort Enforcement: Drag-and-drop now respects the boundary, physically preventing unpinned apps from entering the pinned section
+- Architectural "Blueprint Mode" for live editing: features a translucent navy background with a high-contrast white drafting grid
+- Enhanced Settings UI layout with consistent margins and internal padding using Kirigami units for a cleaner, professional look
 
 ### Fixed
 
 - Build compatibility with LayerShellQt < 6.4 (Ubuntu 25.04, Debian 13)
 - Build compatibility with strict `QT_NO_CAST_FROM_ASCII` flag on non-Arch distributions
+- Dock icon detection now resolves app icons more reliably by combining launcher URL, desktop entry ID variants, and display-name fallbacks
+- Running Steam game windows now keep game-specific icons instead of reverting to the generic Steam icon after dock reordering
+- Drag ghost icon now uses the same task icon source as dock items, preventing temporary icon swaps while reordering
+- Fixed blurry, low-resolution window icons for Steam/Proton games by prioritizing system theme icons over raw window pixels
+- Eliminated the "Drag Proxy" discrepancy where dock items would change quality or transparency while being reordered
+- Improved reliability of screen space reservation during startup by debouncing layout updates, preventing race conditions with the window manager
+- Eliminated "Model Ghosting" where the dock failed to visually update after pin/unpin actions without a window refresh
+- Corrected separator alignment math to ensure pixel-perfect centering during parabolic zoom
+- Resolved "Unsupported Interceptor" property warnings by consolidating animation behaviors
+- Resolved "ConfigurationView not found" error by updating C++ lookup logic and QML function signatures to correctly catch backend arguments
+- Fixed window crashes and layout breakage in the Settings Dialog caused by duplicate layout containers and mismatched closing braces
+- Standardized Settings window header icons to prevent missing asset placeholders (the "Question Mark" bug)
 
 ## [0.7.0] - 2026-03-28
 

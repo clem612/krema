@@ -30,9 +30,21 @@ FormCard.FormCardPage {
             }
         }
 
-        FormCard.FormDelegateSeparator {
-            visible: DockSettings.visibilityMode === 2
-        }
+	FormCard.FormDelegateSeparator {
+                visible: DockSettings.visibilityMode === 0
+            }
+
+            FormCard.FormSwitchDelegate {
+                text: i18n("Reserve screen space")
+                description: i18n("When off, maximized windows will stretch underneath the dock")
+                checked: DockSettings.reserveSpace
+                onCheckedChanged: DockSettings.reserveSpace = checked
+                visible: DockSettings.visibilityMode === 0
+            }
+
+            FormCard.FormDelegateSeparator {
+                visible: DockSettings.visibilityMode === 2
+            }
 
         FormCard.FormSwitchDelegate {
             text: i18n("Only dodge active window")

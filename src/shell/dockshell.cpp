@@ -64,6 +64,8 @@ void DockShell::initialize(DockPlatform::Edge edge, DockPlatform::VisibilityMode
     m_view->visibilityController()->setShowDelay(m_settings->showDelay());
     m_view->visibilityController()->setHideDelay(m_settings->hideDelay());
     m_view->visibilityController()->setDodgeActiveOnly(m_settings->dodgeActiveOnly());
+    m_view->visibilityController()->setReserveSpace(m_settings->reserveSpace());
+    m_view->visibilityController()->setFloatingPadding(m_view->floatingPadding());
 
     // Settings window (pass DockView for QML context property access, e.g. isStyleAvailable)
     m_settingsWindow = std::make_unique<SettingsWindow>(m_settings, m_view.get(), this);
@@ -119,6 +121,7 @@ void DockShell::connectSettingsSignals()
     connect(ss, &ScreenSettings::maxZoomFactorChanged, m_view.get(), &DockView::updateSize);
     connect(ss, &ScreenSettings::floatingChanged, m_view.get(), [this]() {
         m_view->updateSize();
+        m_view->visibilityController()->setFloatingPadding(m_view->floatingPadding());
         Q_EMIT m_view->floatingPaddingChanged();
     });
 
@@ -149,6 +152,10 @@ void DockShell::connectSettingsSignals()
     });
     connect(s, &KremaSettings::DodgeActiveOnlyChanged, this, [this]() {
         m_view->visibilityController()->setDodgeActiveOnly(m_settings->dodgeActiveOnly());
+    });
+
+    connect(s, &KremaSettings::reserveSpaceChanged, this, [this]() {
+        m_view->visibilityController()->setReserveSpace(m_settings->reserveSpace());
     });
 
     // Icon normalization toggle

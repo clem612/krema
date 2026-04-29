@@ -417,137 +417,134 @@ Item {
     }
 
     // Application icon
-    Image {
-        id: iconImage
-        // Anchors set via states below (iconAnchorStates)
-        width: iconSize
-        height: iconSize
-        source: {
-            // IMPORTANT: Read model.display to create a reactive dependency on
-            // model data. After model reordering (move), the Repeater may update
-            // delegate model data without changing index (position unchanged).
-            // Without this, the binding only tracks dockItem.index and won't
-            // re-evaluate when different data appears at the same position.
-            let _dep = model.display
-            let name = DockModel.iconName(dockItem.index)
-            if (name && name.length > 0) {
-                return "image://icon/" + name + "?v=" + DockView.iconCacheVersion
+        Kirigami.Icon {
+            id: iconImage
+            // Anchors set via states below (iconAnchorStates)
+            width: iconSize
+            height: iconSize
+            
+            source: {
+                // IMPORTANT: Read model.display to create a reactive dependency on
+                // model data. After model reordering (move), the Repeater may update
+                // delegate model data without changing index (position unchanged).
+                // Without this, the binding only tracks dockItem.index and won't
+                // re-evaluate when different data appears at the same position.
+                let _dep = model.display
+                return DockModel.iconData(dockItem.index)
             }
-            return ""
-        }
-        sourceSize: Qt.size(Math.ceil(iconSize * maxZoomFactor), Math.ceil(iconSize * maxZoomFactor))
-        smooth: true
 
-        // Transforms: launch bounce + attention animations
-        transform: [
-            Translate { id: bounceTranslate; x: 0; y: 0 },
-            Translate { id: attentionBounceT; x: 0; y: 0 },
-            Rotation {
-                id: attentionRotateT
-                origin.x: iconSize / 2; origin.y: iconSize / 2
-                angle: 0
-            },
-            Scale {
-                id: attentionScaleT
-                origin.x: iconSize / 2; origin.y: iconSize / 2
-                xScale: 1.0; yScale: xScale
+            // Transforms: launch bounce + attention animations
+            transform: [
+                Translate { id: bounceTranslate; x: 0; y: 0 },
+                Translate { id: attentionBounceT; x: 0; y: 0 },
+                Rotation {
+                    id: attentionRotateT
+                    origin.x: iconSize / 2; origin.y: iconSize / 2
+                    angle: 0
+                },
+                Scale {
+                    id: attentionScaleT
+                    origin.x: iconSize / 2; origin.y: iconSize / 2
+                    xScale: 1.0; yScale: xScale
+                }
+            ]
+
+            // Highlight for active window / drag source dimming (× blink for type 6)
+            opacity: {
+                let base
+                if (dockItem.isDragSource) base = 0.3
+                else if (dockItem.model.IsActive) base = 1.0
+                else if (dockItem.model.IsMinimized) base = 0.5
+                else base = 0.8
+                return base * dockItem._blinkOpacity
             }
-        ]
 
-        // Highlight for active window / drag source dimming (× blink for type 6)
-        opacity: {
-            let base
-            if (dockItem.isDragSource) base = 0.3
-            else if (dockItem.model.IsActive) base = 1.0
-            else if (dockItem.model.IsMinimized) base = 0.5
-            else base = 0.8
-            return base * dockItem._blinkOpacity
-        }
+            Behavior on opacity {
+                // Disable during blink animation — rapid _blinkOpacity changes cause
+                // the Behavior to restart every frame, preventing opacity from changing.
+                enabled: !blinkAnim.running
+                NumberAnimation { duration: Kirigami.Units.shortDuration }
+            }
 
-        Behavior on opacity {
-            // Disable during blink animation — rapid _blinkOpacity changes cause
-            // the Behavior to restart every frame, preventing opacity from changing.
-            enabled: !blinkAnim.running
-            NumberAnimation { duration: Kirigami.Units.shortDuration }
-        }
-
-        // Fallback placeholder when icon is not available
-        Rectangle {
-            id: iconPlaceholder
-            anchors.fill: parent
-            radius: Kirigami.Units.largeSpacing
-            color: Kirigami.Theme.highlightColor
-            visible: iconImage.status !== Image.Ready
-            Accessible.ignored: true
-
-            QQC2.Label {
+            // Fallback placeholder when icon is not available
+            Rectangle {
+                id: iconPlaceholder
                 anchors.centerIn: parent
-                text: {
-                    let name = dockItem.model.display || ""
-                    return name.length > 0 ? name[0].toUpperCase() : "?"
-                }
-                font.pixelSize: iconSize * 0.4
-                font.bold: true
-                color: Kirigami.Theme.highlightedTextColor
+                width: parent.width * 0.85
+                height: parent.height * 0.85
+                radius: Kirigami.Units.largeSpacing
+                color: Kirigami.Theme.highlightColor
+                visible: !iconImage.valid
                 Accessible.ignored: true
-            }
-        }
 
-        states: [
-            State {
-                name: "bottom"
-                when: DockView.edge === 1
-                AnchorChanges {
-                    target: iconImage
-                    anchors.top: parent.top
-                    anchors.bottom: undefined
-                    anchors.left: undefined
-                    anchors.right: undefined
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.verticalCenter: undefined
-                }
-            },
-            State {
-                name: "top"
-                when: DockView.edge === 0
-                AnchorChanges {
-                    target: iconImage
-                    anchors.top: undefined
-                    anchors.bottom: parent.bottom
-                    anchors.left: undefined
-                    anchors.right: undefined
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.verticalCenter: undefined
-                }
-            },
-            State {
-                name: "left"
-                when: DockView.edge === 2
-                AnchorChanges {
-                    target: iconImage
-                    anchors.top: undefined
-                    anchors.bottom: undefined
-                    anchors.left: undefined
-                    anchors.right: parent.right
-                    anchors.horizontalCenter: undefined
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-            },
-            State {
-                name: "right"
-                when: DockView.edge === 3
-                AnchorChanges {
-                    target: iconImage
-                    anchors.top: undefined
-                    anchors.bottom: undefined
-                    anchors.left: parent.left
-                    anchors.right: undefined
-                    anchors.horizontalCenter: undefined
-                    anchors.verticalCenter: parent.verticalCenter
+                QQC2.Label {
+                    anchors.centerIn: parent
+                    text: {
+                        let name = dockItem.model.display || ""
+                        return name.length > 0 ? name[0].toUpperCase() : "?"
+                    }
+                    font.pixelSize: iconSize * 0.4
+                    font.bold: true
+                    color: Kirigami.Theme.highlightedTextColor
+                    Accessible.ignored: true
                 }
             }
-        ]
-    }
+
+            states: [
+                State {
+                    name: "bottom"
+                    when: DockView.edge === 1
+                    AnchorChanges {
+                        target: iconImage
+                        anchors.top: parent.top
+                        anchors.bottom: undefined
+                        anchors.left: undefined
+                        anchors.right: undefined
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.verticalCenter: undefined
+                    }
+                },
+                State {
+                    name: "top"
+                    when: DockView.edge === 0
+                    AnchorChanges {
+                        target: iconImage
+                        anchors.top: undefined
+                        anchors.bottom: parent.bottom
+                        anchors.left: undefined
+                        anchors.right: undefined
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.verticalCenter: undefined
+                    }
+                },
+                State {
+                    name: "left"
+                    when: DockView.edge === 2
+                    AnchorChanges {
+                        target: iconImage
+                        anchors.top: undefined
+                        anchors.bottom: undefined
+                        anchors.left: undefined
+                        anchors.right: parent.right
+                        anchors.horizontalCenter: undefined
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                },
+                State {
+                    name: "right"
+                    when: DockView.edge === 3
+                    AnchorChanges {
+                        target: iconImage
+                        anchors.top: undefined
+                        anchors.bottom: undefined
+                        anchors.left: parent.left
+                        anchors.right: undefined
+                        anchors.horizontalCenter: undefined
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+            ]
+        }
 
     // Attention glow effect (type 4) — MultiEffect shadow pulse on iconImage
     MultiEffect {

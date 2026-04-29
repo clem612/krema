@@ -6,6 +6,11 @@
 #include <QImage>
 #include <QPainter>
 
+#include <QDir>
+#include <QDirIterator>
+#include <QFile>
+#include <QFileInfo>
+#include <QStandardPaths>
 #include <algorithm>
 #include <cmath>
 
@@ -29,9 +34,16 @@ QPixmap TaskIconProvider::requestPixmap(const QString &id, QSize *size, const QS
     const int targetSize = std::max(width, height);
 
     QIcon icon = QIcon::fromTheme(iconName);
+
+    // 🕵️ Use shared Steam resolver
+    if (icon.isNull() && iconName.startsWith(QLatin1String("steam_app_"))) {
+        icon = resolveSteamIcon(iconName.mid(10));
+    }
+
     if (icon.isNull()) {
         icon = QIcon(iconName);
     }
+
     if (icon.isNull()) {
         icon = QIcon::fromTheme(QStringLiteral("application-x-executable"));
     }
@@ -144,14 +156,12 @@ IconNormalizationInfo TaskIconProvider::analyzeIcon(const QString &iconName, con
 
     // Determine probe size: use the largest available raster, or 256 for SVG
     const auto sizes = icon.availableSizes();
-    int probeSize = 256;
-    if (!sizes.isEmpty()) {
-        // Find the largest available size
+    int probeSize = 0;
+    if (sizes.isEmpty()) {
+        probeSize = 256; // Fallback for SVGs
+    } else {
         for (const auto &s : sizes) {
-            int maxDim = std::max(s.width(), s.height());
-            if (maxDim > probeSize) {
-                probeSize = maxDim;
-            }
+            probeSize = std::max({probeSize, s.width(), s.height()});
         }
     }
     // For SVG icons, availableSizes() is empty; 256 is a good probe size
@@ -298,6 +308,74 @@ QPixmap TaskIconProvider::shrinkPixmap(const QIcon &icon, int targetSize, qreal 
     painter.end();
 
     return result;
+}
+
+QIcon TaskIconProvider::resolveSteamIcon(const QString &appId)
+{
+    // 1) Prefer the classic Steam desktop icon asset if present in icon themes.
+    const QString steamIconName = QStringLiteral("steam_icon_") + appId;
+    if (QIcon::hasThemeIcon(steamIconName)) {
+        return QIcon::fromTheme(steamIconName);
+    }
+
+    // 2) Explicitly scan icon theme directories for steam_icon_<appid>.* files.
+    const QStringList iconRoots = QStandardPaths::standardLocations(QStandardPaths::GenericDataLocation);
+    for (const QString &root : iconRoots) {
+        const QDir hicolorRoot(root + QStringLiteral("/icons/hicolor"));
+        if (!hicolorRoot.exists()) {
+            continue;
+        }
+
+        QDirIterator it(hicolorRoot.path(),
+                        QStringList{QStringLiteral("steam_icon_") + appId + QStringLiteral(".png"),
+                                    QStringLiteral("steam_icon_") + appId + QStringLiteral(".svg"),
+                                    QStringLiteral("steam_icon_") + appId + QStringLiteral(".xpm")},
+                        QDir::Files,
+                        QDirIterator::Subdirectories);
+        while (it.hasNext()) {
+            const QString path = it.next();
+            const QIcon icon(path);
+            if (!icon.isNull()) {
+                return icon;
+            }
+        }
+    }
+
+    // 3) Fallback to Steam librarycache images, preferring app icon-like assets.
+    const QString cachePath = QDir::homePath() + QStringLiteral("/.local/share/Steam/appcache/librarycache/") + appId;
+    QDirIterator it(cachePath, {QStringLiteral("*.png"), QStringLiteral("*.jpg"), QStringLiteral("*.jpeg")}, QDir::Files, QDirIterator::Subdirectories);
+
+    QString iconCandidate;
+    QString capsuleCandidate;
+    QString logoCandidate;
+
+    while (it.hasNext()) {
+        const QString path = it.next();
+        const QString file = QFileInfo(path).fileName().toLower();
+
+        if (file.contains(QLatin1String("icon"))) {
+            iconCandidate = path;
+            break;
+        }
+        if (capsuleCandidate.isEmpty() && file.contains(QLatin1String("library_600x900"))) {
+            capsuleCandidate = path;
+        }
+        if (logoCandidate.isEmpty() && file.contains(QLatin1String("logo"))) {
+            logoCandidate = path;
+        }
+    }
+
+    if (!iconCandidate.isEmpty()) {
+        return QIcon(iconCandidate);
+    }
+    if (!capsuleCandidate.isEmpty()) {
+        return QIcon(capsuleCandidate);
+    }
+    if (!logoCandidate.isEmpty()) {
+        return QIcon(logoCandidate);
+    }
+
+    return QIcon();
 }
 
 } // namespace krema

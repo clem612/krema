@@ -6,15 +6,98 @@
 #include <taskmanager/abstracttasksmodel.h>
 #include <taskmanager/tasksmodel.h>
 
+#include <QFileInfo>
 #include <QGuiApplication>
 #include <QIcon>
 #include <QLoggingCategory>
 #include <QScreen>
 
+#include <algorithm>
+
+#include "taskiconprovider.h"
+
 Q_LOGGING_CATEGORY(lcModel, "krema.model")
 
 namespace krema
 {
+namespace
+{
+
+QString stripDesktopSuffix(const QString &id)
+{
+    static const QLatin1String suffix(".desktop");
+    if (id.endsWith(suffix)) {
+        return id.left(id.size() - suffix.size());
+    }
+    return id;
+}
+
+QString lastSegment(const QString &id)
+{
+    const int dot = id.lastIndexOf(QLatin1Char('.'));
+    return (dot >= 0) ? id.mid(dot + 1) : id;
+}
+
+QString desktopNameFromUrl(const QUrl &url)
+{
+    if (!url.isValid()) {
+        return {};
+    }
+
+    if (url.scheme() == QLatin1String("applications")) {
+        return stripDesktopSuffix(url.path());
+    }
+
+    if (url.isLocalFile()) {
+        const QString local = url.toLocalFile();
+        if (local.endsWith(QLatin1String(".desktop"))) {
+            return stripDesktopSuffix(QFileInfo(local).baseName());
+        }
+    }
+
+    return {};
+}
+
+QStringList iconCandidates(const QModelIndex &idx)
+{
+    QStringList candidates;
+
+    const QString appId = idx.data(TaskManager::AbstractTasksModel::AppId).toString();
+    const QString stripped = stripDesktopSuffix(appId);
+    const QString segment = lastSegment(stripped);
+    const QString display = idx.data(Qt::DisplayRole).toString().trimmed();
+    const QString launcherName = desktopNameFromUrl(idx.data(TaskManager::AbstractTasksModel::LauncherUrlWithoutIcon).toUrl());
+
+    auto addCandidate = [&candidates](const QString &value) {
+        if (value.isEmpty()) {
+            return;
+        }
+        if (!candidates.contains(value)) {
+            candidates.push_back(value);
+        }
+        const QString lowered = value.toLower();
+        if (!lowered.isEmpty() && !candidates.contains(lowered)) {
+            candidates.push_back(lowered);
+        }
+    };
+
+    addCandidate(appId);
+    addCandidate(stripped);
+    addCandidate(segment);
+    addCandidate(launcherName);
+    addCandidate(display);
+
+    if (stripped.startsWith(QLatin1String("steam_app_"))) {
+        QString steamThemeName = stripped;
+        steamThemeName.replace(QLatin1String("steam_app_"), QLatin1String("steam_icon_"));
+        addCandidate(steamThemeName);
+        addCandidate(QStringLiteral("steam"));
+    }
+
+    return candidates;
+}
+
+} // namespace
 
 DockModel::DockModel(QObject *parent)
     : QObject(parent)
@@ -42,7 +125,7 @@ DockModel::DockModel(QObject *parent)
     m_tasksModel->setGroupMode(TaskManager::TasksModel::GroupApplications);
     m_tasksModel->setSortMode(TaskManager::TasksModel::SortManual);
     m_tasksModel->setHideActivatedLaunchers(true);
-    m_tasksModel->setSeparateLaunchers(false);
+    m_tasksModel->setSeparateLaunchers(true);
     m_tasksModel->setLaunchInPlace(true);
     m_tasksModel->setGroupInline(false);
     m_tasksModel->setTaskReorderingEnabled(true);
@@ -115,6 +198,40 @@ void DockModel::setPinnedLaunchers(const QStringList &launchers)
     Q_EMIT pinnedLaunchersChanged();
 }
 
+QVariant DockModel::iconData(int index) const
+{
+    const QModelIndex idx = m_tasksModel->index(index, 0);
+    if (!idx.isValid())
+        return {};
+
+    // 1. UNIVERSAL THEME PRIORITY (The "Drag" Logic)
+    // Always check if the system theme has a high-res SVG for this app first.
+    QString name = iconName(index);
+    if (QIcon::hasThemeIcon(name)) {
+        return QIcon::fromTheme(name);
+    }
+
+    // 2. STEAM-SPECIFIC FALLBACK
+    QString id = idx.data(TaskManager::AbstractTasksModel::AppId).toString();
+    if (id.startsWith(QLatin1String("steam_app_"))) {
+        QString steamIconId = QStringLiteral("steam_icon_") + id.mid(10);
+        if (QIcon::hasThemeIcon(steamIconId))
+            return QIcon::fromTheme(steamIconId);
+
+        return QIcon::fromTheme(QStringLiteral("steam")); // Clean fallback
+    }
+
+    // 3. RAW PIXEL FALLBACK (The "Blurry" Window Pixels)
+    // Only use these if the system theme completely failed to find the app.
+    const QVariant decoration = idx.data(Qt::DecorationRole);
+    if (decoration.isValid() && !decoration.value<QIcon>().isNull()) {
+        return decoration;
+    }
+
+    // 4. ABSOLUTE FALLBACK
+    return QIcon::fromTheme(QStringLiteral("application-x-executable"));
+}
+
 QString DockModel::iconName(int index) const
 {
     const QModelIndex idx = m_tasksModel->index(index, 0);
@@ -122,8 +239,15 @@ QString DockModel::iconName(int index) const
         return {};
     }
 
-    const QIcon icon = idx.data(Qt::DecorationRole).value<QIcon>();
-    return icon.name();
+    const QStringList candidates = iconCandidates(idx);
+    for (const QString &candidate : candidates) {
+        if (QIcon::hasThemeIcon(candidate)) {
+            return candidate;
+        }
+    }
+
+    // Keep drag ghost/icon provider alive with a best-effort identifier.
+    return candidates.value(0, QStringLiteral("application-x-executable"));
 }
 
 QUrl DockModel::launcherUrl(int index) const

@@ -56,6 +56,11 @@
       <default>0</default>
     </entry>
 
+     <entry name="reserveSpace" type="Bool">
+      <label>Reserve screen space for the dock</label>
+      <default>true</default>
+    </entry>
+
     <entry name="DodgeActiveOnly" type="Bool">
       <label>Only dodge the active window (false = dodge all overlapping windows)</label>
       <default>false</default>
