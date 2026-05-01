@@ -29,6 +29,9 @@ class ScreenSettings : public QObject
     Q_OBJECT
 
     Q_PROPERTY(bool hasOverrides READ hasOverrides NOTIFY hasOverridesChanged)
+    Q_PROPERTY(int separatorStyle READ separatorStyle WRITE setSeparatorStyle NOTIFY separatorStyleChanged)
+    Q_PROPERTY(double separatorOpacity READ separatorOpacity WRITE setSeparatorOpacity NOTIFY separatorOpacityChanged)
+    Q_PROPERTY(int separatorWidth READ separatorWidth WRITE setSeparatorWidth NOTIFY separatorWidthChanged)
 
 public:
     explicit ScreenSettings(const QString &screenName, KremaSettings *fallback, QObject *parent = nullptr);
@@ -46,7 +49,11 @@ public:
     [[nodiscard]] double maxZoomFactor() const;
     [[nodiscard]] bool floating() const;
     [[nodiscard]] int cornerRadius() const;
+    [[nodiscard]] int panelHeight() const;
     [[nodiscard]] QStringList pinnedLaunchers() const;
+    [[nodiscard]] int separatorStyle() const;
+    [[nodiscard]] double separatorOpacity() const;
+    [[nodiscard]] int separatorWidth() const;
 
     // --- Write per-screen overrides ---
 
@@ -58,7 +65,11 @@ public:
     void setMaxZoomFactor(double factor);
     void setFloating(bool floating);
     void setCornerRadius(int radius);
+    void setPanelHeight(int height);
     void setPinnedLaunchers(const QStringList &launchers);
+    void setSeparatorStyle(int style);
+    void setSeparatorOpacity(double opacity);
+    void setSeparatorWidth(int width);
 
     /// Remove all per-screen overrides (revert to global defaults).
     void clearOverrides();
@@ -79,8 +90,12 @@ Q_SIGNALS:
     void backgroundOpacityChanged();
     void maxZoomFactorChanged();
     void floatingChanged();
+    void panelHeightChanged();
     void cornerRadiusChanged();
     void pinnedLaunchersChanged();
+    void separatorStyleChanged();
+    void separatorOpacityChanged();
+    void separatorWidthChanged();
 
 private:
     /// Read a value from per-screen group, falling back to the global default.

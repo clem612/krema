@@ -2,20 +2,17 @@
 // SPDX-FileCopyrightText: 2026 Krema Contributors
 
 #include "dockview.h"
-
 #include "config/screensettings.h"
 #include "dockvisibilitycontroller.h"
 #include "krema.h"
 #include "models/taskiconprovider.h"
 #include "utils/surfacegeometry.h"
-
+#include <KIconLoader>
+#include <KLocalizedQmlContext>
 #include <QDBusConnection>
 #include <QLoggingCategory>
 #include <QPainterPath>
-
-#include <KIconLoader>
-#include <KLocalizedQmlContext>
-
+#include <QQmlContext>
 #include <QQmlEngine>
 #include <QScreen>
 #include <QtQml>
@@ -42,96 +39,148 @@ void DockView::initialize(TaskManager::TasksModel *tasksModel,
                           DockPlatform::Edge edge,
                           DockPlatform::VisibilityMode visibilityMode)
 {
-    // Configure the platform layer (LayerShellQt on Wayland)
     m_platform->setupWindow(this);
     m_platform->setEdge(edge);
-
-    // Store edge for QML access (must be set before QML loading)
     m_edge = edge;
 
-    // Create visibility controller (manages show/hide logic for all modes)
     m_visibilityController = new DockVisibilityController(m_platform.get(), tasksModel, virtualDesktopInfo, activityInfo, this, this);
     m_visibilityController->setMode(visibilityMode);
 
-    // Register the icon image provider for QML
     m_iconProvider = new TaskIconProvider(m_settings->iconNormalization());
     m_iconProvider->setIconScale(m_settings->iconScale());
     engine()->addImageProvider(QStringLiteral("icon"), m_iconProvider);
 
-    // Invalidate icon normalization cache when icon theme changes
     connect(KIconLoader::global(), &KIconLoader::iconChanged, this, [this]() {
         m_iconProvider->clearCache();
         bumpIconCacheVersion();
     });
 
-    // Enable i18n() in QML (required for Accessible.name/description strings)
     KLocalization::setupLocalizedContext(engine());
-
-    // Per-engine context property (supports multiple DockView instances for M8 multi-monitor)
     engine()->rootContext()->setContextProperty(QStringLiteral("DockVisibility"), m_visibilityController);
 
-    // Apply background effects (blur, contrast)
-    applyBackgroundStyle();
+    connect(m_visibilityController, &DockVisibilityController::liveEditModeChanged, this, [this]() {
+        updateSize();
+        applyBackgroundStyle();
+    });
 
-    // Load the QML UI
+    connect(m_visibilityController, &DockVisibilityController::dockVisibleChanged, this, &DockView::updateSize);
+    connect(m_visibilityController, &DockVisibilityController::dockVisibleChanged, this, &DockView::applyBackgroundStyle);
+
+    applyBackgroundStyle();
     setSource(QUrl(QStringLiteral("qrc:/qml/main.qml")));
 
     if (status() == QQuickView::Error) {
-        const auto errs = errors();
-        for (const auto &err : errs) {
-            qCCritical(lcDockView) << "QML load error:" << err.toString();
-        }
+        for (const auto &err : errors())
+            qCCritical(lcDockView) << "QML error:" << err.toString();
         return;
     }
 
-    // Set initial window size
     updateSize();
-
-    // React to screen changes (e.g. DPMS off/on replaces QScreen objects)
     connect(this, &QWindow::screenChanged, this, &DockView::handleScreenChanged);
-    if (screen()) {
+    if (screen())
         m_screenGeometryConnection = connect(screen(), &QScreen::geometryChanged, this, &DockView::handleScreenGeometryChanged);
-    }
 
-    // React to screen lock/unlock (QScreen object stays the same, so screenChanged doesn't fire)
     QDBusConnection::sessionBus().connect(QStringLiteral("org.freedesktop.ScreenSaver"),
                                           QStringLiteral("/ScreenSaver"),
                                           QStringLiteral("org.freedesktop.ScreenSaver"),
                                           QStringLiteral("ActiveChanged"),
                                           this,
                                           SLOT(handleScreenLockChanged(bool)));
-
     show();
 }
 
 QColor DockView::backgroundColor() const
 {
     auto type = static_cast<BackgroundStyleType>(m_settings->backgroundStyle());
-    qreal opacity = m_settings->backgroundOpacity();
+    return computeBackgroundColor(type, m_settings->tintColor(), m_settings->backgroundOpacity(), m_settings->useAccentColor(), m_settings->useSystemColor());
+}
 
-    return computeBackgroundColor(type, m_settings->tintColor(), opacity, m_settings->useAccentColor(), m_settings->useSystemColor());
+void DockView::updateSize()
+{
+    const int iconSize = m_screenSettings ? m_screenSettings->iconSize() : m_settings->iconSize();
+    const double maxZoom = m_screenSettings ? m_screenSettings->maxZoomFactor() : m_settings->maxZoomFactor();
+    const int userH = (m_screenSettings ? m_screenSettings->panelHeight() : m_settings->panelHeight());
+    const int maxZoomExt = static_cast<int>(iconSize * (maxZoom - 1.0)) + 10;
+
+    const QRect screenGeo = screen() ? screen()->geometry() : QRect();
+
+    int surfaceSize;
+    if (m_visibilityController && m_visibilityController->liveEditMode()) {
+        int baseDim = isVertical() ? screenGeo.width() : screenGeo.height();
+        surfaceSize = (baseDim / 4) - 90 + 800;
+    } else {
+        surfaceSize = userH + maxZoomExt + 120;
+    }
+
+    surfaceSize += floatingPadding();
+
+    if (isVertical()) {
+        setWidth(surfaceSize);
+        setHeight(screenGeo.height());
+        m_platform->setSize(QSize(surfaceSize, 0));
+    } else {
+        setWidth(screenGeo.width());
+        setHeight(surfaceSize);
+        m_platform->setSize(QSize(0, surfaceSize));
+    }
+
+    if (m_visibilityController) {
+        m_visibilityController->setZoomOverflowHeight(zoomOverflowHeight());
+        m_visibilityController->updateRegionGeometry();
+    }
+}
+
+void DockView::applyBackgroundStyle()
+{
+    auto type = static_cast<BackgroundStyleType>(m_settings->backgroundStyle());
+    QRegion visualRegion;
+
+    if (m_visibilityController && m_visibilityController->liveEditMode()) {
+        const QRect screenGeo = screen() ? screen()->geometry() : QRect();
+        int currentEdge = edge(); // 0=Top, 1=Bottom, 2=Left, 3=Right
+
+        if (isVertical()) {
+            int trayWidth = (screenGeo.width() / 4) - 90;
+            if (currentEdge == 2) { // Left Edge
+                visualRegion += QRect(0, 0, trayWidth, height());
+            } else { // Right Edge
+                visualRegion += QRect(width() - trayWidth, 0, trayWidth, height());
+            }
+        } else {
+            int trayHeight = (screenGeo.height() / 4) - 90;
+            if (currentEdge == 0) { // Top Edge
+                visualRegion += QRect(0, 0, width(), trayHeight);
+            } else { // Bottom Edge
+                visualRegion += QRect(0, height() - trayHeight, width(), trayHeight);
+            }
+        }
+    } else if (m_visibilityController) {
+        const QRect panel = m_visibilityController->panelRect();
+        if (panel.width() > 0)
+            visualRegion += panel;
+    }
+
+    applyBackgroundToWindow(this, type, visualRegion);
+    Q_EMIT backgroundColorChanged();
+    Q_EMIT backgroundStyleTypeChanged();
 }
 
 int DockView::backgroundStyleType() const
 {
     return m_settings->backgroundStyle();
 }
-
 int DockView::floatingPadding() const
 {
     return m_settings->floating() ? s_floatingMargin : 0;
 }
-
 int DockView::iconCacheVersion() const
 {
     return m_iconCacheVersion;
 }
-
 int DockView::edge() const
 {
     return static_cast<int>(m_edge);
 }
-
 bool DockView::isVertical() const
 {
     return m_edge == DockPlatform::Edge::Left || m_edge == DockPlatform::Edge::Right;
@@ -139,9 +188,8 @@ bool DockView::isVertical() const
 
 void DockView::setEdge(DockPlatform::Edge edge)
 {
-    if (m_edge == edge) {
+    if (m_edge == edge)
         return;
-    }
     m_edge = edge;
     updateSize();
     Q_EMIT edgeChanged();
@@ -178,34 +226,9 @@ DockPlatform *DockView::platform() const
 {
     return m_platform.get();
 }
-
 DockVisibilityController *DockView::visibilityController() const
 {
     return m_visibilityController;
-}
-
-void DockView::updateSize()
-{
-    const int iconSize = m_screenSettings ? m_screenSettings->iconSize() : m_settings->iconSize();
-    const double maxZoom = m_screenSettings ? m_screenSettings->maxZoomFactor() : m_settings->maxZoomFactor();
-    const int h = krema::surfaceHeight(iconSize, s_padding, maxZoom, s_tooltipReserve, floatingPadding());
-    const QRect screenGeo = screen() ? screen()->geometry() : QRect();
-
-    if (isVertical()) {
-        // Vertical dock: h becomes width, screen height becomes height
-        setWidth(h);
-        setHeight(screenGeo.height());
-        // Layer-shell: 0 on double-anchored axis (Top+Bottom) lets compositor decide
-        m_platform->setSize(QSize(h, 0));
-    } else {
-        setWidth(screenGeo.width());
-        setHeight(h);
-        m_platform->setSize(QSize(0, h));
-    }
-
-    if (m_visibilityController) {
-        m_visibilityController->setZoomOverflowHeight(zoomOverflowHeight());
-    }
 }
 
 int DockView::zoomOverflowHeight() const
@@ -217,110 +240,40 @@ int DockView::zoomOverflowHeight() const
 
 void DockView::handleScreenChanged(QScreen *newScreen)
 {
-    // Disconnect from old screen's geometry signal
     disconnect(m_screenGeometryConnection);
-
-    if (!newScreen) {
-        qCDebug(lcDockView) << "Screen changed to nullptr (DPMS off / placeholder)";
+    if (!newScreen)
         return;
-    }
-
-    // Connect to new screen's geometry signal
     m_screenGeometryConnection = connect(newScreen, &QScreen::geometryChanged, this, &DockView::handleScreenGeometryChanged);
-
-    const QRect geo = newScreen->geometry();
-    qCDebug(lcDockView) << "Screen changed:" << newScreen->name() << "geometry=" << geo;
-
-    // Skip recovery if geometry is invalid (placeholder screen during DPMS off)
-    if (geo.width() <= 0 || geo.height() <= 0) {
+    if (newScreen->geometry().width() <= 0)
         return;
-    }
-
-    // Force surface re-creation: the compositor destroys the layer-shell surface
-    // when the associated output is removed. hide()+show() creates a fresh surface.
     hide();
     updateSize();
     applyBackgroundStyle();
     show();
-    if (m_visibilityController) {
+    if (m_visibilityController)
         m_visibilityController->requestEvaluate();
-    }
 }
 
 void DockView::handleScreenGeometryChanged()
 {
-    if (!screen()) {
+    if (!screen() || screen()->geometry().width() <= 0)
         return;
-    }
-
-    const QRect geo = screen()->geometry();
-    qCDebug(lcDockView) << "Screen geometry changed:" << geo;
-
-    if (geo.width() <= 0 || geo.height() <= 0) {
-        return;
-    }
-
     updateSize();
     applyBackgroundStyle();
-    if (m_visibilityController) {
+    if (m_visibilityController)
         m_visibilityController->requestEvaluate();
-    }
 }
 
 void DockView::handleScreenLockChanged(bool active)
 {
-    if (active) {
+    if (active)
         return;
-    }
-
-    qCDebug(lcDockView) << "Screen unlocked — recovering dock";
-    // Surface may have been destroyed during DPMS-off while locked.
-    // hide()+show() ensures a fresh surface on the current screen.
     hide();
     updateSize();
     applyBackgroundStyle();
     show();
-    if (m_visibilityController) {
+    if (m_visibilityController)
         m_visibilityController->requestEvaluate();
-    }
-}
-
-void DockView::applyBackgroundStyle()
-{
-    auto type = static_cast<BackgroundStyleType>(m_settings->backgroundStyle());
-    qreal opacity = m_settings->backgroundOpacity();
-
-    // When opacity is 0, compositor effects (blur/contrast) must also be disabled.
-    // Otherwise KWindowEffects creates a visible frosted layer even with transparent QML color.
-    if (styleUsesBlur(type) && qFuzzyIsNull(opacity)) {
-        removeBackgroundFromWindow(this);
-        Q_EMIT backgroundColorChanged();
-        Q_EMIT backgroundStyleTypeChanged();
-        return;
-    }
-
-    // Restrict blur/contrast to the panel rectangle only.
-    // Without a region, KWindowEffects applies effects to the entire layer-shell surface,
-    // which covers the full screen width and causes a colored bar across the bottom.
-    // Use a rounded rectangle to match the panel's corner radius.
-    QRegion region;
-    if (m_visibilityController) {
-        const QRect panel = m_visibilityController->panelRect();
-        if (panel.width() > 0) {
-            const int radius = m_settings->cornerRadius();
-            if (radius > 0) {
-                QPainterPath path;
-                path.addRoundedRect(QRectF(panel), radius, radius);
-                region = QRegion(path.toFillPolygon().toPolygon());
-            } else {
-                region = QRegion(panel);
-            }
-        }
-    }
-
-    applyBackgroundToWindow(this, type, region);
-    Q_EMIT backgroundColorChanged();
-    Q_EMIT backgroundStyleTypeChanged();
 }
 
 } // namespace krema

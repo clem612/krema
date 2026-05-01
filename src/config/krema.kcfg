@@ -13,6 +13,13 @@
       <max>96</max>
     </entry>
 
+    <entry name="PanelHeight" type="Int">
+      <label>Height/Thickness of the dock panel</label>
+      <default>60</default>
+      <min>30</min>
+      <max>150</max>
+    </entry>
+
     <entry name="IconSpacing" type="Int">
       <label>Spacing between icons</label>
       <default>4</default>
@@ -244,5 +251,36 @@
       <label>Pinned launcher URLs</label>
       <default>applications:org.kde.dolphin.desktop,applications:org.kde.konsole.desktop,applications:org.kde.kate.desktop,applications:systemsettings.desktop</default>
     </entry>
+
+    <entry name="SeparatorStyle" type="Int">
+      <label>0=Classic, 1=Dots</label>
+      <default>0</default>
+    </entry>
+
+    <entry name="SeparatorWidth" type="Int">
+      <label>Thickness of the separator line or dots</label>
+      <default>3</default>
+      <min>1</min>
+      <max>20</max>
+    </entry>
+
+    <entry name="SeparatorLength" type="Int">
+      <label>Length of the separator</label>
+      <default>40</default>
+      <min>10</min>
+      <max>150</max>
+    </entry>
+
+    <entry name="SeparatorSpacing" type="Int">
+      <label>Spacing between dots</label>
+      <default>4</default>
+      <min>1</min>
+      <max>15</max>
+    </entry>
+
+    <entry name="SeparatorOpacity" type="Double">
+      <default>0.5</default>
+    </entry>
+
   </group>
 </kcfg>

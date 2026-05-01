@@ -20,8 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Strict "Split Mode" task management: creates two distinct zones for pinned launchers and unpinned running windows
 - Reactive etched-glass separator pill that dynamically centers itself in the gap between pinned and active zones
 - Auto-Sort Enforcement: Drag-and-drop now respects the boundary, physically preventing unpinned apps from entering the pinned section
-- Architectural "Blueprint Mode" for live editing: features a translucent navy background with a high-contrast white drafting grid
-- Enhanced Settings UI layout with consistent margins and internal padding using Kirigami units for a cleaner, professional look
+- Architectural "Blueprint Mode": Features a translucent navy background with a high-contrast white drafting grid that automatically centers and synchronizes during live panel resizing
+- Enhanced Settings UI: Improved layout consistency using Kirigami units, with instant configuration persistence and "Dock Gravity" to keep icons anchored to the panel edge
+- System-level "Ghost" input region that decouples Wayland mouse tracking from visual panel geometry, ensuring icons remain interactive when visually overflowing thin panels
+- Proportional "Skin" hitbox logic that dynamically adjusts the clickable area of each icon based on its current visual zoom state
+- Consolidated icon-related settings (Size, Spacing, Zoom, Scale, and Attention) into a unified Icons page for a more streamlined configuration experience
+- Implemented a nested visual hierarchy in the Settings sidebar, using specific indentation and icon scaling to clearly distinguish sub-pages from top-level categories.
 
 ### Fixed
 
