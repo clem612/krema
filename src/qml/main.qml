@@ -716,9 +716,23 @@ Item {
            // Create a local alias for Edit Mode that won't crash on startup
            property bool isEditMode: typeof DockVisibility !== "undefined" && DockVisibility.liveEditMode
 
-	   // SIZE: Trust the setting. The C++ surface is already large enough.
-           width: DockView.isVertical ? DockSettings.panelHeight : _actualContentWidth
-           height: DockView.isVertical ? _actualContentHeight : DockSettings.panelHeight
+	   // For Horizontal Docks: Width is the length of all icons.
+           // For Vertical Docks: Width is the "Thickness" (Sandwich Math).
+           width: {
+               if (!DockView.isVertical) return _actualContentWidth;
+    
+               let centerLockWidth = dockRow.animatedContentWidth + 6;
+               return Math.min(DockSettings.panelHeight, centerLockWidth);
+           }
+
+           // For Vertical Docks: Height is the length of all icons.
+           // For Horizontal Docks: Height is the "Thickness" (Sandwich Math).
+           height: {
+                if (DockView.isVertical) return _actualContentHeight;
+    
+                let centerLockHeight = dockRow.animatedContentHeight + 6;
+                return Math.min(DockSettings.panelHeight, centerLockHeight);
+           }
            
            // CORNERS
            radius: DockSettings.cornerRadius
@@ -822,7 +836,7 @@ Item {
 
 	// This calculates the size of ONLY the icons + padding
             property real _actualContentWidth: Math.max(dockRow.implicitWidth + Kirigami.Units.largeSpacing * 2, Kirigami.Units.gridUnit * 6)
-            property real _actualContentHeight: Math.max(dockRow.implicitHeight + Kirigami.Units.largeSpacing * 2, Kirigami.Units.gridUnit * 6)
+            property real _actualContentHeight: Math.max(dockRow.animatedContentHeight + 6, Kirigami.Units.gridUnit * 6)
 
 	    // This function calculates the "Ghost" area for the OS
 	    function updateWaylandInputRegion() {
@@ -875,24 +889,27 @@ Item {
                 }
                 
                 // ANCHOR TO THE GROUND
-                x: {
+		x: {
                     if (DockView.isVertical) {
+                        // Edge 2 = Left of screen, Edge 3 = Right of screen
+                        // We add our 3px cushion to the "ground" edge
                         return DockView.edge === 2 
-                               ? Kirigami.Units.smallSpacing 
-                               : (dockPanel.width - animatedContentWidth - Kirigami.Units.smallSpacing)
+                               ? 3 
+                               : (dockPanel.width - animatedContentWidth - 3)
                     }
+                    // For horizontal docks, keep them centered horizontally
                     return (dockPanel.width - animatedContentWidth) / 2
                 }
                 
 		y: {
                     if (!DockView.isVertical) {
-                        // DockView.edge === 0 is Top. DockView.edge === 1 is Bottom.
-                        // We want the Flow (and the icons inside) to stick to the ground.
+                        // Edge 0 = Top of screen, Edge 1 = Bottom of screen
+                        // We add 3px of padding to the respective edge.
                         return DockView.edge === 0 
-                               ? Kirigami.Units.smallSpacing 
-                               : (dockPanel.height - animatedContentHeight - Kirigami.Units.smallSpacing)
+                               ? 3 
+                               : (dockPanel.height - animatedContentHeight - 3)
                     }
-                    // For vertical docks, center vertically
+                    // For vertical docks, keep them centered
                     return (dockPanel.height - animatedContentHeight) / 2
                 }
 

@@ -16,8 +16,8 @@
     <entry name="PanelHeight" type="Int">
       <label>Height/Thickness of the dock panel</label>
       <default>60</default>
-      <min>30</min>
-      <max>150</max>
+      <min>10</min>
+      <max>74</max>
     </entry>
 
     <entry name="IconSpacing" type="Int">
