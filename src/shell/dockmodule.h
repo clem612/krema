@@ -12,11 +12,11 @@ namespace krema
 /**
  * Abstract base class for modular dock sections (widgets).
  *
- * Each DockWidget represents a section of the dock (task manager,
+ * Each DockModule represents a section of the dock (task manager,
  * launcher, separator, etc.). Concrete implementations provide a
  * QML component URL and an optional C++ data model.
  */
-class DockWidget : public QObject
+class DockModule : public QObject
 {
     Q_OBJECT
 
@@ -24,8 +24,8 @@ class DockWidget : public QObject
     Q_PROPERTY(QString widgetId READ widgetId CONSTANT)
 
 public:
-    explicit DockWidget(QObject *parent = nullptr);
-    ~DockWidget() override;
+    explicit DockModule(QObject *parent = nullptr);
+    ~DockModule() override;
 
     /// Unique identifier for this widget type.
     [[nodiscard]] virtual QString widgetId() const = 0;

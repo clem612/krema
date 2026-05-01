@@ -366,7 +366,7 @@ Item {
         // Debug: log appId for notification matching verification
         Qt.callLater(function() {
             if (dockItem._appId.length > 0)
-                console.log("[NOTIF-TRACE] DockItem created: '" + dockItem.displayName + "' appId=" + dockItem._appId)
+                console.log("[NOTIF-TRACE] DockIcon created: '" + dockItem.displayName + "' appId=" + dockItem._appId)
         })
     }
 

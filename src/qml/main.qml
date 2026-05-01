@@ -912,9 +912,9 @@ Item {
                 id: dockRepeater
                 model: DockModel.tasksModel
 
-                DockItem {
+                AppIcon {
                     // index and model are injected by Repeater into
-                    // DockItem's own required properties
+                    // AppIcon's own required properties
 
                     z: (root.hoveredIndex === index) ? 1 : 0
                     isKeyboardFocused: root.keyboardNavigating && root.hoveredIndex === index
