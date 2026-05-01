@@ -40,10 +40,20 @@ DockVisibilityController::DockVisibilityController(DockPlatform *platform,
     m_overlapModel->setFilterHidden(true);
     m_overlapModel->setFilterByVirtualDesktop(true);
     m_overlapModel->setFilterByActivity(true);
-    if (m_virtualDesktopInfo)
+    if (m_virtualDesktopInfo) {
         m_overlapModel->setVirtualDesktop(m_virtualDesktopInfo->currentDesktop());
-    if (m_activityInfo)
+        connect(m_virtualDesktopInfo, &TaskManager::VirtualDesktopInfo::currentDesktopChanged, this, [this]() {
+            m_overlapModel->setVirtualDesktop(m_virtualDesktopInfo->currentDesktop());
+            m_evaluateTimer.start();
+        });
+    }
+    if (m_activityInfo) {
         m_overlapModel->setActivity(m_activityInfo->currentActivity());
+        connect(m_activityInfo, &TaskManager::ActivityInfo::currentActivityChanged, this, [this]() {
+            m_overlapModel->setActivity(m_activityInfo->currentActivity());
+            m_evaluateTimer.start();
+        });
+    }
     m_overlapModel->componentComplete();
 
     m_showTimer.setSingleShot(true);
@@ -278,7 +288,26 @@ void DockVisibilityController::requestEvaluate()
 
 void DockVisibilityController::updateRegionGeometry()
 {
-    // dockScreenRect() logic is assumed to be defined or handled by computeDockScreenRect utility
+    if (m_dockWindow && m_dockWindow->screen()) {
+        DockScreenRectParams p;
+        p.screenX = m_dockWindow->screen()->geometry().x();
+        p.screenY = m_dockWindow->screen()->geometry().y();
+        p.screenWidth = m_dockWindow->screen()->geometry().width();
+        p.screenHeight = m_dockWindow->screen()->geometry().height();
+
+        auto *view = qobject_cast<QQuickView *>(parent());
+        p.surfaceWidth = view ? view->width() : m_dockWindow->width();
+        p.surfaceHeight = view ? view->height() : m_dockWindow->height();
+
+        p.panelX = m_panelX;
+        p.panelRefY = m_panelRefY;
+        p.panelWidth = m_panelWidth;
+        p.panelHeight = m_panelHeight;
+        p.edge = static_cast<int>(m_platform->edge());
+
+        m_overlapModel->setScreenGeometry(computeDockScreenRect(p));
+    }
+
     applyInputRegion();
 }
 
@@ -346,18 +375,10 @@ void DockVisibilityController::connectModelSignals()
     connect(m_overlapModel, &QAbstractItemModel::modelReset, this, [this]() {
         m_evaluateTimer.start();
     });
-    connect(m_overlapModel, &QAbstractItemModel::dataChanged, this, [this](const QModelIndex &, const QModelIndex &, const QList<int> &roles) {
-        static const QList<int> rel = {TaskManager::AbstractTasksModel::IsActive,
-                                       TaskManager::AbstractTasksModel::IsMaximized,
-                                       TaskManager::AbstractTasksModel::IsFullScreen};
-        if (roles.isEmpty())
-            m_evaluateTimer.start();
-        else
-            for (int r : roles)
-                if (rel.contains(r)) {
-                    m_evaluateTimer.start();
-                    break;
-                }
+    connect(m_overlapModel, &QAbstractItemModel::dataChanged, this, [this](const QModelIndex &, const QModelIndex &, const QList<int> &) {
+        // We no longer filter by specific roles. If ANY property of a window changes
+        // (especially its geometry while dragging), we trigger an evaluation.
+        m_evaluateTimer.start();
     });
 }
 
