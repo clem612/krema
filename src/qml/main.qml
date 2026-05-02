@@ -741,17 +741,17 @@ Item {
            property bool isEditMode: typeof DockVisibility !== "undefined" && DockVisibility.liveEditMode
 
 	   // For Vertical Docks: Thickness logic
-        width: {
+	   width: {
             if (!DockView.isVertical) return _actualContentWidth;
-            // Slave the thickness to the ACTUAL width of the icons + dots
-            return Math.max(10, dockRow.animatedContentWidth + 12);
+            // The slider now sets the base, but it still grows with icons
+            return Math.min(DockSettings.panelHeight, dockRow.animatedContentWidth + 12);
         }
 
         // For Horizontal Docks: Thickness logic
-        height: {
+	height: {
             if (DockView.isVertical) return _actualContentHeight;
-            // Slave the thickness to the ACTUAL height of the icons + dots
-            return Math.max(10, dockRow.animatedContentHeight + 12);
+            // Combines the user's thickness preference with the icon's dynamic height
+            return Math.min(DockSettings.panelHeight, dockRow.animatedContentHeight + 12);
         }
            
            // CORNERS

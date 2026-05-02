@@ -68,7 +68,7 @@ FormCard.FormCardPage {
 
        FormCard.FormSpinBoxDelegate {
            label: i18n("Panel thickness")
-           from: 10; to: 74; stepSize: 2
+	   from: 10; to: DockSettings.iconSize + 24; stepSize: 2
            value: DockSettings.panelHeight
            onValueChanged: {
                DockSettings.panelHeight = value
