@@ -740,28 +740,18 @@ Item {
            // Create a local alias for Edit Mode that won't crash on startup
            property bool isEditMode: typeof DockVisibility !== "undefined" && DockVisibility.liveEditMode
 
-	   // For Horizontal Docks: Length of all icons.
-        // For Vertical Docks: Thickness logic
+	   // For Vertical Docks: Thickness logic
         width: {
             if (!DockView.isVertical) return _actualContentWidth;
-            
-            let requestedSize = DockSettings.panelHeight;
-            // FIXED: Base the ceiling on the actual physical row, not just the icon!
-            let centeredCeiling = dockRow.animatedContentWidth + 12; 
-            
-            return Math.max(10, Math.min(requestedSize, centeredCeiling));
+            // Slave the thickness to the ACTUAL width of the icons + dots
+            return Math.max(10, dockRow.animatedContentWidth + 12);
         }
 
-        // For Vertical Docks: Length of all icons.
         // For Horizontal Docks: Thickness logic
         height: {
             if (DockView.isVertical) return _actualContentHeight;
-            
-            let requestedSize = DockSettings.panelHeight;
-            // FIXED: Base the ceiling on the actual physical row, not just the icon!
-            let centeredCeiling = dockRow.animatedContentHeight + 12; 
-            
-            return Math.max(10, Math.min(requestedSize, centeredCeiling));
+            // Slave the thickness to the ACTUAL height of the icons + dots
+            return Math.max(10, dockRow.animatedContentHeight + 12);
         }
            
            // CORNERS
@@ -883,19 +873,27 @@ Item {
     DockVisibility.setZoomOverflowHeight(maxReach);
 }
 
-               // Trigger the update whenever the panel moves or resizes
-               onXChanged: updateWaylandInputRegion()
-               onYChanged: updateWaylandInputRegion()
-               onWidthChanged: updateWaylandInputRegion()
-               onHeightChanged: updateWaylandInputRegion()
+// Trigger the update AND our debug print whenever the panel moves
+                onXChanged: { updateWaylandInputRegion(); printGeometry(); }
+                onYChanged: { updateWaylandInputRegion(); printGeometry(); }
+                onWidthChanged: { updateWaylandInputRegion(); printGeometry(); }
+                onHeightChanged: { updateWaylandInputRegion(); printGeometry(); }
+
+        function printGeometry() {
+            console.warn("\n=== 📡 DOCK MOVED 📡 ===");
+            console.warn("Edge:            " + DockView.edge);
+            console.warn("Is Vertical:     " + DockView.isVertical);
+            console.warn("Panel Size:      " + dockPanel.width + " x " + dockPanel.height);
+            console.warn("Panel Pos:       X: " + dockPanel.x + " | Y: " + dockPanel.y);
+            console.warn("Icon Row Size:   " + dockRow.width + " x " + dockRow.height);
+            console.warn("Icon Row Pos:    X: " + dockRow.x + " | Y: " + dockRow.y);
+            console.warn("========================\n");
+        }
 
 	    // Main icon layout (Flow switches between horizontal/vertical)
             Flow {
                 id: dockRow
 		z: 2
-		anchors.bottom: parent.bottom
-		anchors.bottomMargin: 6
-		anchors.horizontalCenter: parent.horizontalCenter
                 flow: DockView.isVertical ? Flow.TopToBottom : Flow.LeftToRight
                 spacing: DockSettings.iconSpacing
                 
@@ -921,30 +919,16 @@ Item {
                     }
                 }
                 
-                // ANCHOR TO THE GROUND
-		x: {
-                    if (DockView.isVertical) {
-                        // Edge 2 = Left of screen, Edge 3 = Right of screen
-                        // We add our 3px cushion to the "ground" edge
-                        return DockView.edge === 2 
-                               ? 3 
-                               : (dockPanel.width - animatedContentWidth - 3)
-                    }
-                    // For horizontal docks, keep them centered horizontally
-                    return (dockPanel.width - animatedContentWidth) / 2
-                }
-                
-		y: {
-                    if (!DockView.isVertical) {
-                        // Edge 0 = Top of screen, Edge 1 = Bottom of screen
-                        // We add 3px of padding to the respective edge.
-                        return DockView.edge === 0 
-                               ? 3 
-                               : (dockPanel.height - animatedContentHeight - 3)
-                    }
-                    // For vertical docks, keep them centered
-                    return (dockPanel.height - animatedContentHeight) / 2
-                }
+		// DYNAMIC GROUNDING (No more buckets)
+               x: (dockPanel.width - animatedContentWidth) / 2
+               y: {
+                   // If bottom-aligned (Edge 1), stick to the bottom with 6px gap
+                   if (DockView.edge === 1) return dockPanel.height - animatedContentHeight - 6;
+                   // If top-aligned (Edge 0), stick to top with 6px gap
+                   if (DockView.edge === 0) return 6;
+                   // Default: Center it
+                   return (dockPanel.height - animatedContentHeight) / 2;
+               }
 
             // Animate existing items displaced by add/remove within the Flow.
             // Disabled during hover zoom (mouseInside) to avoid lagging sibling

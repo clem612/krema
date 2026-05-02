@@ -43,7 +43,7 @@ void DockView::initialize(TaskManager::TasksModel *tasksModel,
     m_platform->setEdge(edge);
     m_edge = edge;
 
-    m_visibilityController = new DockVisibilityController(m_platform.get(), m_settings, tasksModel, virtualDesktopInfo, activityInfo, this, this);
+    m_visibilityController = new DockVisibilityController(m_platform.get(), tasksModel, virtualDesktopInfo, activityInfo, this, this);
     m_visibilityController->setMode(visibilityMode);
 
     m_iconProvider = new TaskIconProvider(m_settings->iconNormalization());
