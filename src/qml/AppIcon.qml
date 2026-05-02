@@ -417,20 +417,34 @@ Item {
     }
 
     // Application icon
-        Kirigami.Icon {
+    Item {
             id: iconImage
             // Anchors set via states below (iconAnchorStates)
             width: iconSize
             height: iconSize
             
-            source: {
-                // IMPORTANT: Read model.display to create a reactive dependency on
-                // model data. After model reordering (move), the Repeater may update
-                // delegate model data without changing index (position unchanged).
-                // Without this, the binding only tracks dockItem.index and won't
-                // re-evaluate when different data appears at the same position.
-                let _dep = model.display
-                return DockModel.iconData(dockItem.index)
+            // Expose the "valid" state so the rest of the UI doesn't crash
+            property bool valid: internalIcon.valid
+            
+            Kirigami.Icon {
+                id: internalIcon
+                width: 128
+                height: 128
+                anchors.centerIn: parent
+                
+                // The Squeeze: mathematically shrink the 128px drawing
+                scale: iconSize / 128
+                smooth: true
+                
+                source: {
+                    // IMPORTANT: Read model.display to create a reactive dependency on
+                    // model data. After model reordering (move), the Repeater may update
+                    // delegate model data without changing index (position unchanged).
+                    // Without this, the binding only tracks dockItem.index and won't
+                    // re-evaluate when different data appears at the same position.
+                    let _dep = model.display
+                    return DockModel.iconData(dockItem.index)
+                }
             }
 
             // Transforms: launch bounce + attention animations

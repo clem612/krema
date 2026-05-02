@@ -653,8 +653,8 @@ Item {
               property real screenH: Screen.height
               property bool isVert: DockSettings.edge === 2 || DockSettings.edge === 3
               
-              width: isVert ? (screenW / 4) - 90 : parent.width
-              height: isVert ? parent.height : (screenH / 4) - 90
+	      width: isVert ? 180 : parent.width
+              height: isVert ? parent.height : 180
               
               x: DockSettings.edge === 3 ? parent.width - width : 0
               y: DockSettings.edge === 1 ? parent.height - height : 0
@@ -665,7 +665,7 @@ Item {
            Rectangle {
                 id: blueprintBg
                 anchors.fill: parent
-                color: "#990A2540" 
+		color: "transparent"
                 radius: 0
                 border.color: Qt.rgba(1, 1, 1, 0.3)
                 border.width: 1
@@ -681,30 +681,54 @@ Item {
                     onWidthChanged: { canvasSize = Qt.size(width, height); requestPaint() }
                     onHeightChanged: { canvasSize = Qt.size(width, height); requestPaint() }
                     
-                    onPaint: {
-                        var ctx = getContext("2d");
-                        ctx.clearRect(0, 0, width, height);
-                        
-                        ctx.strokeStyle = "white";
-                        ctx.lineWidth = 1;
-                        ctx.setLineDash([4, 4]);
-                        ctx.beginPath();
-                        
-                        let gridSize = 20;
-                        let offsetX = (width / 2) % gridSize;
-                        let offsetY = (height / 2) % gridSize;
+		    onPaint: {
+    var ctx = getContext("2d");
+    
+    // 1. Clear the canvas completely so it's 100% transparent glass
+    ctx.clearRect(0, 0, width, height);
 
-                        // Draw across the entire surface with extra padding to ensure no gaps
-                        for (let x = offsetX - gridSize; x <= width + gridSize; x += gridSize) { 
-                            ctx.moveTo(Math.floor(x) + 0.5, 0); 
-                            ctx.lineTo(Math.floor(x) + 0.5, height); 
-                        }
-                        for (let y = offsetY - gridSize; y <= height + gridSize; y += gridSize) { 
-                            ctx.moveTo(0, Math.floor(y) + 0.5); 
-                            ctx.lineTo(width, Math.floor(y) + 0.5); 
-                        }
-                        ctx.stroke();
-                    }
+    // 2. Define the Blueprint Proportions
+    let minorSize = 10; // Small background squares
+    let majorSize = 50; // Large framing squares (5 minor squares inside)
+
+    // Start drawing from the center so the grid is perfectly symmetrical
+    let centerX = width / 2;
+    let centerY = height / 2;
+
+    // ==========================================
+    // LAYER 1: THE MINOR GRID (Faint & Thin)
+    // ==========================================
+    ctx.beginPath();
+    ctx.lineWidth = 0.5; // Very thin
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.15)"; // Pure white, 15% opacity
+    
+    for (let x = centerX % minorSize; x <= width; x += minorSize) {
+        ctx.moveTo(Math.floor(x) + 0.5, 0);
+        ctx.lineTo(Math.floor(x) + 0.5, height);
+    }
+    for (let y = centerY % minorSize; y <= height; y += minorSize) {
+        ctx.moveTo(0, Math.floor(y) + 0.5);
+        ctx.lineTo(width, Math.floor(y) + 0.5);
+    }
+    ctx.stroke();
+
+    // ==========================================
+    // LAYER 2: THE MAJOR GRID (Bolder & Wider)
+    // ==========================================
+    ctx.beginPath();
+    ctx.lineWidth = 1.0; // Slightly thicker
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.40)"; // Pure white, 40% opacity
+    
+    for (let x = centerX % majorSize; x <= width; x += majorSize) {
+        ctx.moveTo(Math.floor(x) + 0.5, 0);
+        ctx.lineTo(Math.floor(x) + 0.5, height);
+    }
+    for (let y = centerY % majorSize; y <= height; y += majorSize) {
+        ctx.moveTo(0, Math.floor(y) + 0.5);
+        ctx.lineTo(width, Math.floor(y) + 0.5);
+    }
+    ctx.stroke();
+}
                 }
            }
        }
@@ -716,63 +740,69 @@ Item {
            // Create a local alias for Edit Mode that won't crash on startup
            property bool isEditMode: typeof DockVisibility !== "undefined" && DockVisibility.liveEditMode
 
-	   // For Horizontal Docks: Width is the length of all icons.
-           // For Vertical Docks: Width is the "Thickness" (Sandwich Math).
-           width: {
-               if (!DockView.isVertical) return _actualContentWidth;
-    
-               let centerLockWidth = dockRow.animatedContentWidth + 6;
-               return Math.min(DockSettings.panelHeight, centerLockWidth);
-           }
+	   // For Horizontal Docks: Length of all icons.
+        // For Vertical Docks: Thickness logic
+        width: {
+            if (!DockView.isVertical) return _actualContentWidth;
+            
+            let requestedSize = DockSettings.panelHeight;
+            // FIXED: Base the ceiling on the actual physical row, not just the icon!
+            let centeredCeiling = dockRow.animatedContentWidth + 12; 
+            
+            return Math.max(10, Math.min(requestedSize, centeredCeiling));
+        }
 
-           // For Vertical Docks: Height is the length of all icons.
-           // For Horizontal Docks: Height is the "Thickness" (Sandwich Math).
-           height: {
-                if (DockView.isVertical) return _actualContentHeight;
-    
-                let centerLockHeight = dockRow.animatedContentHeight + 6;
-                return Math.min(DockSettings.panelHeight, centerLockHeight);
-           }
+        // For Vertical Docks: Length of all icons.
+        // For Horizontal Docks: Thickness logic
+        height: {
+            if (DockView.isVertical) return _actualContentHeight;
+            
+            let requestedSize = DockSettings.panelHeight;
+            // FIXED: Base the ceiling on the actual physical row, not just the icon!
+            let centeredCeiling = dockRow.animatedContentHeight + 12; 
+            
+            return Math.max(10, Math.min(requestedSize, centeredCeiling));
+        }
            
            // CORNERS
            radius: DockSettings.cornerRadius
 
-           // COLOR: Fade during edit mode
-           color: isEditMode
-                  ? Qt.rgba(DockView.backgroundColor.r, DockView.backgroundColor.g, DockView.backgroundColor.b, 0.4) 
-                  : (DockView.backgroundStyleType === 3 ? "transparent" : DockView.backgroundColor)
+	   // COLOR: Hardcoded to transparent for the Blueprint look.
+	   color: "transparent"
 
            // POSITIONING: Grow Upwards
            x: DockView.isVertical ? _panelEdgePos : (parent.width - width) / 2
            y: DockView.isVertical ? (parent.height - height) / 2 : _panelEdgePos
 
            property real _panelEdgePos: {
-               let fp = DockView.floatingPadding
-               let sp = Kirigami.Units.largeSpacing
-               
-               // Safety check
-               if (typeof DockVisibility === "undefined") return 0;
+              let fp = DockView.floatingPadding
+              let sp = Kirigami.Units.largeSpacing
+              
+              // This is the new setting you created!
+              let peekSize = DockSettings.hidePeekSize 
+              
+              if (typeof DockVisibility === "undefined") return 0;
 
-               switch (DockView.edge) {
-               case 0: // Top
-                   return DockVisibility.dockVisible ? fp : -height - sp
-               case 1: // Bottom: Grow UPwards
-                   return DockVisibility.dockVisible ? (parent.height - height - fp) : (parent.height + sp)
-               case 2: // Left
-                   return DockVisibility.dockVisible ? fp : -width - sp
-               case 3: // Right
-                   return DockVisibility.dockVisible ? (parent.width - width - fp) : (parent.width + sp)
-               }
-               return 0
-           }
+              switch (DockView.edge) {
+              case 0: // Top
+                  return DockVisibility.dockVisible ? fp : -(height - peekSize)
+              case 1: // Bottom
+                  return DockVisibility.dockVisible ? (parent.height - height - fp) : (parent.height - peekSize)
+              case 2: // Left
+                  return DockVisibility.dockVisible ? fp : -(width - peekSize)
+              case 3: // Right
+                  return DockVisibility.dockVisible ? (parent.width - width - fp) : (parent.width - peekSize)
+              }
+              return 0
+          }
 
         // Acrylic overlay: tint + noise via GPU shader, composited over KWin blur.
         // Shader handles rounded corners via SDF mask — no clip wrapper needed.
         ShaderEffect {
             anchors.fill: parent
             z: 0
-            visible: DockView.backgroundStyleType === 3
-            property real tintR: DockView.backgroundColor.r
+	    visible: false
+	    property real tintR: DockView.backgroundColor.r
             property real tintG: DockView.backgroundColor.g
             property real tintB: DockView.backgroundColor.b
             property real tintOpacity: DockView.backgroundColor.a
@@ -840,18 +870,18 @@ Item {
 
 	    // This function calculates the "Ghost" area for the OS
 	    function updateWaylandInputRegion() {
-               if (typeof DockVisibility === "undefined") return;
-               
-               // Tell OS where the blur goes
-               DockVisibility.setPanelRect(x, y, width, height);
-               
-               // Tell OS where the mouse works (2.5x icon size)
-               let maxReach = DockSettings.iconSize * 2.5;
-               
-               // Even though the C++ function name says "Height," the backend 
-               // uses this number as the "depth" away from the screen edge.
-               DockVisibility.setZoomOverflowHeight(maxReach);
-           }
+    if (typeof DockVisibility === "undefined") return;
+    
+    // Tell OS where the blur goes
+    DockVisibility.setPanelRect(x, y, width, height);
+    
+    // Tell OS where the mouse works (2.5x icon size)
+    let maxReach = DockSettings.iconSize * 2.5;
+    
+    // Even though the C++ function name says "Height," the backend 
+    // uses this number as the "depth" away from the screen edge.
+    DockVisibility.setZoomOverflowHeight(maxReach);
+}
 
                // Trigger the update whenever the panel moves or resizes
                onXChanged: updateWaylandInputRegion()
@@ -863,6 +893,9 @@ Item {
             Flow {
                 id: dockRow
 		z: 2
+		anchors.bottom: parent.bottom
+		anchors.bottomMargin: 6
+		anchors.horizontalCenter: parent.horizontalCenter
                 flow: DockView.isVertical ? Flow.TopToBottom : Flow.LeftToRight
                 spacing: DockSettings.iconSpacing
                 

@@ -43,7 +43,7 @@ void DockView::initialize(TaskManager::TasksModel *tasksModel,
     m_platform->setEdge(edge);
     m_edge = edge;
 
-    m_visibilityController = new DockVisibilityController(m_platform.get(), tasksModel, virtualDesktopInfo, activityInfo, this, this);
+    m_visibilityController = new DockVisibilityController(m_platform.get(), m_settings, tasksModel, virtualDesktopInfo, activityInfo, this, this);
     m_visibilityController->setMode(visibilityMode);
 
     m_iconProvider = new TaskIconProvider(m_settings->iconNormalization());
@@ -99,7 +99,10 @@ void DockView::updateSize()
 {
     const int iconSize = m_screenSettings ? m_screenSettings->iconSize() : m_settings->iconSize();
     const double maxZoom = m_screenSettings ? m_screenSettings->maxZoomFactor() : m_settings->maxZoomFactor();
-    const int userH = (m_screenSettings ? m_screenSettings->panelHeight() : m_settings->panelHeight());
+
+    const int baseIconSize = 48;
+    const int userH = iconSize + ((m_screenSettings ? m_screenSettings->panelHeight() : m_settings->panelHeight()) - baseIconSize);
+
     const int maxZoomExt = static_cast<int>(iconSize * (maxZoom - 1.0)) + 10;
 
     const QRect screenGeo = screen() ? screen()->geometry() : QRect();
@@ -135,29 +138,14 @@ void DockView::applyBackgroundStyle()
     auto type = static_cast<BackgroundStyleType>(m_settings->backgroundStyle());
     QRegion visualRegion;
 
-    if (m_visibilityController && m_visibilityController->liveEditMode()) {
-        const QRect screenGeo = screen() ? screen()->geometry() : QRect();
-        int currentEdge = edge(); // 0=Top, 1=Bottom, 2=Left, 3=Right
-
-        if (isVertical()) {
-            int trayWidth = (screenGeo.width() / 4) - 90;
-            if (currentEdge == 2) { // Left Edge
-                visualRegion += QRect(0, 0, trayWidth, height());
-            } else { // Right Edge
-                visualRegion += QRect(width() - trayWidth, 0, trayWidth, height());
-            }
-        } else {
-            int trayHeight = (screenGeo.height() / 4) - 90;
-            if (currentEdge == 0) { // Top Edge
-                visualRegion += QRect(0, 0, width(), trayHeight);
-            } else { // Bottom Edge
-                visualRegion += QRect(0, height() - trayHeight, width(), trayHeight);
-            }
-        }
-    } else if (m_visibilityController) {
+    // ... inside DockView::applyBackgroundStyle() ...
+    if (m_visibilityController) {
+        // We ALWAYS want to apply the background style to the dock panel,
+        // even when the blueprint grid is visible in Edit Mode.
         const QRect panel = m_visibilityController->panelRect();
-        if (panel.width() > 0)
+        if (panel.isValid()) {
             visualRegion += panel;
+        }
     }
 
     applyBackgroundToWindow(this, type, visualRegion);
