@@ -128,10 +128,8 @@ void DockShell::connectSettingsSignals()
     // and naturally clips at surface boundaries (QML ShaderEffect computes its own margin)
 
     // Background style changes — per-screen overrideable: backgroundOpacity, backgroundStyle, cornerRadius
-    connect(ss, &ScreenSettings::backgroundOpacityChanged, m_view.get(), &DockView::applyBackgroundStyle);
-    connect(ss, &ScreenSettings::backgroundStyleChanged, m_view.get(), &DockView::applyBackgroundStyle);
-    // Tint/accent/system colors are global-only (not per-screen overrideable)
-    connect(s, &KremaSettings::TintColorChanged, m_view.get(), &DockView::applyBackgroundStyle);
+    connect(s, &KremaSettings::configChanged, m_view.get(), &DockView::applyBackgroundStyle);
+    connect(s, &KremaSettings::configChanged, this, []() { /* Saved via Application */ });
     connect(s, &KremaSettings::UseAccentColorChanged, m_view.get(), &DockView::applyBackgroundStyle);
     connect(s, &KremaSettings::UseSystemColorChanged, m_view.get(), &DockView::applyBackgroundStyle);
 

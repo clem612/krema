@@ -56,7 +56,7 @@ FormCard.FormCardPage {
                QQC2.Label { Layout.fillWidth: true; text: i18n("Tint color") }
                Rectangle {
                    width: 40; height: 24; radius: 4
-                   color: DockSettings.tintColor
+		   color: DockSettings.tintColor
                    border.color: Kirigami.Theme.disabledTextColor
                    MouseArea { anchors.fill: parent; onClicked: colorDialog.open() }
                }
@@ -69,9 +69,9 @@ FormCard.FormCardPage {
        FormCard.FormSpinBoxDelegate {
            label: i18n("Panel thickness")
 	   from: 10; to: DockSettings.iconSize + 24; stepSize: 2
-           value: DockSettings.panelHeight
-           onValueChanged: {
-               DockSettings.panelHeight = value
+	   value: DockSettings.panelHeight
+              onValueChanged: {
+                  DockSettings.panelHeight = value
                DockSettings.save()
            }
        }
@@ -81,17 +81,17 @@ FormCard.FormCardPage {
        FormCard.FormSpinBoxDelegate {
            label: i18n("Corner radius")
            from: 0; to: 24
-           value: DockSettings.cornerRadius
+	   value: DockSettings.cornerRadius
            onValueChanged: DockSettings.cornerRadius = value
        }
 
        FormCard.FormDelegateSeparator {}
 
        FormCard.FormSwitchDelegate {
-           text: i18n("Floating")
+           text: i18n("floating")
            checked: DockSettings.floating
            onToggled: DockSettings.floating = checked
        }
    }
-   ColorDialog { id: colorDialog; title: i18n("Choose tint color"); selectedColor: DockSettings.tintColor; onAccepted: DockSettings.tintColor = selectedColor }
+   ColorDialog { id: colorDialog; title: i18n("Choose tint color"); selectedColor: DockSettings.tintColor; onAccepted: { DockSettings.tintColor = selectedColor.toString(); DockSettings.save() } }
 }

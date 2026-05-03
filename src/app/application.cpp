@@ -121,37 +121,9 @@ int Application::run()
     auto saveSettings = [this]() {
         m_settings->save();
     };
-    connect(s, &KremaSettings::IconSizeChanged, this, saveSettings);
-    connect(s, &KremaSettings::IconSpacingChanged, this, saveSettings);
-    connect(s, &KremaSettings::MaxZoomFactorChanged, this, saveSettings);
-    connect(s, &KremaSettings::CornerRadiusChanged, this, saveSettings);
-    connect(s, &KremaSettings::FloatingChanged, this, saveSettings);
-    connect(s, &KremaSettings::BackgroundOpacityChanged, this, saveSettings);
-    connect(s, &KremaSettings::BackgroundStyleChanged, this, saveSettings);
-    connect(s, &KremaSettings::TintColorChanged, this, saveSettings);
-    connect(s, &KremaSettings::VisibilityModeChanged, this, saveSettings);
-    connect(s, &KremaSettings::EdgeChanged, this, saveSettings);
-    connect(s, &KremaSettings::ShowDelayChanged, this, saveSettings);
-    connect(s, &KremaSettings::HideDelayChanged, this, saveSettings);
-    connect(s, &KremaSettings::PreviewEnabledChanged, this, saveSettings);
-    connect(s, &KremaSettings::PreviewThumbnailSizeChanged, this, saveSettings);
-    connect(s, &KremaSettings::PreviewHoverDelayChanged, this, saveSettings);
-    connect(s, &KremaSettings::PreviewHideDelayChanged, this, saveSettings);
-    connect(s, &KremaSettings::ShadowEnabledChanged, this, saveSettings);
-    connect(s, &KremaSettings::ShadowLightXChanged, this, saveSettings);
-    connect(s, &KremaSettings::ShadowLightYChanged, this, saveSettings);
-    connect(s, &KremaSettings::ShadowLightZChanged, this, saveSettings);
-    connect(s, &KremaSettings::ShadowLightRadiusChanged, this, saveSettings);
-    connect(s, &KremaSettings::ShadowColorChanged, this, saveSettings);
-    connect(s, &KremaSettings::ShadowIntensityChanged, this, saveSettings);
-    connect(s, &KremaSettings::ShadowElevationChanged, this, saveSettings);
-    connect(s, &KremaSettings::IconNormalizationChanged, this, saveSettings);
-    connect(s, &KremaSettings::AttentionAnimationChanged, this, saveSettings);
-    connect(s, &KremaSettings::VirtualDesktopModeChanged, this, saveSettings);
-    connect(s, &KremaSettings::OtherDesktopOpacityChanged, this, saveSettings);
-    connect(s, &KremaSettings::MonitorModeChanged, this, saveSettings);
-    connect(s, &KremaSettings::FollowActiveTriggerChanged, this, saveSettings);
-    connect(s, &KremaSettings::ScreenTransitionChanged, this, saveSettings);
+    connect(s, &KremaSettings::configChanged, this, [s]() {
+        s->save();
+    });
 
     // Virtual desktop mode change
     connect(s, &KremaSettings::VirtualDesktopModeChanged, this, [this]() {

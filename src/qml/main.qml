@@ -688,68 +688,64 @@ Item {
                 border.width: 1
                 clip: true 
 
-                Canvas {
-                    id: blueprintCanvas
-                    anchors.fill: parent
-                    opacity: 0.4
-                    
-                    // THIS FIXES THE INCOMPLETE GRID:
-                    // Synchronize the internal drawing buffer with the actual size
-                    onWidthChanged: { canvasSize = Qt.size(width, height); requestPaint() }
-                    onHeightChanged: { canvasSize = Qt.size(width, height); requestPaint() }
-                    
-		    onPaint: {
-    var ctx = getContext("2d");
-    
-    // 1. Clear the canvas completely so it's 100% transparent glass
-    ctx.clearRect(0, 0, width, height);
+		Canvas {
+                   id: blueprintCanvas
+                   anchors.fill: parent
+                   opacity: 0.4
+                   
+                   // Synchronize the internal drawing buffer with the actual size
+                   onWidthChanged: { canvasSize = Qt.size(width, height); requestPaint() }
+                   onHeightChanged: { canvasSize = Qt.size(width, height); requestPaint() }
+                   
+                   onPaint: {
+                       var ctx = getContext("2d");
+                       
+                       // 1. Clear the canvas completely so it's 100% transparent glass
+                       ctx.clearRect(0, 0, width, height);
 
-    // 2. Define the Blueprint Proportions
-    let minorSize = 10; // Small background squares
-    let majorSize = 50; // Large framing squares (5 minor squares inside)
+                       // 2. Define the Blueprint Proportions
+                       let minorSize = 10; // Small background squares
+                       let majorSize = 50; // Large framing squares
+                       let centerX = width / 2;
+                       let centerY = height / 2;
 
-    // Start drawing from the center so the grid is perfectly symmetrical
-    let centerX = width / 2;
-    let centerY = height / 2;
+                       // ==========================================
+                       // LAYER 1: THE MINOR GRID (Faint & Thin)
+                       // ==========================================
+                       ctx.beginPath();
+                       ctx.lineWidth = 0.5;
+                       ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
+                       
+                       for (let x = centerX % minorSize; x <= width; x += minorSize) {
+                           ctx.moveTo(Math.floor(x) + 0.5, 0);
+                           ctx.lineTo(Math.floor(x) + 0.5, height);
+                       }
+                       for (let y = centerY % minorSize; y <= height; y += minorSize) {
+                           ctx.moveTo(0, Math.floor(y) + 0.5);
+                           ctx.lineTo(width, Math.floor(y) + 0.5);
+                       }
+                       ctx.stroke();
 
-    // ==========================================
-    // LAYER 1: THE MINOR GRID (Faint & Thin)
-    // ==========================================
-    ctx.beginPath();
-    ctx.lineWidth = 0.5; // Very thin
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.15)"; // Pure white, 15% opacity
-    
-    for (let x = centerX % minorSize; x <= width; x += minorSize) {
-        ctx.moveTo(Math.floor(x) + 0.5, 0);
-        ctx.lineTo(Math.floor(x) + 0.5, height);
-    }
-    for (let y = centerY % minorSize; y <= height; y += minorSize) {
-        ctx.moveTo(0, Math.floor(y) + 0.5);
-        ctx.lineTo(width, Math.floor(y) + 0.5);
-    }
-    ctx.stroke();
-
-    // ==========================================
-    // LAYER 2: THE MAJOR GRID (Bolder & Wider)
-    // ==========================================
-    ctx.beginPath();
-    ctx.lineWidth = 1.0; // Slightly thicker
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.40)"; // Pure white, 40% opacity
-    
-    for (let x = centerX % majorSize; x <= width; x += majorSize) {
-        ctx.moveTo(Math.floor(x) + 0.5, 0);
-        ctx.lineTo(Math.floor(x) + 0.5, height);
-    }
-    for (let y = centerY % majorSize; y <= height; y += majorSize) {
-        ctx.moveTo(0, Math.floor(y) + 0.5);
-        ctx.lineTo(width, Math.floor(y) + 0.5);
-    }
-    ctx.stroke();
-}
-                }
-           }
-       }
-
+                       // ==========================================
+                       // LAYER 2: THE MAJOR GRID (Bolder & Wider)
+                       // ==========================================
+                       ctx.beginPath();
+                       ctx.lineWidth = 1.0;
+                       ctx.strokeStyle = "rgba(255, 255, 255, 0.40)";
+                       
+                       for (let x = centerX % majorSize; x <= width; x += majorSize) {
+                           ctx.moveTo(Math.floor(x) + 0.5, 0);
+                           ctx.lineTo(Math.floor(x) + 0.5, height);
+                       }
+                       for (let y = centerY % majorSize; y <= height; y += majorSize) {
+                           ctx.moveTo(0, Math.floor(y) + 0.5);
+                           ctx.lineTo(width, Math.floor(y) + 0.5);
+                       }
+                       ctx.stroke();
+                   } 
+	   }
+   }
+   }
         // The visible dock panel (positioned per edge, fits content)
         Rectangle {
             id: dockPanel
@@ -775,9 +771,17 @@ Item {
            // CORNERS
            radius: DockSettings.cornerRadius
 
-	   color: {
-            let baseColor = (DockView.backgroundStyleType === 3) ? "transparent" : DockView.backgroundColor;
-            return Qt.rgba(baseColor.r, baseColor.g, baseColor.b, DockSettings.BackgroundOpacity);
+           color: {
+            let style = DockSettings.backgroundStyle;
+            let c;
+            if (style === 2) { 
+                c = DockSettings.useSystemColor ? DockView.backgroundColor : Qt.color(DockSettings.tintColor);
+            } else if (style === 0) {
+                c = DockView.backgroundColor;
+            } else {
+                return "transparent";
+            }
+            return Qt.rgba(c.r, c.g, c.b, DockSettings.backgroundOpacity);
         }
 
            // POSITIONING: Grow Upwards
@@ -808,20 +812,32 @@ Item {
 
         // Acrylic overlay: tint + noise via GPU shader, composited over KWin blur.
         // Shader handles rounded corners via SDF mask — no clip wrapper needed.
-        ShaderEffect {
-            anchors.fill: parent
-            z: 0
-	    visible: DockView.backgroundStyleType === 3
-	    property real tintR: DockView.backgroundColor.r
-            property real tintG: DockView.backgroundColor.g
-            property real tintB: DockView.backgroundColor.b
-            property real tintOpacity: DockView.backgroundColor.a
-            property real noiseStrength: 0.02
-            property real resX: width
-            property real resY: height
-            property real cornerRadius: dockPanel.radius
-            fragmentShader: "qrc:/qml/shaders/acrylic_overlay.frag.qsb"
-        }
+	// Acrylic overlay: tint + noise via GPU shader
+       ShaderEffect {
+           id: acrylicShader
+           anchors.fill: parent
+           z: 0
+           visible: DockSettings.backgroundStyle === 3
+
+           // 1. Define the tint color first (using camelCase)
+           property color _activeTint: {
+               if (DockSettings.backgroundStyle === 3) {
+                   return DockSettings.useSystemColor ? DockView.backgroundColor : Qt.color(DockSettings.tintColor);
+               }
+               return DockView.backgroundColor;
+           }
+
+           // 2. Now it's safe to reference _activeTint
+           property real tintR: _activeTint.r
+           property real tintG: _activeTint.g
+           property real tintB: _activeTint.b
+           property real tintOpacity: DockView.backgroundColor.a
+           property real noiseStrength: 0.02
+           property real resX: width
+           property real resY: height
+           property real cornerRadius: dockPanel.radius
+           fragmentShader: "qrc:/qml/shaders/acrylic_overlay.frag.qsb"
+       }
 
         // Delay enabling animations until after initial layout to avoid startup flicker
         property bool animationsReady: false
