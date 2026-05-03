@@ -775,8 +775,10 @@ Item {
            // CORNERS
            radius: DockSettings.cornerRadius
 
-	   // COLOR: Hardcoded to transparent for the Blueprint look.
-	   color: "transparent"
+	   color: {
+            let baseColor = (DockView.backgroundStyleType === 3) ? "transparent" : DockView.backgroundColor;
+            return Qt.rgba(baseColor.r, baseColor.g, baseColor.b, DockSettings.BackgroundOpacity);
+        }
 
            // POSITIONING: Grow Upwards
            x: DockView.isVertical ? _panelEdgePos : (parent.width - width) / 2
@@ -809,7 +811,7 @@ Item {
         ShaderEffect {
             anchors.fill: parent
             z: 0
-	    visible: false
+	    visible: DockView.backgroundStyleType === 3
 	    property real tintR: DockView.backgroundColor.r
             property real tintG: DockView.backgroundColor.g
             property real tintB: DockView.backgroundColor.b
@@ -858,7 +860,7 @@ Item {
         }
 
         // Fade animation
-        opacity: DockVisibility.dockVisible ? 1.0 : 0.0
+	opacity: DockVisibility.dockVisible ? 1.0 : 0.0
 
         Behavior on opacity {
             NumberAnimation { duration: Kirigami.Units.longDuration }
@@ -881,7 +883,7 @@ Item {
     if (typeof DockVisibility === "undefined") return;
     
     // Tell OS where the blur goes
-    DockVisibility.setPanelRect(x, y, width, height);
+    DockVisibility.setPanelRect(dockPanel.x, dockPanel.y, dockPanel.width, dockPanel.height);
     
     // Tell OS where the mouse works (2.5x icon size)
     let maxReach = DockSettings.iconSize * 2.5;
