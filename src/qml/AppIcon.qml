@@ -931,9 +931,24 @@ Item {
             }
 
             Rectangle {
-                width: dockItem.model.IsActive ? 4 : 3
-                height: width
-                radius: width / 2
+		    // --- THE ACTIVE DASH LOGIC ---
+                // If the dock is horizontal, stretch width to 16px when active. Otherwise, 4px.
+                width: DockView.isVertical ? 4 : (dockItem.model.IsActive ? 16 : 4)
+                
+                // If the dock is vertical, stretch height to 16px when active. Otherwise, 4px.
+                height: DockView.isVertical ? (dockItem.model.IsActive ? 16 : 4) : 4
+                
+                // Keep the pill shape completely round at the ends
+                radius: 2
+                
+                // Smoothly animate the stretching effect
+                Behavior on width {
+                    NumberAnimation { duration: 250; easing.type: Easing.OutBack }
+                }
+                Behavior on height {
+                    NumberAnimation { duration: 250; easing.type: Easing.OutBack }
+                }
+                // -----------------------------
                 color: (dockItem._showAttentionAnim && dockItem._attentionType === 5)
                        ? Kirigami.Theme.negativeTextColor
                        : Kirigami.Theme.textColor
