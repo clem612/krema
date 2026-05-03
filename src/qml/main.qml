@@ -535,6 +535,23 @@ Item {
 
         // Track mouse position for parabolic zoom + drag handling
 	onPositionChanged: function(mouse) {
+		// --- SOFTWARE FIREWALL FOR OVERGROWN HITBOX ---
+            let maxDockHeight = dockPanel.height + (DockSettings.iconSize * Math.max(0, DockSettings.maxZoomFactor - 1.0))
+            
+            if (mouse.y < (dockMouseArea.height - maxDockHeight)) {
+                if (!PreviewController.visible) {
+                    dockPanel.mouseX = -1
+                    dockPanel.mouseY = -1
+                    root._zoomActive = false
+                }
+                root.hoveredIndex = -1
+                root.hoveredName = ""
+                DockVisibility.setHovered(false)
+                return 
+            } else {
+                DockVisibility.setHovered(true)
+            }
+            // --- END FIREWALL ---
                if (root.keyboardNavigating) {
                    root.keyboardNavigating = false
                    DockVisibility.setKeyboardActive(false)
