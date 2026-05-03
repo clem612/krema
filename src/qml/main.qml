@@ -736,6 +736,7 @@ Item {
         // The visible dock panel (positioned per edge, fits content)
         Rectangle {
             id: dockPanel
+           visible: opacity > 0.01
 
            // Create a local alias for Edit Mode that won't crash on startup
            property bool isEditMode: typeof DockVisibility !== "undefined" && DockVisibility.liveEditMode
@@ -777,7 +778,7 @@ Item {
               case 0: // Top
                   return DockVisibility.dockVisible ? fp : -(height - peekSize)
               case 1: // Bottom
-                  return DockVisibility.dockVisible ? (parent.height - height - fp) : (parent.height - peekSize)
+                  return DockVisibility.dockVisible ? (parent.height - height - fp) : (parent.height + height)
               case 2: // Left
                   return DockVisibility.dockVisible ? fp : -(width - peekSize)
               case 3: // Right
