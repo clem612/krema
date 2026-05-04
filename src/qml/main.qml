@@ -874,7 +874,13 @@ Item {
            property real tintR: _activeTint.r
            property real tintG: _activeTint.g
            property real tintB: _activeTint.b
-           property real tintOpacity: DockView.backgroundColor.a
+	   property real tintOpacity: {
+                if (DockSettings.backgroundStyle === 3) {
+                    // The slider controls opacity no matter what color is picked!
+                    return DockSettings.backgroundOpacity; // (Add / 100.0 here if your slider uses 0-100)
+                }
+                return DockView.backgroundColor.a;
+            }
            property real noiseStrength: 0.02
            property real resX: width
            property real resY: height
