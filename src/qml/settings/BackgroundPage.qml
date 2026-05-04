@@ -11,52 +11,50 @@ import com.bhyoo.krema 1.0
 
 FormCard.FormCardPage {
     id: bgPage
-    title: i18n("Background & Panel")
+    title: i18n("Theme & Style")
 
+    // --- PILLAR 1: MATERIAL ---
+    FormCard.FormHeader { title: i18n("Base Material") }
     FormCard.FormCard {
         FormCard.FormComboBoxDelegate {
             id: styleCombo
             text: i18n("Style")
-            model: [i18n("Panel Inherit"), i18n("Transparent"), i18n("Tinted"), i18n("Acrylic")]
+            description: i18n("The primary texture of the dock background.")
+            // Cleaned up the confusing options. 
+            // 0 = Adaptive, 1 = Solid, 2 = Acrylic
+            model: [i18n("Adaptive (System Default)"), i18n("Solid Color"), i18n("Acrylic (Translucent)")]
             currentIndex: DockSettings.backgroundStyle
             onActivated: function(index) { DockSettings.backgroundStyle = index }
         }
+    }
 
-        FormCard.FormDelegateSeparator { visible: DockSettings.backgroundStyle !== 1 }
-
-        FormCard.AbstractFormDelegate {
-            visible: DockSettings.backgroundStyle !== 1
-            contentItem: ColumnLayout {
-                RowLayout {
-                    QQC2.Label { Layout.fillWidth: true; text: i18n("Opacity") }
-                    QQC2.Label { text: Math.round(opacitySlider.value * 100) + "%" }
-                }
-                QQC2.Slider {
-                    id: opacitySlider; Layout.fillWidth: true
-                    from: 0.0; to: 1.0; stepSize: 0.05
-                    value: DockSettings.backgroundOpacity
-                    onMoved: DockSettings.backgroundOpacity = value
-                }
-            }
-        }
-
-        FormCard.FormDelegateSeparator { visible: DockSettings.backgroundStyle === 2 }
-
+    // --- PILLAR 2: COLOR & OPACITY ---
+    // Now always visible so Opacity is available for all styles
+    FormCard.FormHeader { title: i18n("Color & Opacity") }
+    FormCard.FormCard {
+        
+        // Toggle for System Color Override (Hide if Adaptive)
         FormCard.FormSwitchDelegate {
-            visible: DockSettings.backgroundStyle === 2
-            text: i18n("Use system color")
+            visible: DockSettings.backgroundStyle > 0
+            text: i18n("Use System Accent Color")
+            description: i18n("Automatically match the dock to your current Plasma theme.")
             checked: DockSettings.useSystemColor
             onToggled: DockSettings.useSystemColor = checked
         }
 
-        FormCard.FormDelegateSeparator { visible: DockSettings.backgroundStyle === 2 && !DockSettings.useSystemColor }
+        FormCard.FormDelegateSeparator { 
+            visible: DockSettings.backgroundStyle > 0 && !DockSettings.useSystemColor 
+        }
 
+        // Custom Color Picker (Hide if Adaptive OR using System Color)
         FormCard.AbstractFormDelegate {
-            visible: DockSettings.backgroundStyle === 2 && !DockSettings.useSystemColor
+            visible: DockSettings.backgroundStyle > 0 && !DockSettings.useSystemColor
             contentItem: RowLayout {
-                QQC2.Label { Layout.fillWidth: true; text: i18n("Tint color") }
+                QQC2.Label { Layout.fillWidth: true; text: i18n("Custom Tint Color") }
                 Rectangle {
-                    width: 40; height: 24; radius: 4
+                    width: Kirigami.Units.gridUnit * 2
+                    height: Kirigami.Units.gridUnit * 1.2
+                    radius: Kirigami.Units.smallSpacing
                     color: DockSettings.tintColor
                     border.color: Kirigami.Theme.disabledTextColor
                     border.width: 1
@@ -68,22 +66,33 @@ FormCard.FormCardPage {
             }
         }
 
-        FormCard.FormDelegateSeparator {}
+        FormCard.FormDelegateSeparator { visible: DockSettings.backgroundStyle > 0 }
 
-        FormCard.FormSpinBoxDelegate {
-            label: i18n("Panel thickness")
-            from: 10; to: DockSettings.iconSize + 24; stepSize: 2
-            value: DockSettings.panelHeight
-            onValueChanged: {
-                DockSettings.panelHeight = value
-                DockSettings.save()
+        // Opacity Slider (ALWAYS VISIBLE)
+        FormCard.AbstractFormDelegate {
+            contentItem: ColumnLayout {
+                RowLayout {
+                    QQC2.Label { Layout.fillWidth: true; text: i18n("Background Opacity") }
+                    QQC2.Label { text: Math.round(opacitySlider.value * 100) + "%" }
+                }
+                QQC2.Slider {
+                    id: opacitySlider
+                    Layout.fillWidth: true
+                    from: 0.0; to: 1.0; stepSize: 0.05
+                    value: DockSettings.backgroundOpacity
+                    onMoved: DockSettings.backgroundOpacity = value
+                }
             }
         }
+    }
 
-        FormCard.FormDelegateSeparator {}
-
+    // --- PILLAR 3: GEOMETRY ---
+    // (Note: You might move this to a "Layout" page later, but for now it lives here)
+    FormCard.FormHeader { title: i18n("Geometry") }
+    FormCard.FormCard {
         FormCard.FormSpinBoxDelegate {
-            label: i18n("Corner radius")
+            label: i18n("Corner Radius")
+            description: i18n("How round the edges of the dock should be.")
             from: 0; to: 24
             value: DockSettings.cornerRadius
             onValueChanged: DockSettings.cornerRadius = value
@@ -91,14 +100,27 @@ FormCard.FormCardPage {
 
         FormCard.FormDelegateSeparator {}
 
+        FormCard.FormSpinBoxDelegate {
+            label: i18n("Panel Thickness")
+            from: 10; to: DockSettings.iconSize + 24; stepSize: 2
+            value: DockSettings.panelHeight
+            onValueChanged: {
+                DockSettings.panelHeight = value
+                DockSettings.save()
+            }
+        }
+        
+        FormCard.FormDelegateSeparator {}
+
         FormCard.FormSwitchDelegate {
-            text: i18n("floating")
+            text: i18n("Floating Dock")
+            description: i18n("Detach the dock from the screen edge.")
             checked: DockSettings.floating
             onToggled: DockSettings.floating = checked
         }
     }
 
-    // THE CUSTOM COLOR PICKER POPUP
+    // THE CUSTOM COLOR PICKER POPUP (Kept exactly as you had it)
     QQC2.Popup {
         id: colorPickerPopup
         parent: bgPage.Window.window ? bgPage.Window.window.contentItem : bgPage

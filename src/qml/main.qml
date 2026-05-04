@@ -814,18 +814,25 @@ Item {
            // CORNERS
            radius: DockSettings.cornerRadius
 
-           color: {
-            let style = DockSettings.backgroundStyle;
-            let c;
-            if (style === 2) { 
-                c = DockSettings.useSystemColor ? DockView.backgroundColor : Qt.color(DockSettings.tintColor);
-            } else if (style === 0) {
-                c = DockView.backgroundColor;
-            } else {
-                return "transparent";
+	   // BASE PANEL COLOR
+            color: {
+                let style = DockSettings.backgroundStyle;
+                let c = DockView.backgroundColor; // Default to Adaptive
+
+                // Style 2 is Acrylic. The base panel MUST be transparent so the shader can do its job.
+                if (style === 2) {
+                    return "transparent";
+                }
+                
+                // Style 1 is Solid Color.
+                if (style === 1) {
+                    // Check if the user toggled the "Use System Accent Color" override
+                    c = DockSettings.useSystemColor ? DockView.backgroundColor : Qt.color(DockSettings.tintColor);
+                }
+                
+                // For Style 0 (Adaptive) and Style 1 (Solid), apply the universal opacity slider
+                return Qt.rgba(c.r, c.g, c.b, DockSettings.backgroundOpacity);
             }
-            return Qt.rgba(c.r, c.g, c.b, DockSettings.backgroundOpacity);
-        }
 
            // POSITIONING: Grow Upwards
            x: DockView.isVertical ? _panelEdgePos : (parent.width - width) / 2
@@ -853,36 +860,38 @@ Item {
               return 0
           }
 
-        // Acrylic overlay: tint + noise via GPU shader, composited over KWin blur.
+
         // Shader handles rounded corners via SDF mask — no clip wrapper needed.
 	// Acrylic overlay: tint + noise via GPU shader
-       ShaderEffect {
-           id: acrylicShader
-           anchors.fill: parent
-           z: 0
-           visible: DockSettings.backgroundStyle === 3
+        ShaderEffect {
+            id: acrylicShader
+            anchors.fill: parent
+            z: 0
+            // UPDATE: 2 is our new Acrylic index!
+            visible: DockSettings.backgroundStyle === 2
 
-           // 1. Define the tint color first (using camelCase)
-           property color _activeTint: {
-               if (DockSettings.backgroundStyle === 3) {
-                   return DockSettings.useSystemColor ? DockView.backgroundColor : Qt.color(DockSettings.tintColor);
-               }
-               return DockView.backgroundColor;
-           }
-
-           // 2. Now it's safe to reference _activeTint
-           property real tintR: _activeTint.r
-           property real tintG: _activeTint.g
-           property real tintB: _activeTint.b
-	   property real tintOpacity: {
-                if (DockSettings.backgroundStyle === 3) {
-                    // The slider controls opacity no matter what color is picked!
-                    return DockSettings.backgroundOpacity; // (Add / 100.0 here if your slider uses 0-100)
+            // Define the base color and universally inject the custom opacity
+            property color _activeTint: {
+                let c = DockView.backgroundColor;
+                
+                // If Solid (1) or Acrylic (2) AND custom color is enabled
+                if (DockSettings.backgroundStyle > 0 && !DockSettings.useSystemColor) {
+                    c = Qt.color(DockSettings.tintColor);
                 }
-                return DockView.backgroundColor.a;
+                
+                // Return the color with our universal opacity slider applied
+                return Qt.rgba(c.r, c.g, c.b, DockSettings.backgroundOpacity);
             }
-           property real noiseStrength: 0.02
-           property real resX: width
+
+            property real tintR: _activeTint.r
+            property real tintG: _activeTint.g
+            property real tintB: _activeTint.b
+            
+            // We can just grab the alpha directly from _activeTint now!
+            property real tintOpacity: _activeTint.a
+            
+            property real noiseStrength: 0.02
+            property real resX: width
            property real resY: height
            property real cornerRadius: dockPanel.radius
            fragmentShader: "qrc:/qml/shaders/acrylic_overlay.frag.qsb"
