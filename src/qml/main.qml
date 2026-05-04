@@ -333,84 +333,91 @@ Item {
     }
 
     function updateHoveredItem() {
-           if (dockPanel.mouseX === -9999) {
-               hoveredIndex = -1
-               hoveredName = ""
-               _zoomActive = false
-               return
-           }
+         if (dockPanel.mouseX === -9999) {
+             hoveredIndex = -1
+             hoveredName = ""
+             _zoomActive = false
+             debugHitbox.visible = false
+             return
+         }
 
-           let mx = dockMouseArea.mouseX
-           let my = dockMouseArea.mouseY
-           let bestIndex = -1
-           let minDistance = Infinity
+         let mx = dockMouseArea.mouseX
+         let my = dockMouseArea.mouseY
+         let bestIndex = -1
 
-           for (let i = 0; i < dockRepeater.count; i++) {
-               let item = dockRepeater.itemAt(i)
-               if (!item) continue
+         // Variables to store the winners for the debug box
+         let finalPMin, finalPMax, finalSMin, finalSMax
 
-               let itemPos = item.mapToItem(dockMouseArea, 0, 0)
-               let halfSlot = (DockSettings.iconSize + DockSettings.iconSpacing) / 2
-               let visualSkin = DockSettings.iconSize * item.zoomFactor
+         for (let i = 0; i < dockRepeater.count; i++) {
+             let item = dockRepeater.itemAt(i)
+             if (!item) continue
 
-               let pMin, pMax, sMin, sMax, mouseP, centerP
+             let itemPos = item.mapToItem(dockMouseArea, 0, 0)
+             let visualSkin = DockSettings.iconSize * item.zoomFactor
+             let halfSlot = (visualSkin + DockSettings.iconSpacing) / 2
 
-               if (DockView.isVertical) {
-                   // --- VERTICAL (Left/Right) ---
-                   centerP = itemPos.y + (item.height / 2)
-                   pMin = centerP - halfSlot
-                   pMax = centerP + halfSlot
-                   mouseP = my
+             let pMin, pMax, sMin, sMax, mouseP, mouseS, centerP
 
-                   let sBase = (DockView.edge === 2) ? itemPos.x : (itemPos.x + item.width)
-                   if (DockView.edge === 2) { // LEFT
-                       sMin = sBase - 20
-                       sMax = sBase + visualSkin + 15
-                   } else { // RIGHT
-                       sMin = sBase - visualSkin - 15
-                       sMax = sBase + 20
-                   }
-               } else {
-                   // --- HORIZONTAL (Top/Bottom) ---
-                   centerP = itemPos.x + (item.width / 2)
-                   pMin = centerP - halfSlot
-                   pMax = centerP + halfSlot
-                   mouseP = mx
+             if (DockView.isVertical) {
+                 centerP = itemPos.y + (DockSettings.iconSize / 2)
+                 pMin = centerP - halfSlot
+                 pMax = centerP + halfSlot
+                 mouseP = my; mouseS = mx
+                 
+                 let sBase = (DockView.edge === 2) ? itemPos.x : (itemPos.x + item.width)
+                 if (DockView.edge === 2) { // LEFT
+                     sMin = sBase - 20; sMax = sBase + visualSkin + 15
+                 } else { // RIGHT
+                     sMin = sBase - visualSkin - 15; sMax = sBase + 20
+                 }
+             } else {
+                 centerP = itemPos.x + (DockSettings.iconSize / 2)
+                 pMin = centerP - halfSlot
+                 pMax = centerP + halfSlot
+                 mouseP = mx; mouseS = my
+                 
+                 let sBase = (DockView.edge === 1) ? (itemPos.y + item.height) : itemPos.y
+                 if (DockView.edge === 1) { // BOTTOM
+                     sMin = sBase - visualSkin - 15; sMax = sBase + 20
+                 } else { // TOP
+                     sMin = sBase - 20; sMax = sBase + visualSkin + 15
+                 }
+             }
 
-                   let sBase = (DockView.edge === 0) ? itemPos.y : (itemPos.y + item.height)
-                   if (DockView.edge === 0) { // TOP
-                       sMin = sBase - 20
-                       sMax = sBase + visualSkin + 15
-                   } else { // BOTTOM
-                       sMin = sBase - visualSkin - 15
-                       sMax = sBase + 20
-                   }
-               }
+             if (mouseP >= pMin && mouseP <= pMax && mouseS >= sMin && mouseS <= sMax) {
+                 bestIndex = i
+                 finalPMin = pMin; finalPMax = pMax
+                 finalSMin = sMin; finalSMax = sMax
+                 break
+             }
+         }
 
-               if (mouseP >= pMin && mouseP <= pMax) {
-                   let inDepth = (DockView.isVertical) ? (mx >= sMin && mx <= sMax) : (my >= sMin && my <= sMax)
-                   let dist = Math.abs(mouseP - centerP)
-                   if (inDepth && dist < minDistance) {
-                       bestIndex = i
-                       minDistance = dist
-                   }
-               }
-           }
+         if (bestIndex >= 0) {
+             _zoomActive = true
+             
+             // --- VISUAL DEBUG ---
+             if (DockView.isVertical) {
+                 debugHitbox.y = finalPMin; debugHitbox.height = finalPMax - finalPMin
+                 debugHitbox.x = finalSMin; debugHitbox.width = finalSMax - finalSMin
+             } else {
+                 debugHitbox.x = finalPMin; debugHitbox.width = finalPMax - finalPMin
+                 debugHitbox.y = finalSMin; debugHitbox.height = finalSMax - finalSMin
+             }
+             debugHitbox.visible = true
 
-           if (bestIndex >= 0) {
-               _zoomActive = true
-               if (hoveredIndex !== bestIndex) {
-                   hoveredIndex = bestIndex
-                   hoveredName = dockRepeater.itemAt(bestIndex).displayName
-                   tooltipTimer.restart()
-               }
-           } else {
-               if (!_zoomActive) {
-                   hoveredIndex = -1
-                   hoveredName = ""
-               }
-           }
-       }
+             if (hoveredIndex !== bestIndex) {
+                 hoveredIndex = bestIndex
+                 hoveredName = dockRepeater.itemAt(bestIndex).displayName
+                 tooltipTimer.restart()
+             }
+         } else {
+             debugHitbox.visible = false
+             if (!_zoomActive) {
+                 hoveredIndex = -1
+                 hoveredName = ""
+             }
+         }
+   }
 
     MouseArea {
         id: dockMouseArea
@@ -535,23 +542,46 @@ Item {
 
         // Track mouse position for parabolic zoom + drag handling
 	onPositionChanged: function(mouse) {
-		// --- SOFTWARE FIREWALL FOR OVERGROWN HITBOX ---
-            let maxDockHeight = dockPanel.height + (DockSettings.iconSize * Math.max(0, DockSettings.maxZoomFactor - 1.0))
-            
-            if (mouse.y < (dockMouseArea.height - maxDockHeight)) {
-                if (!PreviewController.visible) {
-                    dockPanel.mouseX = -1
-                    dockPanel.mouseY = -1
-                    root._zoomActive = false
-                }
-                root.hoveredIndex = -1
-                root.hoveredName = ""
-                DockVisibility.setHovered(false)
-                return 
-            } else {
-                DockVisibility.setHovered(true)
-            }
-            // --- END FIREWALL ---
+           // 1. Calculate our dynamic reach
+           let maxIconHeight = DockSettings.iconSize * DockSettings.maxZoomFactor
+           let dynamicBuffer = 10 + (30 * Math.max(0, DockSettings.maxZoomFactor - 1.0))
+           let totalReach = maxIconHeight + dynamicBuffer
+           
+           let isOutside = false
+
+           // 2. Check boundaries based on the current Edge
+           // Edge 0: Top | Edge 1: Bottom | Edge 2: Left | Edge 3: Right
+           if (DockView.edge === 0) {        // TOP
+               isOutside = mouse.y > totalReach
+           } else if (DockView.edge === 1) { // BOTTOM
+               isOutside = mouse.y < (dockMouseArea.height - totalReach)
+           } else if (DockView.edge === 2) { // LEFT
+               isOutside = mouse.x > totalReach
+           } else if (DockView.edge === 3) { // RIGHT
+               isOutside = mouse.x < (dockMouseArea.width - totalReach)
+           }
+
+           // 3. The "Reset" Logic
+           if (isOutside) {
+               if (!PreviewController.visible) {
+                   dockPanel.mouseX = -1
+                   dockPanel.mouseY = -1
+                   root._zoomActive = false
+               }
+               root.hoveredIndex = -1
+               root.hoveredName = ""
+               debugHitbox.visible = false
+               DockVisibility.setHovered(false)
+               return 
+           } else {
+               DockVisibility.setHovered(true)
+           } // --- END UNIVERSAL FIREWALL ---
+
+           if (root.keyboardNavigating) {
+               root.keyboardNavigating = false
+               DockVisibility.setKeyboardActive(false)
+           }
+
                if (root.keyboardNavigating) {
                    root.keyboardNavigating = false
                    DockVisibility.setKeyboardActive(false)
@@ -609,8 +639,21 @@ Item {
                  }
                
                root.updateHoveredItem()
-           }
-}
+        }
+    }
+
+    // --- DEBUG HITBOX LAYER ---
+    Rectangle {
+        id: debugHitbox
+        parent: dockMouseArea
+        color: "#55ff0000" // Transparent Red
+        border.color: "red"
+        border.width: 2
+        visible: false // Change to 'true' to see the box!
+        
+        // This box will jump to the current hovered icon's boundaries
+        x: 0; y: 0; width: 0; height: 0 
+    }
 
     // Projective SDF drop shadow via ShaderEffect.
     // Each pixel projects a ray from the light source through the ground plane
@@ -955,16 +998,27 @@ Item {
                     }
                 }
                 
-		// DYNAMIC GROUNDING (No more buckets)
-               x: (dockPanel.width - animatedContentWidth) / 2
-               y: {
-                   // If bottom-aligned (Edge 1), stick to the bottom with 6px gap
-                   if (DockView.edge === 1) return dockPanel.height - animatedContentHeight - 6;
-                   // If top-aligned (Edge 0), stick to top with 6px gap
-                   if (DockView.edge === 0) return 6;
-                   // Default: Center it
-                   return (dockPanel.height - animatedContentHeight) / 2;
-               }
+		// DYNAMIC GROUNDING (Supports all 4 Edges)
+                 x: {
+                     if (DockView.isVertical) {
+                         // If Left-aligned (Edge 2), stick to left with 6px gap
+                         if (DockView.edge === 2) return 6;
+                         // If Right-aligned (Edge 3), stick to right
+                         if (DockView.edge === 3) return dockPanel.width - animatedContentWidth - 6;
+                     }
+                     // If horizontal, center the row
+                     return (dockPanel.width - animatedContentWidth) / 2;
+                 }
+                 y: {
+                     if (!DockView.isVertical) {
+                         // If Bottom-aligned (Edge 1), stick to bottom with 6px gap
+                         if (DockView.edge === 1) return dockPanel.height - animatedContentHeight - 6;
+                         // If Top-aligned (Edge 0), stick to top with 6px gap
+                         if (DockView.edge === 0) return 6;
+                     }
+                     // If vertical, center the row vertically
+                     return (dockPanel.height - animatedContentHeight) / 2;
+                 }
 
             // Animate existing items displaced by add/remove within the Flow.
             // Disabled during hover zoom (mouseInside) to avoid lagging sibling
