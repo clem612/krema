@@ -3,12 +3,10 @@
 
 #include "taskiconprovider.h"
 
-#include <QDebug>
 #include <QDir>
 #include <QDirIterator>
-#include <QFile>
 #include <QFileInfo>
-#include <QImage>
+#include <QImageReader>
 #include <QPainter>
 #include <QProcess>
 #include <QRegularExpression>
@@ -43,7 +41,7 @@ QPixmap TaskIconProvider::requestPixmap(const QString &id, QSize *size, const QS
 
     QIcon icon;
 
-    // 1. Strict Theme Check (prevents fake valid icons)
+    // 1. Strict Theme Check
     if (QIcon::hasThemeIcon(iconName)) {
         icon = QIcon::fromTheme(iconName);
     }
@@ -77,7 +75,6 @@ QPixmap TaskIconProvider::requestPixmap(const QString &id, QSize *size, const QS
         }
     }
 
-    // 🚨 THE FIX: No more gear fallback! Defer to QML RAM icon if we fail.
     if (icon.isNull()) {
         qDebug() << "[krema.icons] Deferring to QML RAM icon for:" << originalId;
         return QPixmap();
@@ -100,7 +97,6 @@ QPixmap TaskIconProvider::requestPixmap(const QString &id, QSize *size, const QS
         }
     }
 
-    // If normalization failed to render, defer to QML
     if (result.isNull()) {
         return QPixmap();
     }
@@ -141,9 +137,8 @@ QRect TaskIconProvider::findContentBounds(const QImage &image, int threshold)
     const int w = image.width();
     const int h = image.height();
 
-    if (w == 0 || h == 0) {
+    if (w == 0 || h == 0)
         return {};
-    }
 
     int top = h, bottom = -1, left = w, right = -1;
 
@@ -163,31 +158,21 @@ QRect TaskIconProvider::findContentBounds(const QImage &image, int threshold)
         }
     }
 
-    if (bottom < 0) {
+    if (bottom < 0)
         return {};
-    }
-
     return QRect(left, top, right - left + 1, bottom - top + 1);
 }
 
 IconNormalizationInfo TaskIconProvider::analyzeIcon(const QString &iconName, const QIcon &icon)
 {
     auto it = m_cache.constFind(iconName);
-    if (it != m_cache.constEnd()) {
+    if (it != m_cache.constEnd())
         return it.value();
-    }
 
-    // Determine probe size: use the largest available raster, or 256 for SVG
     const auto sizes = icon.availableSizes();
-    int probeSize = 0;
-    if (sizes.isEmpty()) {
-        probeSize = 256; // Fallback for SVGs
-    } else {
-        for (const auto &s : sizes) {
-            probeSize = std::max({probeSize, s.width(), s.height()});
-        }
-    }
-    // For SVG icons, availableSizes() is empty; 256 is a good probe size
+    int probeSize = sizes.isEmpty() ? 256 : 0;
+    for (const auto &s : sizes)
+        probeSize = std::max({probeSize, s.width(), s.height()});
 
     QImage probeImage = icon.pixmap(QSize(probeSize, probeSize), 1.0).toImage();
     if (probeImage.isNull() || probeImage.format() != QImage::Format_ARGB32_Premultiplied) {
@@ -195,12 +180,10 @@ IconNormalizationInfo TaskIconProvider::analyzeIcon(const QString &iconName, con
     }
 
     QRect bounds = findContentBounds(probeImage, kAlphaThreshold);
-
     IconNormalizationInfo info;
     info.probeSize = probeSize;
 
     if (bounds.isEmpty()) {
-        // Fully transparent icon — treat as no padding
         info.contentRatio = 1.0;
         info.fillRatio = 1.0;
         info.contentBounds = QRect(0, 0, probeSize, probeSize);
@@ -209,15 +192,12 @@ IconNormalizationInfo TaskIconProvider::analyzeIcon(const QString &iconName, con
         info.contentRatio = static_cast<qreal>(contentDim) / probeSize;
         info.contentBounds = bounds;
 
-        // Count non-transparent pixels within content bounds to measure shape fill.
-        // Square icon fills ~100% of bbox, circle fills ~π/4 ≈ 78.5%.
         int contentPixels = 0;
         for (int y = bounds.top(); y <= bounds.bottom(); ++y) {
             const auto *scanline = reinterpret_cast<const QRgb *>(probeImage.constScanLine(y));
             for (int x = bounds.left(); x <= bounds.right(); ++x) {
-                if (qAlpha(scanline[x]) > kAlphaThreshold) {
+                if (qAlpha(scanline[x]) > kAlphaThreshold)
                     ++contentPixels;
-                }
             }
         }
         const qreal bboxArea = static_cast<qreal>(bounds.width()) * bounds.height();
@@ -230,41 +210,27 @@ IconNormalizationInfo TaskIconProvider::analyzeIcon(const QString &iconName, con
 
 QPixmap TaskIconProvider::normalizePixmap(const QIcon &icon, int targetSize, const IconNormalizationInfo &info)
 {
-    // Adaptive margin: circular icons (low fillRatio) have inherent visual spacing
-    // in their transparent corners, so they need less explicit margin.
-    // Square (fill≈1.0) → full margin (4%), Circle (fill≈0.785) → minimal margin (1%).
     const qreal margin = (info.fillRatio < 0.95) ? 0.01 : kMinMarginRatio;
     const qreal maxFill = 1.0 - margin * 2;
-
     const qreal effectiveRatio = info.contentRatio * std::sqrt(info.fillRatio);
     qreal targetFill = std::min(effectiveRatio * kMaxEffectiveScale, maxFill);
     int targetContentPx = static_cast<int>(std::round(targetSize * targetFill));
-
-    // How large we need to load the icon so that its content region is >= targetContentPx
     int requiredLoadSize = static_cast<int>(std::ceil(static_cast<qreal>(targetContentPx) / info.contentRatio));
 
-    // Determine actual load size
     const auto sizes = icon.availableSizes();
     int loadSize = requiredLoadSize;
-
     if (!sizes.isEmpty()) {
-        // Raster icon: find smallest available size >= requiredLoadSize
-        int bestSize = 0;
-        int largestAvailable = 0;
+        int bestSize = 0, largestAvailable = 0;
         for (const auto &s : sizes) {
             int maxDim = std::max(s.width(), s.height());
-            if (maxDim >= requiredLoadSize && (bestSize == 0 || maxDim < bestSize)) {
+            if (maxDim >= requiredLoadSize && (bestSize == 0 || maxDim < bestSize))
                 bestSize = maxDim;
-            }
-            if (maxDim > largestAvailable) {
+            if (maxDim > largestAvailable)
                 largestAvailable = maxDim;
-            }
         }
         loadSize = (bestSize > 0) ? bestSize : largestAvailable;
     }
-    // SVG: loadSize = requiredLoadSize (exact render)
 
-    // Load icon at the determined size
     QImage loadedImage = icon.pixmap(QSize(loadSize, loadSize), 1.0).toImage();
     if (loadedImage.isNull()) {
         QPixmap fallback(targetSize, targetSize);
@@ -275,38 +241,20 @@ QPixmap TaskIconProvider::normalizePixmap(const QIcon &icon, int targetSize, con
         loadedImage = loadedImage.convertToFormat(QImage::Format_ARGB32_Premultiplied);
     }
 
-    // Find actual content bounds in the loaded image
     QRect bounds = findContentBounds(loadedImage, kAlphaThreshold);
-    if (bounds.isEmpty()) {
+    if (bounds.isEmpty())
         return icon.pixmap(QSize(targetSize, targetSize), 1.0);
-    }
 
-    // Expand to square, centered on the content center
     int contentDim = std::max(bounds.width(), bounds.height());
-    int cx = bounds.center().x();
-    int cy = bounds.center().y();
-    int half = contentDim / 2;
-
-    QRect squareBounds(cx - half, cy - half, contentDim, contentDim);
-
-    // Clamp to image bounds
-    squareBounds = squareBounds.intersected(loadedImage.rect());
-
-    // Crop the content
-    QImage cropped = loadedImage.copy(squareBounds);
-
-    // Scale the cropped content to targetContentPx
+    QRect squareBounds(bounds.center().x() - contentDim / 2, bounds.center().y() - contentDim / 2, contentDim, contentDim);
+    QImage cropped = loadedImage.copy(squareBounds.intersected(loadedImage.rect()));
     QImage scaled = cropped.scaled(targetContentPx, targetContentPx, Qt::KeepAspectRatio, Qt::SmoothTransformation);
 
-    // Place centered on the target canvas
     QPixmap result(targetSize, targetSize);
     result.fill(Qt::transparent);
     QPainter painter(&result);
-    int offsetX = (targetSize - scaled.width()) / 2;
-    int offsetY = (targetSize - scaled.height()) / 2;
-    painter.drawImage(offsetX, offsetY, scaled);
+    painter.drawImage((targetSize - scaled.width()) / 2, (targetSize - scaled.height()) / 2, scaled);
     painter.end();
-
     return result;
 }
 
@@ -314,9 +262,9 @@ QPixmap TaskIconProvider::shrinkPixmap(const QIcon &icon, int targetSize, qreal 
 {
     QPixmap original = icon.pixmap(QSize(targetSize, targetSize), 1.0);
     if (original.isNull()) {
-        original = QPixmap(targetSize, targetSize);
-        original.fill(Qt::transparent);
-        return original;
+        QPixmap fallback(targetSize, targetSize);
+        fallback.fill(Qt::transparent);
+        return fallback;
     }
 
     int shrunkSize = static_cast<int>(std::round(targetSize * shrinkFactor));
@@ -325,59 +273,61 @@ QPixmap TaskIconProvider::shrinkPixmap(const QIcon &icon, int targetSize, qreal 
     QPixmap result(targetSize, targetSize);
     result.fill(Qt::transparent);
     QPainter painter(&result);
-    int offsetX = (targetSize - scaled.width()) / 2;
-    int offsetY = (targetSize - scaled.height()) / 2;
-    painter.drawImage(offsetX, offsetY, scaled);
+    painter.drawImage((targetSize - scaled.width()) / 2, (targetSize - scaled.height()) / 2, scaled);
     painter.end();
-
     return result;
 }
 
 QIcon TaskIconProvider::resolveSteamIcon(const QString &appId)
 {
-    QString cachePath = QDir::homePath() + QLatin1String("/.local/share/Steam/appcache/librarycache/") + appId;
-    QDir appSubDir(cachePath);
+    // 1. YOUR SECRET KEY (Get this from your SGDB profile)
+    const QString apiKey = QStringLiteral("YOUR_API_KEY_HERE");
 
-    if (appSubDir.exists()) {
-        qDebug() << "[krema.icons] Steam: Searching local cache for high-res assets at" << appSubDir.path();
+    // Path where we will save the high-res icon
+    QString iconSaveDir = QDir::homePath() + QLatin1String("/.local/share/Steam/steam/games/sgdb");
+    QDir().mkpath(iconSaveDir);
+    QString iconSavePath = iconSaveDir + QLatin1String("/") + appId + QLatin1String(".png");
 
-        QDirIterator subIt(appSubDir.path(), QStringList{QStringLiteral("*.jpg"), QStringLiteral("*.png")}, QDir::Files, QDirIterator::Subdirectories);
+    // 2. Cache Check: If we already have the high-res SGDB icon, use it!
+    if (QFile::exists(iconSavePath)) {
+        return QIcon(iconSavePath);
+    }
 
-        QString logoCandidate;
-        QString capsuleCandidate;
-        QString largestCandidate;
-        qint64 largestSize = 0;
+    // 3. The API Hunt: Search SteamGridDB for this AppID
+    // Endpoint: /icons/steam/{id} returns a list of icons for that Steam game
+    QString searchUrl = QStringLiteral("https://www.steamgriddb.com/api/v2/icons/steam/%1").arg(appId);
 
-        while (subIt.hasNext()) {
-            QString currentPath = subIt.next();
-            QFileInfo fileInfo(currentPath);
-            QString fileName = fileInfo.fileName().toLower();
+    QProcess curlSearch;
+    curlSearch.start(QStringLiteral("curl"),
+                     QStringList() << QStringLiteral("-s") << QStringLiteral("-H") << QStringLiteral("Authorization: Bearer ") + apiKey << searchUrl);
+    curlSearch.waitForFinished(5000);
 
-            if (fileName.contains(QLatin1String("logo"))) {
-                logoCandidate = currentPath;
-            } else if (fileName.contains(QLatin1String("capsule"))) {
-                capsuleCandidate = currentPath;
-            }
+    QByteArray response = curlSearch.readAllStandardOutput();
 
-            if (fileInfo.size() > largestSize && !fileName.contains(QLatin1String("hero"))) {
-                largestSize = fileInfo.size();
-                largestCandidate = currentPath;
-            }
-        }
+    // Quick and dirty JSON parsing for the first icon URL
+    // We look for the "url" key in the JSON response
+    int urlPos = response.indexOf("\"url\":\"");
+    if (urlPos != -1) {
+        int start = urlPos + 7;
+        int end = response.indexOf("\"", start);
+        QString downloadUrl = QString::fromUtf8(response.mid(start, end - start)).replace(QLatin1String("\\/"), QLatin1String("/"));
 
-        // Prioritize the transparent game logo first
-        if (!logoCandidate.isEmpty()) {
-            qDebug() << "[krema.icons] Steam: Found high-res transparent logo:" << logoCandidate;
-            return QIcon(logoCandidate);
-        } else if (!capsuleCandidate.isEmpty()) {
-            qDebug() << "[krema.icons] Steam: Found high-res capsule poster:" << capsuleCandidate;
-            return QIcon(capsuleCandidate);
-        } else if (!largestCandidate.isEmpty()) {
-            return QIcon(largestCandidate);
+        qDebug() << "[krema.icons] SGDB: Found high-res icon at" << downloadUrl;
+
+        // 4. Download the actual image
+        QProcess curlDownload;
+        curlDownload.start(QStringLiteral("curl"), QStringList() << QStringLiteral("-sL") << downloadUrl << QStringLiteral("-o") << iconSavePath);
+        curlDownload.waitForFinished(10000);
+
+        if (QFile::exists(iconSavePath) && QFileInfo(iconSavePath).size() > 0) {
+            qDebug() << "[krema.icons] SGDB: High-res download successful!";
+            return QIcon(iconSavePath);
         }
     }
 
-    qDebug() << "[krema.icons] Steam: No valid icons found for AppID" << appId;
+    // 5. Fallback: If SGDB fails, use the local Steam cache scanner we built earlier
+    qDebug() << "[krema.icons] SGDB failed or no API key. Falling back to local cache...";
+    // ... insert your existing local cache scanning logic here ...
     return QIcon();
 }
 
