@@ -765,9 +765,10 @@ Item {
 	   // --- THE SPAM-FREE ULTIMATE DEBUGGER ---
            Timer {
                id: ultimateDebugger
-               interval: 100 // Checks 10 times a second
+               interval: 100
                repeat: true
-               running: true
+               // ONLY run if the terminal command includes our custom flag
+               running: Qt.application.arguments.indexOf("--debug-geom") !== -1
                property string lastState: ""
 
                onTriggered: {
@@ -782,22 +783,18 @@ Item {
                    let item = dockRepeater.itemAt(hoveredIndex);
                    if (!item) return;
 
-                   // Rounding everything stops the micro-pixel animation spam!
                    let pX = Math.round(dockPanel.x);
                    let pY = Math.round(dockPanel.y);
                    let pW = Math.round(dockPanel.width);
                    let pH = Math.round(dockPanel.height);
 
                    let iX = Math.round(item.x);
-                   let iY = Math.round(item.y);
                    let iW = Math.round(item.width);
                    let zF = item.zoomFactor.toFixed(2);
                    let iCX = Math.round(item.itemCenterX);
 
-                   // Create a unique "fingerprint" of the current sizes/positions
                    let currentState = `${hoveredIndex}-${pW}-${pX}-${iW}-${iX}-${zF}`;
 
-                   // ONLY PRINT if the rounded numbers actually changed
                    if (currentState !== lastState) {
                        console.log(`\x1b[36m[PANEL]\x1b[0m Pos:(${pX}, ${pY}) Size:${pW}x${pH}  >>>  \x1b[32m[ICON ${hoveredIndex}]\x1b[0m Pos: X:${iX} (Center: ${iCX}) | Size:${iW}px | Zoom:${zF}x`);
                        lastState = currentState;
@@ -808,19 +805,24 @@ Item {
            // Create a local alias for Edit Mode that won't crash on startup
            property bool isEditMode: typeof DockVisibility !== "undefined" && DockVisibility.liveEditMode
 
-	   // For Vertical Docks: Thickness logic
-	   width: {
-            if (!DockView.isVertical) return _actualContentWidth;
-            // The slider now sets the base, but it still grows with icons
-            return Math.min(DockSettings.panelHeight, dockRow.animatedContentWidth + 12);
-        }
+	   // For Vertical Docks: Width is Thickness (Slider), Height is Length (Instant Sync)
+           width: {
+               if (DockView.isVertical) return DockSettings.panelHeight;
+               
+               // HORIZONTAL: Total footprint of all icons + separator + spacing
+               // childrenRect.width is the ONLY property that updates 1:1 with zoom
+               let content = dockRow.childrenRect.width;
+               return (content > 0) ? content + 24 : Kirigami.Units.gridUnit * 6;
+           }
 
-        // For Horizontal Docks: Thickness logic
-	height: {
-            if (DockView.isVertical) return _actualContentHeight;
-            // Combines the user's thickness preference with the icon's dynamic height
-            return Math.min(DockSettings.panelHeight, dockRow.animatedContentHeight + 12);
-        }
+           // For Horizontal Docks: Height is Thickness (Slider), Width is Length (Instant Sync)
+           height: {
+               if (!DockView.isVertical) return DockSettings.panelHeight;
+               
+               // VERTICAL: Total footprint of icons/separator on Y axis
+               let content = dockRow.childrenRect.height;
+               return (content > 0) ? content + 24 : Kirigami.Units.gridUnit * 6;
+           }
            
            // CORNERS
            radius: DockSettings.cornerRadius
@@ -912,21 +914,21 @@ Item {
         property bool animationsReady: false
         Component.onCompleted: Qt.callLater(function() { animationsReady = true })
 
-        Behavior on width {
+        /*Behavior on width {
             enabled: dockPanel.animationsReady
             NumberAnimation {
                 duration: Kirigami.Units.longDuration
                 easing.type: Easing.InOutQuad
             }
-        }
+        } */
 
-        Behavior on height {
+        /*Behavior on height {
             enabled: dockPanel.animationsReady && DockView.isVertical
             NumberAnimation {
                 duration: Kirigami.Units.longDuration
                 easing.type: Easing.InOutQuad
             }
-        }
+        }*/
 
         Behavior on x {
             enabled: dockPanel.animationsReady && DockView.isVertical
@@ -960,8 +962,8 @@ Item {
            property bool mouseInside: mouseX !== -9999 && root._zoomActive && !root._dragActive
 
 	// This calculates the size of ONLY the icons + padding
-           property real _actualContentWidth: Math.max(dockRow.animatedContentWidth + Kirigami.Units.largeSpacing * 2, Kirigami.Units.gridUnit * 6)
-           property real _actualContentHeight: Math.max(dockRow.animatedContentHeight + Kirigami.Units.largeSpacing * 2, Kirigami.Units.gridUnit * 6)
+        property real _actualContentWidth: dockPanel.width
+        property real _actualContentHeight: dockPanel.height
 
 	    // This function calculates the "Ghost" area for the OS
 	    function updateWaylandInputRegion() {
@@ -1110,7 +1112,7 @@ Item {
 
           // --- STRICT PROPORTIONAL MATH ---
           // Line thickness is 6% of icon, Length is 70% of icon
-          property real autoThickness: Math.max(1, Math.round(DockSettings.iconSize * 0.06))
+          property real autoThickness: Math.min(1, Math.round(DockSettings.iconSize * 0.06))
           property real autoLength: Math.round(DockSettings.iconSize * 0.7) 
           
           width: Math.round(!DockView.isVertical ? autoThickness : autoLength)
