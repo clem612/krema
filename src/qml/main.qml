@@ -949,8 +949,8 @@ Item {
            property bool mouseInside: mouseX !== -9999 && root._zoomActive && !root._dragActive
 
 	// This calculates the size of ONLY the icons + padding
-            property real _actualContentWidth: Math.max(dockRow.implicitWidth + Kirigami.Units.largeSpacing * 2, Kirigami.Units.gridUnit * 6)
-            property real _actualContentHeight: Math.max(dockRow.animatedContentHeight + 6, Kirigami.Units.gridUnit * 6)
+           property real _actualContentWidth: Math.max(dockRow.animatedContentWidth + Kirigami.Units.largeSpacing * 2, Kirigami.Units.gridUnit * 6)
+           property real _actualContentHeight: Math.max(dockRow.animatedContentHeight + Kirigami.Units.largeSpacing * 2, Kirigami.Units.gridUnit * 6)
 
 	    // This function calculates the "Ghost" area for the OS
 	    function updateWaylandInputRegion() {

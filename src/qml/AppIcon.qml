@@ -375,12 +375,12 @@ Item {
     readonly property int _indicatorSpace: 4 + Kirigami.Units.smallSpacing
 
     // Size: base icon size + fixed indicator space (toward screen edge)
-    width: DockView.isVertical
-        ? (iconSize + _indicatorSpace)
-        : iconSize
-    height: DockView.isVertical
-        ? iconSize
-        : (iconSize + _indicatorSpace)
+        width: DockView.isVertical
+            ? (iconSize + _indicatorSpace)
+            : Math.round(iconSize * currentScale)
+        height: DockView.isVertical
+            ? Math.round(iconSize * currentScale)
+            : (iconSize + _indicatorSpace)
 
     // Scaled transform: grow away from the dock edge
     transform: Scale {
