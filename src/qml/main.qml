@@ -332,92 +332,60 @@ Item {
         }
     }
 
+    // Throttling property to stop the terminal spam
     function updateHoveredItem() {
-         if (dockPanel.mouseX === -9999) {
-             hoveredIndex = -1
-             hoveredName = ""
-             _zoomActive = false
-             debugHitbox.visible = false
-             return
-         }
+        if (dockPanel.mouseX === -9999) {
+            hoveredIndex = -1; hoveredName = ""; _zoomActive = false;
+            return;
+        }
 
-         let mx = dockMouseArea.mouseX
-         let my = dockMouseArea.mouseY
-         let bestIndex = -1
+        let mPos = DockView.isVertical ? dockMouseArea.mouseY : dockMouseArea.mouseX;
+        let bestIndex = -1;
 
-         // Variables to store the winners for the debug box
-         let finalPMin, finalPMax, finalSMin, finalSMax
+        // Find exactly where the first icon starts visually on the screen
+        let firstItem = dockRepeater.itemAt(0);
+        if (!firstItem) return;
+        
+        let startPos = firstItem.mapToItem(dockMouseArea, 0, 0);
+        let currentEdge = DockView.isVertical ? startPos.y : startPos.x;
 
-         for (let i = 0; i < dockRepeater.count; i++) {
-             let item = dockRepeater.itemAt(i)
-             if (!item) continue
+        // Build the timeline using your idea: the actual, current zoomed sizes
+        for (let i = 0; i < dockRepeater.count; i++) {
+            let item = dockRepeater.itemAt(i);
+            if (!item) continue;
 
-             let itemPos = item.mapToItem(dockMouseArea, 0, 0)
-             let visualSkin = DockSettings.iconSize * item.zoomFactor
-             let halfSlot = (visualSkin + DockSettings.iconSpacing) / 2
+            // item.width/height is already mathematically bound to the zoom factor!
+            let itemSize = DockView.isVertical ? item.height : item.width;
+            
+            // Push the boundary forward by the exact size of this zoomed icon
+            currentEdge += itemSize;
 
-             let pMin, pMax, sMin, sMax, mouseP, mouseS, centerP
+            // If the mouse hasn't crossed this swollen boundary yet, this is our icon
+            if (mPos <= currentEdge) {
+                bestIndex = i;
+                break;
+            }
+            
+            // Add the spacing before checking the next icon's territory
+            currentEdge += DockSettings.iconSpacing;
+        }
 
-             if (DockView.isVertical) {
-                 centerP = itemPos.y + (DockSettings.iconSize / 2)
-                 pMin = centerP - halfSlot
-                 pMax = centerP + halfSlot
-                 mouseP = my; mouseS = mx
-                 
-                 let sBase = (DockView.edge === 2) ? itemPos.x : (itemPos.x + item.width)
-                 if (DockView.edge === 2) { // LEFT
-                     sMin = sBase - 20; sMax = sBase + visualSkin + 15
-                 } else { // RIGHT
-                     sMin = sBase - visualSkin - 15; sMax = sBase + 20
-                 }
-             } else {
-                 centerP = itemPos.x + (DockSettings.iconSize / 2)
-                 pMin = centerP - halfSlot
-                 pMax = centerP + halfSlot
-                 mouseP = mx; mouseS = my
-                 
-                 let sBase = (DockView.edge === 1) ? (itemPos.y + item.height) : itemPos.y
-                 if (DockView.edge === 1) { // BOTTOM
-                     sMin = sBase - visualSkin - 15; sMax = sBase + 20
-                 } else { // TOP
-                     sMin = sBase - 20; sMax = sBase + visualSkin + 15
-                 }
-             }
+        // Catch-all for the far edges
+        if (bestIndex === -1 && dockRepeater.count > 0) {
+            bestIndex = dockRepeater.count - 1;
+        }
 
-             if (mouseP >= pMin && mouseP <= pMax && mouseS >= sMin && mouseS <= sMax) {
-                 bestIndex = i
-                 finalPMin = pMin; finalPMax = pMax
-                 finalSMin = sMin; finalSMax = sMax
-                 break
-             }
-         }
-
-         if (bestIndex >= 0) {
-             _zoomActive = true
-             
-             // --- VISUAL DEBUG ---
-             if (DockView.isVertical) {
-                 debugHitbox.y = finalPMin; debugHitbox.height = finalPMax - finalPMin
-                 debugHitbox.x = finalSMin; debugHitbox.width = finalSMax - finalSMin
-             } else {
-                 debugHitbox.x = finalPMin; debugHitbox.width = finalPMax - finalPMin
-                 debugHitbox.y = finalSMin; debugHitbox.height = finalSMax - finalSMin
-             }
-             debugHitbox.visible = true
-
-             if (hoveredIndex !== bestIndex) {
-                 hoveredIndex = bestIndex
-                 hoveredName = dockRepeater.itemAt(bestIndex).displayName
-                 tooltipTimer.restart()
-             }
-         } else {
-             debugHitbox.visible = false
-             if (!_zoomActive) {
-                 hoveredIndex = -1
-                 hoveredName = ""
-             }
-         }
-   }
+        if (bestIndex >= 0) {
+            _zoomActive = true;
+            if (hoveredIndex !== bestIndex) {
+                hoveredIndex = bestIndex;
+                hoveredName = dockRepeater.itemAt(bestIndex).displayName;
+                tooltipTimer.restart();
+            }
+        } else {
+            hoveredIndex = -1; hoveredName = ""; _zoomActive = false;
+        }
+    }
 
     MouseArea {
         id: dockMouseArea
@@ -794,6 +762,49 @@ Item {
             id: dockPanel
            visible: opacity > 0.01
 
+	   // --- THE SPAM-FREE ULTIMATE DEBUGGER ---
+           Timer {
+               id: ultimateDebugger
+               interval: 100 // Checks 10 times a second
+               repeat: true
+               running: true
+               property string lastState: ""
+
+               onTriggered: {
+                   if (hoveredIndex === -1) {
+                       if (lastState !== "IDLE") {
+                           console.log("\x1b[90m[DEBUG] Dock Idle (No Hover)\x1b[0m");
+                           lastState = "IDLE";
+                       }
+                       return;
+                   }
+
+                   let item = dockRepeater.itemAt(hoveredIndex);
+                   if (!item) return;
+
+                   // Rounding everything stops the micro-pixel animation spam!
+                   let pX = Math.round(dockPanel.x);
+                   let pY = Math.round(dockPanel.y);
+                   let pW = Math.round(dockPanel.width);
+                   let pH = Math.round(dockPanel.height);
+
+                   let iX = Math.round(item.x);
+                   let iY = Math.round(item.y);
+                   let iW = Math.round(item.width);
+                   let zF = item.zoomFactor.toFixed(2);
+                   let iCX = Math.round(item.itemCenterX);
+
+                   // Create a unique "fingerprint" of the current sizes/positions
+                   let currentState = `${hoveredIndex}-${pW}-${pX}-${iW}-${iX}-${zF}`;
+
+                   // ONLY PRINT if the rounded numbers actually changed
+                   if (currentState !== lastState) {
+                       console.log(`\x1b[36m[PANEL]\x1b[0m Pos:(${pX}, ${pY}) Size:${pW}x${pH}  >>>  \x1b[32m[ICON ${hoveredIndex}]\x1b[0m Pos: X:${iX} (Center: ${iCX}) | Size:${iW}px | Zoom:${zF}x`);
+                       lastState = currentState;
+                   }
+               }
+           }
+
            // Create a local alias for Edit Mode that won't crash on startup
            property bool isEditMode: typeof DockVisibility !== "undefined" && DockVisibility.liveEditMode
 
@@ -974,14 +985,6 @@ Item {
                 onHeightChanged: { updateWaylandInputRegion(); printGeometry(); }
 
         function printGeometry() {
-            console.warn("\n=== 📡 DOCK MOVED 📡 ===");
-            console.warn("Edge:            " + DockView.edge);
-            console.warn("Is Vertical:     " + DockView.isVertical);
-            console.warn("Panel Size:      " + dockPanel.width + " x " + dockPanel.height);
-            console.warn("Panel Pos:       X: " + dockPanel.x + " | Y: " + dockPanel.y);
-            console.warn("Icon Row Size:   " + dockRow.width + " x " + dockRow.height);
-            console.warn("Icon Row Pos:    X: " + dockRow.x + " | Y: " + dockRow.y);
-            console.warn("========================\n");
         }
 
 	    // Main icon layout (Flow switches between horizontal/vertical)
@@ -1059,15 +1062,18 @@ Item {
                     isKeyboardFocused: root.keyboardNavigating && root.hoveredIndex === index
                     iconSize: DockSettings.iconSize
                     maxZoomFactor: DockSettings.maxZoomFactor
-                    panelMouseX: dockPanel.mouseX
-                    panelMouseInside: dockPanel.mouseInside
-                    spacing: DockSettings.iconSpacing
+		    // --- STRICT ABSOLUTE MATH ---
+                         panelMouseX: DockView.isVertical ? dockMouseArea.mouseY : dockMouseArea.mouseX
+                         panelMouseInside: dockPanel.mouseInside
+                         spacing: DockSettings.iconSpacing
 
-                    // Compute this item's center on the primary axis relative to the panel.
-                    // For vertical docks, the primary axis is Y (remapped to mouseX).
-		    itemCenterX: DockView.isVertical
-                        ? (y + height / 2 + dockRow.y + dockPanel.y)
-			: (x + width / 2 + dockRow.x + dockPanel.x)
+                         // The center is based on the absolute index, NOT the shifting width
+                         itemCenterX: {
+                             let slot = iconSize + spacing;
+                             let totalUnscaled = (dockRepeater.count * slot) - spacing;
+                             let start = DockView.isVertical ? (root.height - totalUnscaled) / 2 : (root.width - totalUnscaled) / 2;
+                             return start + (index * slot) + (iconSize / 2);
+                         }
                     // Drag and drop visual feedback
                     isDragSource: root._dragActive && root._dragSourceIndex === index
                     isExternalDropTarget: externalDropArea.containsDrag
