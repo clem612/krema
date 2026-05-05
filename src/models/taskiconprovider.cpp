@@ -3,14 +3,18 @@
 
 #include "taskiconprovider.h"
 
-#include <QImage>
-#include <QPainter>
-
+#include <QDebug>
 #include <QDir>
 #include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
+#include <QImage>
+#include <QPainter>
+#include <QProcess>
+#include <QRegularExpression>
+#include <QSettings>
 #include <QStandardPaths>
+#include <QTextStream>
 #include <algorithm>
 #include <cmath>
 
@@ -25,63 +29,82 @@ TaskIconProvider::TaskIconProvider(bool normalizationEnabled)
 
 QPixmap TaskIconProvider::requestPixmap(const QString &id, QSize *size, const QSize &requestedSize)
 {
-    // Parse "org.kde.dolphin?v=0" → iconName = "org.kde.dolphin"
     const int queryIdx = id.indexOf(QLatin1Char('?'));
-    const QString iconName = (queryIdx >= 0) ? id.left(queryIdx) : id;
+    QString iconName = (queryIdx >= 0) ? id.left(queryIdx) : id;
+    QString originalId = iconName;
+
+    if (iconName.endsWith(QLatin1String(".desktop"))) {
+        iconName.chop(8);
+    }
 
     const int width = requestedSize.width() > 0 ? requestedSize.width() : 48;
     const int height = requestedSize.height() > 0 ? requestedSize.height() : 48;
     const int targetSize = std::max(width, height);
 
-    QIcon icon = QIcon::fromTheme(iconName);
+    QIcon icon;
 
-    // 🕵️ Use shared Steam resolver
-    if (icon.isNull() && iconName.startsWith(QLatin1String("steam_app_"))) {
-        icon = resolveSteamIcon(iconName.mid(10));
+    // 1. Strict Theme Check (prevents fake valid icons)
+    if (QIcon::hasThemeIcon(iconName)) {
+        icon = QIcon::fromTheme(iconName);
     }
 
+    // 2. Desktop File Extraction
     if (icon.isNull()) {
-        icon = QIcon(iconName);
+        QString desktopFile = originalId.endsWith(QLatin1String(".desktop")) ? originalId : originalId + QLatin1String(".desktop");
+        QStringList paths = QStandardPaths::locateAll(QStandardPaths::ApplicationsLocation, desktopFile);
+
+        if (!paths.isEmpty()) {
+            QSettings settings(paths.first(), QSettings::IniFormat);
+            settings.beginGroup(QStringLiteral("Desktop Entry"));
+            QString realIconName = settings.value(QStringLiteral("Icon")).toString();
+
+            if (!realIconName.isEmpty()) {
+                if (QIcon::hasThemeIcon(realIconName)) {
+                    icon = QIcon::fromTheme(realIconName);
+                } else {
+                    icon = QIcon(realIconName);
+                }
+            }
+        }
     }
 
+    // 3. Steam Resolver
     if (icon.isNull()) {
-        icon = QIcon::fromTheme(QStringLiteral("application-x-executable"));
+        if (originalId.startsWith(QLatin1String("steam_app_"))) {
+            icon = resolveSteamIcon(originalId.mid(10));
+        } else if (originalId.startsWith(QLatin1String("steam_icon_"))) {
+            icon = resolveSteamIcon(originalId.mid(11));
+        }
+    }
+
+    // 🚨 THE FIX: No more gear fallback! Defer to QML RAM icon if we fail.
+    if (icon.isNull()) {
+        qDebug() << "[krema.icons] Deferring to QML RAM icon for:" << originalId;
+        return QPixmap();
     }
 
     QPixmap result;
 
-    // Fast path: normalization disabled
     if (!m_normalizationEnabled) {
         result = icon.pixmap(QSize(targetSize, targetSize), 1.0);
-        if (result.isNull()) {
-            result = QPixmap(targetSize, targetSize);
-            result.fill(Qt::transparent);
-        }
     } else {
-        // Analyze icon padding (cached)
-        auto info = analyzeIcon(iconName, icon);
-
-        // Shape correction only applies when there's actual padding to reclaim.
-        // If the bounding box already fills the canvas (contentRatio > 0.95), scaling up
-        // would clip the icon edges — so skip normalization entirely.
-        // For icons WITH padding, use effective ratio that penalizes round shapes
-        // (a circle's visual mass is ~sqrt(π/4) ≈ 89% of same-bbox square).
+        auto info = analyzeIcon(originalId, icon);
         const bool hasSignificantPadding = info.contentRatio < 0.95;
         const qreal effectiveRatio = hasSignificantPadding ? info.contentRatio * std::sqrt(info.fillRatio) : info.contentRatio;
 
-        // If content fills most of the icon (accounting for shape), skip normalization.
-        // Shrink so that content fills exactly kEdgeToEdgeFill of the canvas,
-        // matching the target fill used by normalizePixmap for square icons.
         if (effectiveRatio >= kMinContentRatio) {
             const qreal shrinkFactor = (info.contentRatio > kEdgeToEdgeFill) ? kEdgeToEdgeFill / info.contentRatio : 1.0;
             result = shrinkPixmap(icon, targetSize, shrinkFactor);
         } else {
-            // Normalize: crop padding and rescale
             result = normalizePixmap(icon, targetSize, info);
         }
     }
 
-    // Apply uniform icon scale (adds equal padding around all icons)
+    // If normalization failed to render, defer to QML
+    if (result.isNull()) {
+        return QPixmap();
+    }
+
     if (m_iconScale < 1.0) {
         int shrunkSize = static_cast<int>(std::round(targetSize * m_iconScale));
         QImage scaled = result.toImage().scaled(shrunkSize, shrunkSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
@@ -312,69 +335,49 @@ QPixmap TaskIconProvider::shrinkPixmap(const QIcon &icon, int targetSize, qreal 
 
 QIcon TaskIconProvider::resolveSteamIcon(const QString &appId)
 {
-    // 1) Prefer the classic Steam desktop icon asset if present in icon themes.
-    const QString steamIconName = QStringLiteral("steam_icon_") + appId;
-    if (QIcon::hasThemeIcon(steamIconName)) {
-        return QIcon::fromTheme(steamIconName);
-    }
+    QString cachePath = QDir::homePath() + QLatin1String("/.local/share/Steam/appcache/librarycache/") + appId;
+    QDir appSubDir(cachePath);
 
-    // 2) Explicitly scan icon theme directories for steam_icon_<appid>.* files.
-    const QStringList iconRoots = QStandardPaths::standardLocations(QStandardPaths::GenericDataLocation);
-    for (const QString &root : iconRoots) {
-        const QDir hicolorRoot(root + QStringLiteral("/icons/hicolor"));
-        if (!hicolorRoot.exists()) {
-            continue;
-        }
+    if (appSubDir.exists()) {
+        qDebug() << "[krema.icons] Steam: Searching local cache for high-res assets at" << appSubDir.path();
 
-        QDirIterator it(hicolorRoot.path(),
-                        QStringList{QStringLiteral("steam_icon_") + appId + QStringLiteral(".png"),
-                                    QStringLiteral("steam_icon_") + appId + QStringLiteral(".svg"),
-                                    QStringLiteral("steam_icon_") + appId + QStringLiteral(".xpm")},
-                        QDir::Files,
-                        QDirIterator::Subdirectories);
-        while (it.hasNext()) {
-            const QString path = it.next();
-            const QIcon icon(path);
-            if (!icon.isNull()) {
-                return icon;
+        QDirIterator subIt(appSubDir.path(), QStringList{QStringLiteral("*.jpg"), QStringLiteral("*.png")}, QDir::Files, QDirIterator::Subdirectories);
+
+        QString logoCandidate;
+        QString capsuleCandidate;
+        QString largestCandidate;
+        qint64 largestSize = 0;
+
+        while (subIt.hasNext()) {
+            QString currentPath = subIt.next();
+            QFileInfo fileInfo(currentPath);
+            QString fileName = fileInfo.fileName().toLower();
+
+            if (fileName.contains(QLatin1String("logo"))) {
+                logoCandidate = currentPath;
+            } else if (fileName.contains(QLatin1String("capsule"))) {
+                capsuleCandidate = currentPath;
+            }
+
+            if (fileInfo.size() > largestSize && !fileName.contains(QLatin1String("hero"))) {
+                largestSize = fileInfo.size();
+                largestCandidate = currentPath;
             }
         }
-    }
 
-    // 3) Fallback to Steam librarycache images, preferring app icon-like assets.
-    const QString cachePath = QDir::homePath() + QStringLiteral("/.local/share/Steam/appcache/librarycache/") + appId;
-    QDirIterator it(cachePath, {QStringLiteral("*.png"), QStringLiteral("*.jpg"), QStringLiteral("*.jpeg")}, QDir::Files, QDirIterator::Subdirectories);
-
-    QString iconCandidate;
-    QString capsuleCandidate;
-    QString logoCandidate;
-
-    while (it.hasNext()) {
-        const QString path = it.next();
-        const QString file = QFileInfo(path).fileName().toLower();
-
-        if (file.contains(QLatin1String("icon"))) {
-            iconCandidate = path;
-            break;
-        }
-        if (capsuleCandidate.isEmpty() && file.contains(QLatin1String("library_600x900"))) {
-            capsuleCandidate = path;
-        }
-        if (logoCandidate.isEmpty() && file.contains(QLatin1String("logo"))) {
-            logoCandidate = path;
+        // Prioritize the transparent game logo first
+        if (!logoCandidate.isEmpty()) {
+            qDebug() << "[krema.icons] Steam: Found high-res transparent logo:" << logoCandidate;
+            return QIcon(logoCandidate);
+        } else if (!capsuleCandidate.isEmpty()) {
+            qDebug() << "[krema.icons] Steam: Found high-res capsule poster:" << capsuleCandidate;
+            return QIcon(capsuleCandidate);
+        } else if (!largestCandidate.isEmpty()) {
+            return QIcon(largestCandidate);
         }
     }
 
-    if (!iconCandidate.isEmpty()) {
-        return QIcon(iconCandidate);
-    }
-    if (!capsuleCandidate.isEmpty()) {
-        return QIcon(capsuleCandidate);
-    }
-    if (!logoCandidate.isEmpty()) {
-        return QIcon(logoCandidate);
-    }
-
+    qDebug() << "[krema.icons] Steam: No valid icons found for AppID" << appId;
     return QIcon();
 }
 

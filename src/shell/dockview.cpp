@@ -48,7 +48,7 @@ void DockView::initialize(TaskManager::TasksModel *tasksModel,
 
     m_iconProvider = new TaskIconProvider(m_settings->iconNormalization());
     m_iconProvider->setIconScale(m_settings->iconScale());
-    engine()->addImageProvider(QStringLiteral("icon"), m_iconProvider);
+    engine()->addImageProvider(QStringLiteral("taskicon"), m_iconProvider);
 
     connect(KIconLoader::global(), &KIconLoader::iconChanged, this, [this]() {
         m_iconProvider->clearCache();

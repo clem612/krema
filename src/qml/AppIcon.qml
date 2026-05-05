@@ -419,32 +419,35 @@ Item {
     // Application icon
     Item {
             id: iconImage
-            // Anchors set via states below (iconAnchorStates)
             width: iconSize
             height: iconSize
             
-            // Expose the "valid" state so the rest of the UI doesn't crash
-            property bool valid: internalIcon.valid
+            // Valid if EITHER the C++ image loaded successfully OR Kirigami found the RAM icon
+            property bool valid: internalIcon.status === Image.Ready || ramIcon.valid
             
+            // Backup: Native RAM Icon (Kirigami perfectly understands KDE's raw QIcon memory object)
             Kirigami.Icon {
+                id: ramIcon
+                width: 128
+                height: 128
+                anchors.centerIn: parent
+                scale: iconSize / 128
+                smooth: true
+                visible: internalIcon.status !== Image.Ready
+                source: model.decoration 
+            }
+
+            // Primary: C++ Normalized Icon (Standard Image natively handles custom image:// URLs)
+            Image {
                 id: internalIcon
                 width: 128
                 height: 128
                 anchors.centerIn: parent
-                
-                // The Squeeze: mathematically shrink the 128px drawing
                 scale: iconSize / 128
                 smooth: true
-                
-                source: {
-                    // IMPORTANT: Read model.display to create a reactive dependency on
-                    // model data. After model reordering (move), the Repeater may update
-                    // delegate model data without changing index (position unchanged).
-                    // Without this, the binding only tracks dockItem.index and won't
-                    // re-evaluate when different data appears at the same position.
-                    let _dep = model.display
-                    return DockModel.iconData(dockItem.index)
-                }
+                sourceSize.width: 128
+                sourceSize.height: 128
+                source: dockItem._appId ? ("image://taskicon/" + dockItem._appId) : ""
             }
 
             // Transforms: launch bounce + attention animations
