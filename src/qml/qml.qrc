@@ -5,16 +5,19 @@
         <file>SettingsDialog.qml</file>
         <file>PreviewPopup.qml</file>
         <file>PreviewThumbnail.qml</file>
+        <file>components/KremaCard.qml</file>
+        <file>components/KremaSwitch.qml</file>
         <file>settings/BehaviorPage.qml</file>
         <file>settings/PreviewPage.qml</file>
-	<file>settings/IconsPage.qml</file>
+        <file>settings/IconsPage.qml</file>
         <file>settings/SeparatorPage.qml</file>
         <file>settings/PanelPage.qml</file>
         <file>settings/BackgroundPage.qml</file>
         <file>settings/ShadowPage.qml</file>
-	<file>settings/VisibilityPage.qml</file>
+        <file>settings/VisibilityPage.qml</file>
         <file>settings/MonitorPage.qml</file>
         <file>settings/VirtualDesktopsPage.qml</file>
-	<file>settings/AboutPage.qml</file>
+        <file>settings/AboutPage.qml</file>
+	<file>components/KremaComboBox.qml</file>
     </qresource>
 </RCC>

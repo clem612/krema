@@ -5,122 +5,184 @@ import QtQuick
 import QtQuick.Controls as QQC2
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
-import org.kde.kirigamiaddons.formcard as FormCard
 import QtQuick.Window
 import com.bhyoo.krema 1.0
 
-FormCard.FormCardPage {
+// Import our custom UI Kit
+import "../components"
+
+QQC2.ScrollView {
     id: bgPage
-    title: i18n("Theme & Style")
+    contentWidth: availableWidth
+    clip: true
 
-    // --- PILLAR 1: MATERIAL ---
-    FormCard.FormHeader { title: i18n("Base Material") }
-    FormCard.FormCard {
-        FormCard.FormComboBoxDelegate {
-            id: styleCombo
-            text: i18n("Style")
-            description: i18n("The primary texture of the dock background.")
-            // Cleaned up the confusing options. 
-            // 0 = Adaptive, 1 = Solid, 2 = Acrylic
-            model: [i18n("Adaptive (System Default)"), i18n("Solid Color"), i18n("Acrylic (Translucent)")]
-            currentIndex: DockSettings.backgroundStyle
-            onActivated: function(index) { DockSettings.backgroundStyle = index }
-        }
-    }
+    ColumnLayout {
+        anchors.fill: parent
+        anchors.margins: 16
+        spacing: 32
 
-    // --- PILLAR 2: COLOR & OPACITY ---
-    // Now always visible so Opacity is available for all styles
-    FormCard.FormHeader { title: i18n("Color & Opacity") }
-    FormCard.FormCard {
-        
-        // Toggle for System Color Override (Hide if Adaptive)
-        FormCard.FormSwitchDelegate {
-            visible: DockSettings.backgroundStyle > 0
-            text: i18n("Use System Accent Color")
-            description: i18n("Automatically match the dock to your current Plasma theme.")
-            checked: DockSettings.useSystemColor
-            onToggled: DockSettings.useSystemColor = checked
-        }
-
-        FormCard.FormDelegateSeparator { 
-            visible: DockSettings.backgroundStyle > 0 && !DockSettings.useSystemColor 
-        }
-
-        // Custom Color Picker (Hide if Adaptive OR using System Color)
-        FormCard.AbstractFormDelegate {
-            visible: DockSettings.backgroundStyle > 0 && !DockSettings.useSystemColor
-            contentItem: RowLayout {
-                QQC2.Label { Layout.fillWidth: true; text: i18n("Custom Tint Color") }
-                Rectangle {
-                    width: Kirigami.Units.gridUnit * 2
-                    height: Kirigami.Units.gridUnit * 1.2
-                    radius: Kirigami.Units.smallSpacing
-                    color: DockSettings.tintColor
-                    border.color: Kirigami.Theme.disabledTextColor
-                    border.width: 1
-                    MouseArea { 
-                        anchors.fill: parent
-                        onClicked: colorPickerPopup.open() 
+        // --- PILLAR 1: MATERIAL ---
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 8
+            
+            QQC2.Label { 
+                text: i18n("Base Material")
+                color: "#80FFFDD0" // 50% opacity Krema Accent
+                font.bold: true
+                font.letterSpacing: 1.1
+                font.pixelSize: 12
+                Layout.leftMargin: 8
+            }
+            
+            KremaCard {
+                RowLayout {
+                    Layout.fillWidth: true
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 2
+                        QQC2.Label { text: i18n("Style"); color: "#FFFDD0"; font.bold: true }
+                        QQC2.Label { text: i18n("The primary texture of the dock background."); color: "#80FFFDD0"; font.pixelSize: 12 }
+                    }
+		    KremaComboBox {
+                        Layout.fillWidth: true
+                        Layout.maximumWidth: 220 // This stops it from ever escaping the card
+                        model: [i18n("Adaptive (System Default)"), i18n("Solid Color"), i18n("Acrylic (Translucent)")]
+                        currentIndex: DockSettings.backgroundStyle
+                        onActivated: function(index) { DockSettings.backgroundStyle = index }
                     }
                 }
             }
         }
 
-        FormCard.FormDelegateSeparator { visible: DockSettings.backgroundStyle > 0 }
-
-        // Opacity Slider (ALWAYS VISIBLE)
-        FormCard.AbstractFormDelegate {
-            contentItem: ColumnLayout {
-                RowLayout {
-                    QQC2.Label { Layout.fillWidth: true; text: i18n("Background Opacity") }
-                    QQC2.Label { text: Math.round(opacitySlider.value * 100) + "%" }
-                }
-                QQC2.Slider {
-                    id: opacitySlider
+        // --- PILLAR 2: COLOR & OPACITY ---
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 8
+            
+            QQC2.Label { 
+                text: i18n("Color & Opacity")
+                color: "#80FFFDD0"
+                font.bold: true
+                font.letterSpacing: 1.1
+                font.pixelSize: 12
+                Layout.leftMargin: 8
+            }
+            
+            KremaCard {
+                KremaSwitch {
                     Layout.fillWidth: true
-                    from: 0.0; to: 1.0; stepSize: 0.05
-                    value: DockSettings.backgroundOpacity
-                    onMoved: DockSettings.backgroundOpacity = value
+                    visible: DockSettings.backgroundStyle > 0
+                    text: i18n("Use System Accent Color")
+                    checked: DockSettings.useSystemColor
+                    onToggled: DockSettings.useSystemColor = checked
+                }
+
+                Rectangle { 
+                    Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A"
+                    visible: DockSettings.backgroundStyle > 0 && !DockSettings.useSystemColor 
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    visible: DockSettings.backgroundStyle > 0 && !DockSettings.useSystemColor
+                    QQC2.Label { Layout.fillWidth: true; text: i18n("Custom Tint Color"); color: "#FFFDD0"; font.bold: true }
+                    Rectangle {
+                        width: 48; height: 28; radius: 6
+                        color: DockSettings.tintColor
+                        border.color: "#333133"; border.width: 1
+                        MouseArea { 
+                            anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                            onClicked: colorPickerPopup.open() 
+                        }
+                    }
+                }
+
+                Rectangle { 
+                    Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A"
+                    visible: DockSettings.backgroundStyle > 0 
+                }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    RowLayout {
+                        QQC2.Label { Layout.fillWidth: true; text: i18n("Background Opacity"); color: "#FFFDD0"; font.bold: true }
+                        QQC2.Label { text: Math.round(opacitySlider.value * 100) + "%"; color: "#80FFFDD0"; font.bold: true }
+                    }
+                    QQC2.Slider {
+                        id: opacitySlider
+                        Layout.fillWidth: true
+                        from: 0.0; to: 1.0; stepSize: 0.05
+                        value: DockSettings.backgroundOpacity
+                        onMoved: DockSettings.backgroundOpacity = value
+                    }
+                }
+            }
+        }
+
+        // --- PILLAR 3: GEOMETRY ---
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 8
+            
+            QQC2.Label { 
+                text: i18n("Geometry")
+                color: "#80FFFDD0"
+                font.bold: true
+                font.letterSpacing: 1.1
+                font.pixelSize: 12
+                Layout.leftMargin: 8
+            }
+            
+            KremaCard {
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    RowLayout {
+                        QQC2.Label { Layout.fillWidth: true; text: i18n("Corner Radius"); color: "#FFFDD0"; font.bold: true }
+                        QQC2.Label { text: cornerSlider.value + "px"; color: "#80FFFDD0"; font.bold: true }
+                    }
+                    QQC2.Slider {
+                        id: cornerSlider
+                        Layout.fillWidth: true
+                        from: 0; to: 24; stepSize: 1
+                        value: DockSettings.cornerRadius
+                        onMoved: DockSettings.cornerRadius = value
+                    }
+                }
+
+                Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A" }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    RowLayout {
+                        QQC2.Label { Layout.fillWidth: true; text: i18n("Panel Thickness"); color: "#FFFDD0"; font.bold: true }
+                        QQC2.Label { text: panelThicknessSlider.value + "px"; color: "#80FFFDD0"; font.bold: true }
+                    }
+                    QQC2.Slider {
+                        id: panelThicknessSlider
+                        Layout.fillWidth: true
+                        from: 10; to: DockSettings.iconSize + 24; stepSize: 2
+                        value: DockSettings.panelHeight
+                        onMoved: {
+                            DockSettings.panelHeight = value
+                            DockSettings.save()
+                        }
+                    }
+                }
+
+                Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A" }
+
+                KremaSwitch {
+                    Layout.fillWidth: true
+                    text: i18n("Floating Dock")
+                    checked: DockSettings.floating
+                    onToggled: DockSettings.floating = checked
                 }
             }
         }
     }
 
-    // --- PILLAR 3: GEOMETRY ---
-    // (Note: You might move this to a "Layout" page later, but for now it lives here)
-    FormCard.FormHeader { title: i18n("Geometry") }
-    FormCard.FormCard {
-        FormCard.FormSpinBoxDelegate {
-            label: i18n("Corner Radius")
-            description: i18n("How round the edges of the dock should be.")
-            from: 0; to: 24
-            value: DockSettings.cornerRadius
-            onValueChanged: DockSettings.cornerRadius = value
-        }
-
-        FormCard.FormDelegateSeparator {}
-
-        FormCard.FormSpinBoxDelegate {
-            label: i18n("Panel Thickness")
-            from: 10; to: DockSettings.iconSize + 24; stepSize: 2
-            value: DockSettings.panelHeight
-            onValueChanged: {
-                DockSettings.panelHeight = value
-                DockSettings.save()
-            }
-        }
-        
-        FormCard.FormDelegateSeparator {}
-
-        FormCard.FormSwitchDelegate {
-            text: i18n("Floating Dock")
-            description: i18n("Detach the dock from the screen edge.")
-            checked: DockSettings.floating
-            onToggled: DockSettings.floating = checked
-        }
-    }
-
-    // THE CUSTOM COLOR PICKER POPUP (Kept exactly as you had it)
+    // --- CUSTOM COLOR PICKER POPUP ---
     QQC2.Popup {
         id: colorPickerPopup
         parent: bgPage.Window.window ? bgPage.Window.window.contentItem : bgPage
@@ -130,6 +192,14 @@ FormCard.FormCardPage {
         modal: true
         focus: true
         closePolicy: QQC2.Popup.CloseOnEscape | QQC2.Popup.CloseOnPressOutside
+
+        // Krema Theming for the Popup background
+        background: Rectangle {
+            color: "#1C1A1C"
+            radius: 12
+            border.color: "#333133"
+            border.width: 1
+        }
 
         property real rVal: 0
         property real gVal: 0
@@ -147,33 +217,37 @@ FormCard.FormCardPage {
             QQC2.Label {
                 text: i18n("Custom Tint Color")
                 font.weight: Font.Bold
+                color: "#FFFDD0"
                 Layout.alignment: Qt.AlignHCenter
             }
 
             Rectangle {
                 Layout.fillWidth: true
                 height: Kirigami.Units.gridUnit * 4
-                radius: Kirigami.Units.smallSpacing
+                radius: 8
                 color: colorPickerPopup.tempColor
-                border.color: Kirigami.Theme.disabledTextColor
+                border.color: "#333133"
                 border.width: 1
             }
 
             GridLayout {
                 columns: 2
                 Layout.fillWidth: true
-                QQC2.Label { text: "R:" }
+                QQC2.Label { text: "R:"; color: "#80FFFDD0"; font.bold: true }
                 QQC2.Slider { Layout.fillWidth: true; from: 0; to: 1; value: colorPickerPopup.rVal; onMoved: colorPickerPopup.rVal = value }
-                QQC2.Label { text: "G:" }
+                QQC2.Label { text: "G:"; color: "#80FFFDD0"; font.bold: true }
                 QQC2.Slider { Layout.fillWidth: true; from: 0; to: 1; value: colorPickerPopup.gVal; onMoved: colorPickerPopup.gVal = value }
-                QQC2.Label { text: "B:" }
+                QQC2.Label { text: "B:"; color: "#80FFFDD0"; font.bold: true }
                 QQC2.Slider { Layout.fillWidth: true; from: 0; to: 1; value: colorPickerPopup.bVal; onMoved: colorPickerPopup.bVal = value }
             }
 
             RowLayout {
                 Layout.fillWidth: true
                 Item { Layout.fillWidth: true }
-                QQC2.Button { text: i18n("Cancel"); onClicked: colorPickerPopup.close() }
+                QQC2.Button { 
+                    text: i18n("Cancel")
+                    onClicked: colorPickerPopup.close() 
+                }
                 QQC2.Button {
                     text: i18n("Save")
                     highlighted: true

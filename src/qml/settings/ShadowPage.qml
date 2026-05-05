@@ -6,113 +6,208 @@ import QtQuick.Controls as QQC2
 import QtQuick.Layouts
 import QtQuick.Dialogs
 import org.kde.kirigami as Kirigami
-import org.kde.kirigamiaddons.formcard as FormCard
 import com.bhyoo.krema 1.0
 
-FormCard.FormCardPage {
-    title: i18n("Shadow")
+// Import our custom UI Kit
+import "../components"
 
-    FormCard.FormCard {
-        FormCard.FormSwitchDelegate {
-            text: i18n("Enable shadow")
-            checked: DockSettings.shadowEnabled
-            onToggled: DockSettings.shadowEnabled = checked
-        }
+QQC2.ScrollView {
+    id: shadowPage
+    contentWidth: availableWidth
+    clip: true
 
-        FormCard.FormDelegateSeparator { visible: DockSettings.shadowEnabled }
+    // Let the ScrollView handle margins natively to prevent clipping
+    topPadding: 16
+    bottomPadding: 32 // Premium breathing room at the bottom
+    leftPadding: 16
+    rightPadding: 16
 
-        FormCard.AbstractFormDelegate {
-            id: lightXDelegate; visible: DockSettings.shadowEnabled; background: null
-            contentItem: ColumnLayout {
-                spacing: Kirigami.Units.smallSpacing
-                RowLayout {
-                    QQC2.Label { Layout.fillWidth: true; text: i18n("Light X"); color: lightXDelegate.enabled ? Kirigami.Theme.textColor : Kirigami.Theme.disabledTextColor }
-                    QQC2.Label { text: lightXSlider.value; color: Kirigami.Theme.disabledTextColor }
+    ColumnLayout {
+        // ONLY fill the width, let the height stretch natively
+        width: parent.width
+        spacing: 32
+
+        // --- SECTION 1: MASTER SWITCH ---
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 8
+            
+            QQC2.Label { 
+                text: i18n("Master Control")
+                color: "#80FFFDD0" // 50% opacity Krema Accent
+                font.bold: true
+                font.letterSpacing: 1.1
+                font.pixelSize: 12
+                Layout.leftMargin: 8
+            }
+            
+            KremaCard {
+                KremaSwitch {
+                    Layout.fillWidth: true
+                    text: i18n("Enable High-Fidelity Shadows")
+                    checked: DockSettings.shadowEnabled
+                    onToggled: DockSettings.shadowEnabled = checked
                 }
-                QQC2.Slider { id: lightXSlider; Layout.fillWidth: true; from: -300; to: 300; stepSize: 10; value: DockSettings.shadowLightX; onMoved: DockSettings.shadowLightX = value }
             }
         }
 
-        FormCard.FormDelegateSeparator { visible: DockSettings.shadowEnabled }
-
-        FormCard.AbstractFormDelegate {
-            id: lightYDelegate; visible: DockSettings.shadowEnabled; background: null
-            contentItem: ColumnLayout {
-                spacing: Kirigami.Units.smallSpacing
-                RowLayout {
-                    QQC2.Label { Layout.fillWidth: true; text: i18n("Light Y"); color: lightYDelegate.enabled ? Kirigami.Theme.textColor : Kirigami.Theme.disabledTextColor }
-                    QQC2.Label { text: lightYSlider.value; color: Kirigami.Theme.disabledTextColor }
-                }
-                QQC2.Slider { id: lightYSlider; Layout.fillWidth: true; from: -300; to: 300; stepSize: 10; value: DockSettings.shadowLightY; onMoved: DockSettings.shadowLightY = value }
-            }
-        }
-
-        FormCard.FormDelegateSeparator { visible: DockSettings.shadowEnabled }
-
-        FormCard.AbstractFormDelegate {
-            id: lightZDelegate; visible: DockSettings.shadowEnabled; background: null
-            contentItem: ColumnLayout {
-                spacing: Kirigami.Units.smallSpacing
-                RowLayout {
-                    QQC2.Label { Layout.fillWidth: true; text: i18n("Light Z (height)"); color: lightZDelegate.enabled ? Kirigami.Theme.textColor : Kirigami.Theme.disabledTextColor }
-                    QQC2.Label { text: lightZSlider.value; color: Kirigami.Theme.disabledTextColor }
-                }
-                QQC2.Slider { id: lightZSlider; Layout.fillWidth: true; from: 100; to: 2000; stepSize: 20; value: DockSettings.shadowLightZ; onMoved: DockSettings.shadowLightZ = value }
-            }
-        }
-
-        FormCard.FormDelegateSeparator { visible: DockSettings.shadowEnabled }
-
-        FormCard.AbstractFormDelegate {
-            id: lightRadiusDelegate; visible: DockSettings.shadowEnabled; background: null
-            contentItem: ColumnLayout {
-                spacing: Kirigami.Units.smallSpacing
-                RowLayout {
-                    QQC2.Label { Layout.fillWidth: true; text: i18n("Light radius"); color: lightRadiusDelegate.enabled ? Kirigami.Theme.textColor : Kirigami.Theme.disabledTextColor }
-                    QQC2.Label { text: lightRadiusSlider.value.toFixed(1) + "px"; color: Kirigami.Theme.disabledTextColor }
-                }
-                QQC2.Slider { id: lightRadiusSlider; Layout.fillWidth: true; from: 0.5; to: 20.0; stepSize: 0.5; value: DockSettings.shadowLightRadius; onMoved: DockSettings.shadowLightRadius = value }
-            }
-        }
-
-        FormCard.FormDelegateSeparator { visible: DockSettings.shadowEnabled }
-
-        FormCard.FormSpinBoxDelegate {
+        // --- SECTION 2: LIGHT PHYSICS ---
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 8
             visible: DockSettings.shadowEnabled
-            label: i18n("Elevation")
-            from: 1; to: 50
-            value: DockSettings.shadowElevation
-            onValueChanged: DockSettings.shadowElevation = value
-        }
-
-        FormCard.FormDelegateSeparator { visible: DockSettings.shadowEnabled }
-
-        FormCard.AbstractFormDelegate {
-            id: intensityDelegate; visible: DockSettings.shadowEnabled; background: null
-            contentItem: ColumnLayout {
-                spacing: Kirigami.Units.smallSpacing
-                RowLayout {
-                    QQC2.Label { Layout.fillWidth: true; text: i18n("Shadow intensity"); color: intensityDelegate.enabled ? Kirigami.Theme.textColor : Kirigami.Theme.disabledTextColor }
-                    QQC2.Label { text: Math.round(intensitySlider.value * 100) + "%"; color: Kirigami.Theme.disabledTextColor }
+            
+            QQC2.Label { 
+                text: i18n("Light Source Physics")
+                color: "#80FFFDD0"
+                font.bold: true
+                font.letterSpacing: 1.1
+                font.pixelSize: 12
+                Layout.leftMargin: 8
+            }
+            
+            KremaCard {
+                // LIGHT X
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    RowLayout {
+                        QQC2.Label { Layout.fillWidth: true; text: i18n("Light X (Horizontal offset)"); color: "#FFFDD0"; font.bold: true }
+                        QQC2.Label { text: lightXSlider.value + "px"; color: "#80FFFDD0"; font.bold: true }
+                    }
+                    QQC2.Slider {
+                        id: lightXSlider; Layout.fillWidth: true; 
+                        from: -300; to: 300; stepSize: 10; 
+                        value: DockSettings.shadowLightX; 
+                        onMoved: DockSettings.shadowLightX = value 
+                    }
                 }
-                QQC2.Slider { id: intensitySlider; Layout.fillWidth: true; from: 0.0; to: 1.0; stepSize: 0.05; value: DockSettings.shadowIntensity; onMoved: DockSettings.shadowIntensity = value }
+
+                Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A" }
+
+                // LIGHT Y
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    RowLayout {
+                        QQC2.Label { Layout.fillWidth: true; text: i18n("Light Y (Vertical offset)"); color: "#FFFDD0"; font.bold: true }
+                        QQC2.Label { text: lightYSlider.value + "px"; color: "#80FFFDD0"; font.bold: true }
+                    }
+                    QQC2.Slider {
+                        id: lightYSlider; Layout.fillWidth: true; 
+                        from: -300; to: 300; stepSize: 10; 
+                        value: DockSettings.shadowLightY; 
+                        onMoved: DockSettings.shadowLightY = value 
+                    }
+                }
+
+                Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A" }
+
+                // LIGHT Z (HEIGHT)
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    RowLayout {
+                        QQC2.Label { Layout.fillWidth: true; text: i18n("Light Z (Distance from dock)"); color: "#FFFDD0"; font.bold: true }
+                        QQC2.Label { text: lightZSlider.value; color: "#80FFFDD0"; font.bold: true }
+                    }
+                    QQC2.Slider {
+                        id: lightZSlider; Layout.fillWidth: true; 
+                        from: 100; to: 2000; stepSize: 20; 
+                        value: DockSettings.shadowLightZ; 
+                        onMoved: DockSettings.shadowLightZ = value 
+                    }
+                }
             }
         }
 
-        FormCard.FormDelegateSeparator { visible: DockSettings.shadowEnabled }
+        // --- SECTION 3: APPEARANCE ---
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 8
+            visible: DockSettings.shadowEnabled
+            
+            QQC2.Label { 
+                text: i18n("Shadow Appearance")
+                color: "#80FFFDD0"
+                font.bold: true
+                font.letterSpacing: 1.1
+                font.pixelSize: 12
+                Layout.leftMargin: 8
+            }
+            
+            KremaCard {
+                // ELEVATION
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    RowLayout {
+                        QQC2.Label { Layout.fillWidth: true; text: i18n("Elevation (Depth scale)"); color: "#FFFDD0"; font.bold: true }
+                        QQC2.Label { text: elevationSlider.value; color: "#80FFFDD0"; font.bold: true }
+                    }
+                    QQC2.Slider {
+                        id: elevationSlider; Layout.fillWidth: true; 
+                        from: 1; to: 50; stepSize: 1; 
+                        value: DockSettings.shadowElevation; 
+                        onMoved: DockSettings.shadowElevation = value 
+                    }
+                }
 
-        FormCard.AbstractFormDelegate {
-            id: colorDelegate; visible: DockSettings.shadowEnabled; background: null
-            contentItem: RowLayout {
-                QQC2.Label { Layout.fillWidth: true; text: i18n("Shadow color"); color: colorDelegate.enabled ? Kirigami.Theme.textColor : Kirigami.Theme.disabledTextColor }
-                Rectangle {
-                    width: 40; height: 24; radius: 4
-                    color: DockSettings.shadowColor
-                    border.color: Kirigami.Theme.disabledTextColor
-                    MouseArea { anchors.fill: parent; onClicked: shadowColorDialog.open() }
+                Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A" }
+
+                // RADIUS
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    RowLayout {
+                        QQC2.Label { Layout.fillWidth: true; text: i18n("Blur Radius"); color: "#FFFDD0"; font.bold: true }
+                        QQC2.Label { text: lightRadiusSlider.value.toFixed(1) + "px"; color: "#80FFFDD0"; font.bold: true }
+                    }
+                    QQC2.Slider {
+                        id: lightRadiusSlider; Layout.fillWidth: true; 
+                        from: 0.5; to: 20.0; stepSize: 0.5; 
+                        value: DockSettings.shadowLightRadius; 
+                        onMoved: DockSettings.shadowLightRadius = value 
+                    }
+                }
+
+                Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A" }
+
+                // INTENSITY
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    RowLayout {
+                        QQC2.Label { Layout.fillWidth: true; text: i18n("Shadow Intensity"); color: "#FFFDD0"; font.bold: true }
+                        QQC2.Label { text: Math.round(intensitySlider.value * 100) + "%"; color: "#80FFFDD0"; font.bold: true }
+                    }
+                    QQC2.Slider {
+                        id: intensitySlider; Layout.fillWidth: true; 
+                        from: 0.0; to: 1.0; stepSize: 0.05; 
+                        value: DockSettings.shadowIntensity; 
+                        onMoved: DockSettings.shadowIntensity = value 
+                    }
+                }
+
+                Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A" }
+
+                // SHADOW COLOR PICKER
+                RowLayout {
+                    Layout.fillWidth: true
+                    QQC2.Label { Layout.fillWidth: true; text: i18n("Shadow Color Tint"); color: "#FFFDD0"; font.bold: true }
+                    Rectangle {
+                        width: 48; height: 28; radius: 6
+                        color: DockSettings.shadowColor
+                        border.color: "#333133"; border.width: 1
+                        MouseArea { 
+                            anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                            onClicked: shadowColorDialog.open() 
+                        }
+                    }
                 }
             }
         }
     }
-    ColorDialog { id: shadowColorDialog; title: i18n("Choose shadow color"); selectedColor: DockSettings.shadowColor; onAccepted: DockSettings.shadowColor = selectedColor }
+
+    // Native Color Dialog
+    ColorDialog { 
+        id: shadowColorDialog; 
+        title: i18n("Choose shadow color"); 
+        selectedColor: DockSettings.shadowColor; 
+        onAccepted: DockSettings.shadowColor = selectedColor 
+    }
 }

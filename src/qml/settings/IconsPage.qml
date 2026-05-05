@@ -1,104 +1,126 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krema Contributors
+
 import QtQuick
 import QtQuick.Controls as QQC2
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
-import org.kde.kirigamiaddons.formcard as FormCard
 import com.bhyoo.krema 1.0
 
-FormCard.FormCardPage {
-    title: i18n("Icons")
+// Import our custom UI Kit
+import "../components"
 
-    FormCard.FormHeader { title: i18n("Icon Layout") }
+QQC2.ScrollView {
+    id: iconsPage
+    contentWidth: availableWidth
+    clip: true
 
-    FormCard.FormCard {
-        FormCard.FormSpinBoxDelegate {
-            label: i18n("Icon size")
-            from: 24; to: 96; stepSize: 4
-            value: DockSettings.iconSize
-            onValueChanged: DockSettings.iconSize = value
-        }
+    // Let the ScrollView handle margins natively
+    topPadding: 16
+    bottomPadding: 32
+    leftPadding: 16
+    rightPadding: 16
 
-        FormCard.FormDelegateSeparator {}
+    ColumnLayout {
+        // ONLY fill the width, let the height stretch natively
+        width: parent.width
+        spacing: 32
 
-        FormCard.FormSpinBoxDelegate {
-            label: i18n("Icon spacing")
-            from: 0; to: 16
-            value: DockSettings.iconSpacing
-            onValueChanged: DockSettings.iconSpacing = value
-        }
-
-        FormCard.FormDelegateSeparator {}
-
-        FormCard.AbstractFormDelegate {
-            contentItem: ColumnLayout {
-                RowLayout {
-                    QQC2.Label { Layout.fillWidth: true; text: i18n("Zoom factor") }
-                    QQC2.Label { text: DockSettings.maxZoomFactor.toFixed(1) + "x"; opacity: 0.6 }
-                }
-                QQC2.Slider {
+        // --- SECTION 1: SIZING & GEOMETRY ---
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 8
+            
+            QQC2.Label { 
+                text: i18n("Sizing & Geometry")
+                color: "#80FFFDD0" // 50% opacity Krema Accent
+                font.bold: true
+                font.letterSpacing: 1.1
+                font.pixelSize: 12
+                Layout.leftMargin: 8
+            }
+            
+            KremaCard {
+                // ICON SIZE
+                ColumnLayout {
                     Layout.fillWidth: true
-                    from: 1.0; to: 2.0; stepSize: 0.1
-                    value: DockSettings.maxZoomFactor
-                    onMoved: DockSettings.maxZoomFactor = value
+                    RowLayout {
+                        QQC2.Label { Layout.fillWidth: true; text: i18n("Base Icon Size"); color: "#FFFDD0"; font.bold: true }
+                        QQC2.Label { text: iconSizeSlider.value + "px"; color: "#80FFFDD0"; font.bold: true }
+                    }
+                    QQC2.Slider {
+                        id: iconSizeSlider; Layout.fillWidth: true; 
+                        from: 24; to: 96; stepSize: 4; 
+                        value: DockSettings.iconSize; 
+                        onMoved: DockSettings.iconSize = value 
+                    }
+                }
+
+                Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A" }
+
+                // ICON SPACING
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    RowLayout {
+                        QQC2.Label { Layout.fillWidth: true; text: i18n("Icon Spacing (Gaps)"); color: "#FFFDD0"; font.bold: true }
+                        QQC2.Label { text: iconSpacingSlider.value + "px"; color: "#80FFFDD0"; font.bold: true }
+                    }
+                    QQC2.Slider {
+                        id: iconSpacingSlider; Layout.fillWidth: true; 
+                        from: 0; to: 16; stepSize: 1; 
+                        value: DockSettings.iconSpacing; 
+                        onMoved: DockSettings.iconSpacing = value 
+                    }
+                }
+
+                Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A" }
+
+                // ZOOM FACTOR
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    RowLayout {
+                        QQC2.Label { Layout.fillWidth: true; text: i18n("Hover Zoom Factor"); color: "#FFFDD0"; font.bold: true }
+                        QQC2.Label { text: zoomFactorSlider.value.toFixed(1) + "x"; color: "#80FFFDD0"; font.bold: true }
+                    }
+                    QQC2.Slider {
+                        id: zoomFactorSlider; Layout.fillWidth: true; 
+                        from: 1.0; to: 2.0; stepSize: 0.1; 
+                        value: DockSettings.maxZoomFactor; 
+                        onMoved: DockSettings.maxZoomFactor = value 
+                    }
+                }
+
+                Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A" }
+
+                // ICON SCALE (Global internal scale)
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    RowLayout {
+                        QQC2.Label { Layout.fillWidth: true; text: i18n("Global Icon Scale"); color: "#FFFDD0"; font.bold: true }
+                        QQC2.Label { text: Math.round(iconScaleSlider.value * 100) + "%"; color: "#80FFFDD0"; font.bold: true }
+                    }
+                    QQC2.Slider {
+                        id: iconScaleSlider; Layout.fillWidth: true; 
+                        from: 0.5; to: 1.0; stepSize: 0.05; 
+                        value: DockSettings.iconScale; 
+                        onMoved: DockSettings.iconScale = value 
+                    }
+                }
+
+                Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A" }
+
+                // NORMALIZATION SWITCH
+                KremaSwitch {
+                    Layout.fillWidth: true
+                    text: i18n("Icon Size Normalization")
+                    checked: DockSettings.iconNormalization
+                    onToggled: DockSettings.iconNormalization = checked
+                }
+                QQC2.Label { 
+                    text: i18n("Automatically adjusts icons with excess transparent padding so they appear visually consistent."); 
+                    color: "#80FFFDD0"; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.topMargin: -8
                 }
             }
-        }
-
-        FormCard.FormDelegateSeparator {}
-
-        FormCard.FormSwitchDelegate {
-            text: i18n("Icon size normalization")
-            description: i18n("Automatically adjust icons with excess padding to appear visually consistent")
-            checked: DockSettings.iconNormalization
-            onToggled: DockSettings.iconNormalization = checked
-        }
-
-        FormCard.FormDelegateSeparator {}
-
-        FormCard.AbstractFormDelegate {
-            contentItem: ColumnLayout {
-                RowLayout {
-                    QQC2.Label { Layout.fillWidth: true; text: i18n("Icon scale") }
-                    QQC2.Label { text: Math.round(DockSettings.iconScale * 100) + "%"; opacity: 0.6 }
-                }
-                QQC2.Slider {
-                    Layout.fillWidth: true
-                    from: 0.5; to: 1.0; stepSize: 0.05
-                    value: DockSettings.iconScale
-                    onMoved: DockSettings.iconScale = value
-                }
-            }
-        }
-    }
-
-    FormCard.FormHeader { title: i18n("Behavior & Notifications") }
-
-    FormCard.FormCard {
-        FormCard.FormComboBoxDelegate {
-            text: i18n("Attention animation")
-            description: i18n("Animation when an app demands attention")
-            model: [i18n("None"), i18n("Bounce"), i18n("Glow")]
-            currentIndex: DockSettings.attentionAnimation
-            onActivated: function(index) { DockSettings.attentionAnimation = index }
-        }
-
-        FormCard.FormDelegateSeparator {}
-
-        FormCard.FormSpinBoxDelegate {
-            label: i18n("Attention duration (seconds, 0 = infinite)")
-            from: 0; to: 60
-            value: DockSettings.attentionAnimationDuration
-            onValueChanged: DockSettings.attentionAnimationDuration = value
-        }
-
-        FormCard.FormDelegateSeparator {}
-
-        FormCard.FormComboBoxDelegate {
-            text: i18n("Badge display")
-            description: i18n("How notification badges appear on dock icons")
-            model: [i18n("None"), i18n("Dot"), i18n("Number")]
-            currentIndex: DockSettings.badgeDisplayMode
-            onActivated: function(index) { DockSettings.badgeDisplayMode = index }
         }
     }
 }

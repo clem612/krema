@@ -12,32 +12,41 @@ Item {
     objectName: "configuration"
     id: settingsWindow
 
-    // --- NARROWER WIDTH ---
-    implicitWidth: 600 
-    implicitHeight: 650
+    // --- KREMA DIMENSIONS ---
+    implicitWidth: 720 
+    implicitHeight: 620
 
     property bool isPinned: false
     property var configViewItem: settingsWindow
-    readonly property int tileHeight: Math.floor(Kirigami.Units.gridUnit * 2.0)
+    readonly property int tileHeight: 44
 
+    // --- THE LOGICAL KREMA CATEGORIZATION ---
     property var menuData: [
         {
-            name: i18n("Behavior"),
-            icon: "preferences-system",
+            name: i18n("Theme & Style"),
+            icon: "preferences-desktop-theme",
             subItems: [
-                { id: "visibility", name: i18n("Visibility"), icon: "view-visible", page: "settings/VisibilityPage.qml" },
-                { id: "multimonitor", name: i18n("Multi-Monitor"), icon: "video-display", page: "settings/MonitorPage.qml" },
-                { id: "virtualdesktops", name: i18n("Virtual Desktops"), icon: "preferences-desktop-virtual", page: "settings/VirtualDesktopsPage.qml" }
+                { id: "background", name: i18n("Background"), icon: "preferences-desktop-wallpaper", page: "settings/BackgroundPage.qml" },
+                { id: "shadow", name: i18n("Shadows"), icon: "format-text-shadow", page: "settings/ShadowPage.qml" },
+                { id: "separator", name: i18n("Separator"), icon: "format-stroke-color", page: "settings/SeparatorPage.qml" }
             ]
         },
         {
-            name: i18n("Appearance & Style"),
-            icon: "preferences-desktop-theme",
+            name: i18n("Layout & Size"),
+            icon: "transform-scale",
             subItems: [
-                { id: "icons", name: i18n("Icons"), icon: "preferences-desktop-icons", page: "settings/IconsPage.qml" },
-                { id: "separator", name: i18n("Separator"), icon: "format-stroke-color", page: "settings/SeparatorPage.qml" },
-                { id: "background", name: i18n("Background & Panel"), icon: "preferences-desktop-wallpaper", page: "settings/BackgroundPage.qml" },
-                { id: "shadow", name: i18n("Shadow"), icon: "format-text-shadow", page: "settings/ShadowPage.qml" },
+                { id: "icons", name: i18n("Icon Sizing & Gaps"), icon: "preferences-desktop-icons", page: "settings/IconsPage.qml" },
+                { id: "panel", name: i18n("Panel Geometry"), icon: "measure", page: "settings/PanelPage.qml" }
+            ]
+        },
+        {
+            name: i18n("Behavior & Rules"),
+            icon: "preferences-system",
+            subItems: [
+                { id: "behavior", name: i18n("General Behavior"), icon: "preferences-system-windows", page: "settings/BehaviorPage.qml" },
+                { id: "visibility", name: i18n("Visibility Rules"), icon: "view-visible", page: "settings/VisibilityPage.qml" },
+                { id: "multimonitor", name: i18n("Multi-Monitor"), icon: "video-display", page: "settings/MonitorPage.qml" },
+                { id: "virtualdesktops", name: i18n("Virtual Desktops"), icon: "preferences-desktop-virtual", page: "settings/VirtualDesktopsPage.qml" },
                 { id: "preview", name: i18n("Window Preview"), icon: "view-preview", page: "settings/PreviewPage.qml" }
             ]
         },
@@ -75,125 +84,272 @@ Item {
 
     onVisibleChanged: {
         if (typeof DockVisibility !== "undefined") {
-            // This triggers the C++ updateSize and Input Region logic
             DockVisibility.liveEditMode = settingsWindow.visible;
             DockVisibility.setInteracting(settingsWindow.visible);
         }
     }
 
+    // --- THE MAIN CHASSIS ---
     Rectangle {
         id: settingsChassis
         anchors.fill: parent
-        color: Kirigami.Theme.backgroundColor
-        radius: 12
-        border.color: Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.backgroundColor, Kirigami.Theme.textColor, 0.15)
+        color: "#1C1A1C" // Deep Roast Base
+        radius: 16
+        border.color: "#333133" // Subtle inner rim
         border.width: 1
+        clip: true
 
-        ColumnLayout {
+        RowLayout {
             anchors.fill: parent
-            anchors.margins: Kirigami.Units.gridUnit
             spacing: 0
 
+            // --- LEFT SIDEBAR (Darker Inset) ---
             Rectangle {
-                Layout.fillWidth: true; Layout.preferredHeight: tileHeight; color: "transparent"
-                RowLayout {
-                    anchors.fill: parent; anchors.leftMargin: Kirigami.Units.largeSpacing; anchors.rightMargin: Kirigami.Units.largeSpacing
-                    Kirigami.Icon { source: "preferences-system"; Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium; Layout.preferredHeight: width }
-                    QQC2.Label { text: "Krema Settings"; font.bold: true; Layout.fillWidth: true; verticalAlignment: Text.AlignVCenter }
-                    QQC2.ToolButton { icon.name: settingsWindow.isPinned ? "window-pin" : "window-unpin"; onClicked: settingsWindow.isPinned = !settingsWindow.isPinned }
-		    QQC2.ToolButton { icon.name: "window-close"; onClicked: SettingsController.visible = false }
+                Layout.preferredWidth: 240
+                Layout.fillHeight: true
+                color: "#121112" // Darker to push it back visually
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: 0
+
+                    // Sidebar Header
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 70
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 24
+                            anchors.rightMargin: 16
+                            Label { 
+                                text: "Krema"
+                                color: "#FFFDD0" 
+                                font.bold: true
+                                font.pixelSize: 22
+                                font.letterSpacing: 1.2
+                                Layout.fillWidth: true 
+                                verticalAlignment: Text.AlignVCenter 
+                            }
+                        }
+                    }
+
+                    // Dynamic Menu Stack
+                    StackView { 
+                        id: sidebarStack
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        initialItem: mainMenuComponent 
+                    }
                 }
             }
 
-            Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: Kirigami.Theme.textColor; opacity: 0.1 }
+            // Vertical Separator Line
+            Rectangle { Layout.preferredWidth: 1; Layout.fillHeight: true; color: "#2A282A" }
 
-            RowLayout {
-                Layout.fillWidth: true; Layout.fillHeight: true; spacing: 0
-                Rectangle {
-                    Layout.preferredWidth: 200; Layout.fillHeight: true; color: "transparent"
-                    StackView { id: sidebarStack; anchors.fill: parent; initialItem: mainMenuComponent }
+            // --- RIGHT CONTENT AREA ---
+            ColumnLayout {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                spacing: 0
+
+                // Content Header (Window Controls)
+                Item {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 60
+                    RowLayout {
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.rightMargin: 16
+                        spacing: 8
+
+                        // Pin Button
+                        QQC2.ToolButton { 
+                            icon.name: settingsWindow.isPinned ? "window-pin" : "window-unpin"
+                            icon.color: settingsWindow.isPinned ? "#FFFDD0" : "#80FFFDD0"
+                            onClicked: settingsWindow.isPinned = !settingsWindow.isPinned 
+                        }
+                        
+                        // Close Button
+                        QQC2.ToolButton { 
+                            icon.name: "window-close"
+                            icon.color: "#80FFFDD0"
+                            onClicked: SettingsController.visible = false 
+                        }
+                    }
                 }
-                Rectangle { Layout.preferredWidth: 1; Layout.fillHeight: true; color: Kirigami.Theme.textColor; opacity: 0.1 }
-                Loader { id: pageLoader; Layout.fillWidth: true; Layout.fillHeight: true; source: "settings/VisibilityPage.qml" }
-            }
 
-            Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: Kirigami.Theme.textColor; opacity: 0.1 }
-            
-            RowLayout {
-                Layout.fillWidth: true; Layout.preferredHeight: tileHeight
-                anchors.leftMargin: Kirigami.Units.largeSpacing; anchors.rightMargin: Kirigami.Units.largeSpacing
-                QQC2.Button { text: i18n("Add Widgets..."); flat: true; enabled: false; icon.name: "list-add" }
-                Item { Layout.fillWidth: true }
-		QQC2.Button { text: i18n("Close"); icon.name: "dialog-close"; onClicked: SettingsController.visible = false }
+                // The Actual Settings Page
+                Loader { 
+                    id: pageLoader
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    Layout.margins: 16
+                    source: "settings/BackgroundPage.qml" // Default landing page
+                }
             }
         }
     }
 
+    // --- CUSTOM STYLED MENU COMPONENTS ---
     Component {
         id: mainMenuComponent
-        ColumnLayout {
-            spacing: 0
-            ListView {
-                model: settingsWindow.menuData
-                Layout.fillWidth: true
-                Layout.preferredHeight: count * tileHeight
-                currentIndex: -1
-                clip: true
-                boundsBehavior: Flickable.StopAtBounds
-                delegate: QQC2.ItemDelegate {
-                    width: parent.width
-                    height: tileHeight
-                    highlighted: ListView.isCurrentItem
-                    leftPadding: Kirigami.Units.largeSpacing
-                    rightPadding: Kirigami.Units.largeSpacing
-                    contentItem: RowLayout {
-                        spacing: Kirigami.Units.largeSpacing
-                        Kirigami.Icon { source: modelData.icon; Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium; Layout.preferredHeight: width }
-                        QQC2.Label { text: modelData.name; Layout.fillWidth: true; verticalAlignment: Text.AlignVCenter; color: highlighted ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.textColor }
-                        Kirigami.Icon { source: "go-next-symbolic"; Layout.preferredWidth: Kirigami.Units.iconSizes.small; Layout.preferredHeight: width; visible: modelData.subItems !== undefined; opacity: highlighted ? 1.0 : 0.5 }
-                    }
+        ListView {
+            model: settingsWindow.menuData
+            currentIndex: -1
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+            
+            delegate: Rectangle {
+                id: menuDelegateRect
+                width: parent.width - 32
+                height: tileHeight
+                anchors.horizontalCenter: parent.horizontalCenter
+                radius: 8
+                
+                // 1. Dynamic State Logic (Selected > Pressed > Hover > Idle)
+                color: {
+                    if (ListView.isCurrentItem) return "#1AFFFDD0"
+                    if (menuMouse.pressed) return "#15FFFDD0" // Tactile click feedback
+                    if (menuMouse.containsMouse) return "#0AFFFDD0"
+                    return "transparent"
+                }
+                
+                // 2. Viscous Transition (The Krema Feel)
+                Behavior on color {
+                    ColorAnimation { duration: 150; easing.type: Easing.OutCubic }
+                }
+                
+                MouseArea {
+                    id: menuMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor // 3. The Hand Cursor
                     onClicked: {
                         if (modelData.subItems) sidebarStack.push(subMenuComponent, { "categoryName": modelData.name, "subModel": modelData.subItems })
                         else pageLoader.source = modelData.page
                     }
                 }
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: 16
+                    anchors.rightMargin: 16
+                    spacing: 12
+                    Kirigami.Icon { 
+                        source: modelData.icon
+                        color: parent.ListView.isCurrentItem ? "#FFFDD0" : "#80FFFDD0"
+                        Layout.preferredWidth: 18; Layout.preferredHeight: 18 
+                    }
+                    Label { 
+                        text: modelData.name
+                        color: parent.ListView.isCurrentItem ? "#FFFDD0" : "#80FFFDD0"
+                        font.weight: parent.ListView.isCurrentItem ? Font.Bold : Font.Normal
+                        Layout.fillWidth: true 
+                    }
+                    Kirigami.Icon { 
+                        source: "go-next-symbolic"
+                        color: "#80FFFDD0"
+                        Layout.preferredWidth: 16; Layout.preferredHeight: 16
+                        visible: modelData.subItems !== undefined 
+                    }
+                }
             }
-            Item { Layout.fillHeight: true }
         }
     }
 
     Component {
         id: subMenuComponent
         ColumnLayout {
-            spacing: 0
+            spacing: 8
             property string categoryName: ""
             property var subModel: []
-            QQC2.ItemDelegate {
-                Layout.fillWidth: true; height: tileHeight
-                onClicked: sidebarStack.pop()
-                leftPadding: Kirigami.Units.largeSpacing
-                contentItem: RowLayout {
-                    spacing: Kirigami.Units.largeSpacing
-                    Kirigami.Icon { source: "go-previous-symbolic"; Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium; Layout.preferredHeight: width }
-                    QQC2.Label { text: categoryName; font.bold: true; Layout.fillWidth: true; verticalAlignment: Text.AlignVCenter }
+
+            // --- Back Button ---
+            Rectangle {
+                Layout.preferredWidth: parent.width - 32
+                Layout.alignment: Qt.AlignHCenter
+                height: tileHeight
+                radius: 8
+                
+                // State Logic
+                color: {
+                    if (backMouse.pressed) return "#15FFFDD0"
+                    if (backMouse.containsMouse) return "#0AFFFDD0"
+                    return "transparent"
+                }
+                
+                Behavior on color { ColorAnimation { duration: 150; easing.type: Easing.OutCubic } }
+                
+                MouseArea {
+                    id: backMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor // Hand Cursor
+                    onClicked: sidebarStack.pop()
+                }
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: 16
+                    spacing: 12
+                    Kirigami.Icon { source: "go-previous-symbolic"; color: "#FFFDD0"; Layout.preferredWidth: 18; Layout.preferredHeight: 18 }
+                    Label { text: categoryName; color: "#FFFDD0"; font.bold: true; Layout.fillWidth: true }
                 }
             }
-            Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: Kirigami.Theme.textColor; opacity: 0.1 }
+
+            Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A"; Layout.leftMargin: 16; Layout.rightMargin: 16 }
+
+            // --- Sub-items List ---
             ListView {
-                Layout.fillWidth: true; Layout.preferredHeight: count * tileHeight; model: subModel; currentIndex: -1; clip: true
-                delegate: QQC2.ItemDelegate {
-                    width: parent.width; height: tileHeight
-                    highlighted: ListView.isCurrentItem
-                    leftPadding: Kirigami.Units.largeSpacing * 2
-                    contentItem: RowLayout {
-                        spacing: Kirigami.Units.largeSpacing
-                        Kirigami.Icon { source: modelData.icon || ""; Layout.preferredWidth: Kirigami.Units.iconSizes.small; Layout.preferredHeight: width }
-                        QQC2.Label { text: modelData.name; Layout.fillWidth: true; verticalAlignment: Text.AlignVCenter; color: highlighted ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.textColor }
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                model: subModel
+                currentIndex: -1
+                clip: true
+                
+                delegate: Rectangle {
+                    id: subDelegateRect
+                    width: parent.width - 32
+                    height: tileHeight
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    radius: 8
+                    
+                    // State Logic
+                    color: {
+                        if (ListView.isCurrentItem) return "#1AFFFDD0"
+                        if (subMouse.pressed) return "#15FFFDD0"
+                        if (subMouse.containsMouse) return "#0AFFFDD0"
+                        return "transparent"
                     }
-                    onClicked: pageLoader.source = modelData.page
+                    
+                    Behavior on color { ColorAnimation { duration: 150; easing.type: Easing.OutCubic } }
+                    
+                    MouseArea {
+                        id: subMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor // Hand Cursor
+                        onClicked: pageLoader.source = modelData.page
+                    }
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 16
+                        spacing: 12
+                        Kirigami.Icon { 
+                            source: modelData.icon || ""
+                            color: parent.ListView.isCurrentItem ? "#FFFDD0" : "#80FFFDD0"
+                            Layout.preferredWidth: 18; Layout.preferredHeight: 18 
+                        }
+                        Label { 
+                            text: modelData.name
+                            color: parent.ListView.isCurrentItem ? "#FFFDD0" : "#80FFFDD0"
+                            font.weight: parent.ListView.isCurrentItem ? Font.Medium : Font.Normal
+                            Layout.fillWidth: true 
+                        }
+                    }
                 }
             }
-            Item { Layout.fillHeight: true }
         }
     }
 }
