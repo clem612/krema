@@ -51,6 +51,8 @@ add_library(krema_lib STATIC
     utils/surfacegeometry.h
     utils/inputregion.h
     utils/inputregion.cpp
+    utils/peiconextractor.cpp
+    utils/peiconextractor.h
 
     ${KREMA_KCFG_SRCS}
     ${QML_RESOURCES}

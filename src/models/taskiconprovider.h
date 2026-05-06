@@ -37,7 +37,6 @@ struct IconNormalizationInfo {
 class TaskIconProvider : public QQuickImageProvider
 {
 public:
-    static QIcon resolveSteamIcon(const QString &appId);
     explicit TaskIconProvider(bool normalizationEnabled = true);
 
     QPixmap requestPixmap(const QString &id, QSize *size, const QSize &requestedSize) override;
@@ -47,6 +46,10 @@ public:
     void clearCache();
 
 private:
+    // Steam Icon Hunters
+    QString resolveSteamExePath(const QString &appId);
+    QIcon resolveSteamIconLocal(const QString &appId);
+
     /// Find the bounding rect of non-transparent content in an image.
     static QRect findContentBounds(const QImage &image, int threshold = 25);
 
