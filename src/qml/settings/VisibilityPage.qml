@@ -48,14 +48,12 @@ QQC2.ScrollView {
                             color: "#80FFFDD0"; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true 
                         }
                     }
-                    KremaComboBox {
-                        // FIXED: Added fillWidth and maximumWidth to prevent card overflow
-                        Layout.fillWidth: true
-                        Layout.maximumWidth: 180
-                        model: [i18n("Always Visible"), i18n("Auto Hide"), i18n("Dodge Windows")]
-                        currentIndex: DockSettings.visibilityMode
-                        onActivated: function(index) { DockSettings.visibilityMode = index }
-                    }
+		    KremaComboBox {
+                       Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                       model: [i18n("Always Visible"), i18n("Auto Hide"), i18n("Dodge Windows")]
+                       currentIndex: DockSettings.visibilityMode
+                       onActivated: function(index) { DockSettings.visibilityMode = index }
+                   }
                 }
 
                 Rectangle { 
@@ -107,15 +105,13 @@ QQC2.ScrollView {
                             color: "#80FFFDD0"; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true 
                         }
                     }
-                    KremaComboBox {
-                        // FIXED: Added fillWidth and maximumWidth to prevent card overflow
-                        Layout.fillWidth: true
-                        Layout.maximumWidth: 120
-                        model: [i18n("Top"), i18n("Bottom"), i18n("Left"), i18n("Right")]
-                        currentIndex: DockSettings.edge
-                        onActivated: function(index) { DockSettings.edge = index }
-                    }
-                }
+		    KremaComboBox {
+                       Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                       model: [i18n("Top"), i18n("Bottom"), i18n("Left"), i18n("Right")]
+                       currentIndex: DockSettings.edge
+                       onActivated: function(index) { DockSettings.edge = index }
+                   }
+	       }
             }
         }
     }

@@ -38,14 +38,18 @@ QQC2.ScrollView {
                     ColumnLayout {
                         Layout.fillWidth: true; spacing: 2
                         QQC2.Label { text: i18n("Attention Animation"); color: "#FFFDD0"; font.bold: true }
-                        QQC2.Label { text: i18n("Visual feedback when an app needs you."); color: "#80FFFDD0"; font.pixelSize: 12 }
-                    }
-                    KremaComboBox {
-                        Layout.preferredWidth: 140
-                        model: [i18n("None"), i18n("Bounce"), i18n("Glow")]
-                        currentIndex: DockSettings.attentionAnimation
-                        onActivated: function(index) { DockSettings.attentionAnimation = index }
-                    }
+			QQC2.Label { 
+                           text: i18n("Visual feedback when an app needs you.")
+                           color: "#80FFFDD0"; font.pixelSize: 12
+                           wrapMode: Text.WordWrap; Layout.fillWidth: true 
+                       }
+                   }
+                   KremaComboBox {
+                       Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                       model: [i18n("None"), i18n("Bounce"), i18n("Glow")]
+                       currentIndex: DockSettings.attentionAnimation
+                       onActivated: function(index) { DockSettings.attentionAnimation = index }
+                   }
                 }
 
                 Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A" }
@@ -76,14 +80,18 @@ QQC2.ScrollView {
                     ColumnLayout {
                         Layout.fillWidth: true; spacing: 2
                         QQC2.Label { text: i18n("Badge Display"); color: "#FFFDD0"; font.bold: true }
-                        QQC2.Label { text: i18n("Notification count styles."); color: "#80FFFDD0"; font.pixelSize: 12 }
-                    }
-                    KremaComboBox {
-                        Layout.preferredWidth: 140
-                        model: [i18n("None"), i18n("Dot"), i18n("Number")]
-                        currentIndex: DockSettings.badgeDisplayMode
-                        onActivated: function(index) { DockSettings.badgeDisplayMode = index }
-                    }
+			QQC2.Label { 
+                           text: i18n("Notification count styles.")
+                           color: "#80FFFDD0"; font.pixelSize: 12
+                           wrapMode: Text.WordWrap; Layout.fillWidth: true 
+                       }
+                   }
+                   KremaComboBox {
+                       Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                       model: [i18n("None"), i18n("Dot"), i18n("Number")]
+                       currentIndex: DockSettings.badgeDisplayMode
+                       onActivated: function(index) { DockSettings.badgeDisplayMode = index }
+                   }
                 }
             }
         }

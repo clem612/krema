@@ -38,19 +38,30 @@ QQC2.ScrollView {
             KremaCard {
                 RowLayout {
                     Layout.fillWidth: true
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: 2
-                        QQC2.Label { text: i18n("Style"); color: "#FFFDD0"; font.bold: true }
-                        QQC2.Label { text: i18n("The primary texture of the dock background."); color: "#80FFFDD0"; font.pixelSize: 12 }
-                    }
+		    ColumnLayout {
+                       Layout.fillWidth: true
+                       spacing: 2
+                       QQC2.Label { 
+                           text: i18n("Style")
+                           color: "#FFFDD0"
+                           font.bold: true 
+                           Layout.fillWidth: true
+                       }
+                       QQC2.Label { 
+                           text: i18n("The primary texture of the dock background.")
+                           color: "#80FFFDD0"
+                           font.pixelSize: 12
+                           wrapMode: Text.WordWrap // Allows the text to break into multiple lines
+                           Layout.fillWidth: true  // Forces the label to respect layout boundaries
+                       }
+                   }
 		    KremaComboBox {
-                        Layout.fillWidth: true
-                        Layout.maximumWidth: 220 // This stops it from ever escaping the card
-                        model: [i18n("Adaptive (System Default)"), i18n("Solid Color"), i18n("Acrylic (Translucent)")]
-                        currentIndex: DockSettings.backgroundStyle
-                        onActivated: function(index) { DockSettings.backgroundStyle = index }
-                    }
+                       Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                       
+                       model: [i18n("Adaptive (System Default)"), i18n("Solid Color"), i18n("Acrylic (Translucent)")]
+                       currentIndex: DockSettings.backgroundStyle
+                       onActivated: function(index) { DockSettings.backgroundStyle = index }
+                   }
                 }
             }
         }
@@ -119,68 +130,6 @@ QQC2.ScrollView {
                 }
             }
         }
-
-        // --- PILLAR 3: GEOMETRY ---
-        ColumnLayout {
-            Layout.fillWidth: true
-            spacing: 8
-            
-            QQC2.Label { 
-                text: i18n("Geometry")
-                color: "#80FFFDD0"
-                font.bold: true
-                font.letterSpacing: 1.1
-                font.pixelSize: 12
-                Layout.leftMargin: 8
-            }
-            
-            KremaCard {
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    RowLayout {
-                        QQC2.Label { Layout.fillWidth: true; text: i18n("Corner Radius"); color: "#FFFDD0"; font.bold: true }
-                        QQC2.Label { text: cornerSlider.value + "px"; color: "#80FFFDD0"; font.bold: true }
-                    }
-                    QQC2.Slider {
-                        id: cornerSlider
-                        Layout.fillWidth: true
-                        from: 0; to: 24; stepSize: 1
-                        value: DockSettings.cornerRadius
-                        onMoved: DockSettings.cornerRadius = value
-                    }
-                }
-
-                Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A" }
-
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    RowLayout {
-                        QQC2.Label { Layout.fillWidth: true; text: i18n("Panel Thickness"); color: "#FFFDD0"; font.bold: true }
-                        QQC2.Label { text: panelThicknessSlider.value + "px"; color: "#80FFFDD0"; font.bold: true }
-                    }
-                    QQC2.Slider {
-                        id: panelThicknessSlider
-                        Layout.fillWidth: true
-                        from: 10; to: DockSettings.iconSize + 24; stepSize: 2
-                        value: DockSettings.panelHeight
-                        onMoved: {
-                            DockSettings.panelHeight = value
-                            DockSettings.save()
-                        }
-                    }
-                }
-
-                Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A" }
-
-                KremaSwitch {
-                    Layout.fillWidth: true
-                    text: i18n("Floating Dock")
-                    checked: DockSettings.floating
-                    onToggled: DockSettings.floating = checked
-                }
-            }
-        }
-    }
 
     // --- CUSTOM COLOR PICKER POPUP ---
     QQC2.Popup {
@@ -260,4 +209,5 @@ QQC2.ScrollView {
             }
         }
     }
+}
 }

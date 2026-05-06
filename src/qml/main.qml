@@ -812,23 +812,17 @@ Item {
            property bool isEditMode: typeof DockVisibility !== "undefined" && DockVisibility.liveEditMode
 
 	   // For Vertical Docks: Width is Thickness (Slider), Height is Length (Instant Sync)
-           width: {
-               if (DockView.isVertical) return DockSettings.panelHeight;
-               
-               // HORIZONTAL: Total footprint of all icons + separator + spacing
-               // childrenRect.width is the ONLY property that updates 1:1 with zoom
-               let content = dockRow.childrenRect.width;
-               return (content > 0) ? content + 24 : Kirigami.Units.gridUnit * 6;
-           }
+	   width: {
+              if (!DockView.isVertical) return _actualContentWidth;
+              // THE CEILING: Cap panel thickness so it never exceeds icons + padding
+              return Math.min(DockSettings.panelHeight, dockRow.animatedContentWidth + 12);
+          }
 
-           // For Horizontal Docks: Height is Thickness (Slider), Width is Length (Instant Sync)
-           height: {
-               if (!DockView.isVertical) return DockSettings.panelHeight;
-               
-               // VERTICAL: Total footprint of icons/separator on Y axis
-               let content = dockRow.childrenRect.height;
-               return (content > 0) ? content + 24 : Kirigami.Units.gridUnit * 6;
-           }
+          height: {
+              if (DockView.isVertical) return _actualContentHeight;
+              // THE CEILING: Cap panel thickness so it never exceeds icons + padding
+              return Math.min(DockSettings.panelHeight, dockRow.animatedContentHeight + 12);
+          }
            
            // CORNERS
            radius: DockSettings.cornerRadius
@@ -968,8 +962,8 @@ Item {
            property bool mouseInside: mouseX !== -9999 && root._zoomActive && !root._dragActive
 
 	// This calculates the size of ONLY the icons + padding
-        property real _actualContentWidth: dockPanel.width
-        property real _actualContentHeight: dockPanel.height
+	property real _actualContentWidth: Math.max(dockRow.implicitWidth + Kirigami.Units.largeSpacing * 2, Kirigami.Units.gridUnit * 6)
+        property real _actualContentHeight: Math.max(dockRow.animatedContentHeight + 6, Kirigami.Units.gridUnit * 6)
 
 	    // This function calculates the "Ghost" area for the OS
 	    function updateWaylandInputRegion() {
@@ -1121,11 +1115,11 @@ Item {
 
           // --- STRICT PROPORTIONAL MATH ---
           // Line thickness is 6% of icon, Length is 70% of icon
-          property real autoThickness: Math.min(1, Math.round(DockSettings.iconSize * 0.06))
-          property real autoLength: Math.round(DockSettings.iconSize * 0.7) 
+	  property real autoThickness: Math.max(1, Math.round(DockSettings.iconSize * 0.05))
+	  property real autoLength: Math.round(DockSettings.iconSize * 0.7)
           
-          width: Math.round(!DockView.isVertical ? autoThickness : autoLength)
-          height: Math.round(DockView.isVertical ? autoThickness : autoLength)
+	  width: Math.round(!DockView.isVertical ? autoThickness : autoLength)
+	  height: Math.round(DockView.isVertical ? autoThickness : autoLength)
 
           x: {
               if (!visible) return 0;
