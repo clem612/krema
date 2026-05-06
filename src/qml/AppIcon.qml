@@ -165,29 +165,29 @@ Item {
     property bool isExternalDropTarget: false
 
     // Configuration from DockView
-    property int iconSize: 48
-    property real maxZoomFactor: 1.6
-    property real panelMouseX: -1
-    property bool panelMouseInside: false
-    property int spacing: 4
-    property real itemCenterX: 0
+       property int iconSize: 48
+       property real maxZoomFactor: 1.6
+       property real panelMouseX: -1
+       property bool panelMouseInside: false
+       property int spacing: 4
+       
+       // Re-added the property so the parent can pass the perfect math
+       property real itemCenterX: 0
 
-    // Gaussian sigma factor for the zoom curve (sigma = iconSize * factor).
-    // Controls how many neighboring icons are visibly affected by zoom.
-    // Recommended range: 0.8 (tight) – 1.8 (wide). Default 1.2 ≈ macOS Dock.
-    property real zoomSigmaFactor: 1.2
-    readonly property real zoomSigma: iconSize * zoomSigmaFactor
+       // Gaussian sigma factor
+       property real zoomSigmaFactor: 1.2
+       readonly property real zoomSigma: iconSize * zoomSigmaFactor
 
-    // Computed zoom factor for this item
-    readonly property real zoomFactor: {
-        if (!panelMouseInside || panelMouseX < 0) {
-            return 1.0
-        }
+       // Computed zoom factor for this item
+       readonly property real zoomFactor: {
+           if (!panelMouseInside || panelMouseX < 0) {
+               return 1.0
+           }
 
-        let distance = Math.abs(panelMouseX - itemCenterX)
-        let sigma2 = zoomSigma * zoomSigma
-        return 1.0 + (maxZoomFactor - 1.0) * Math.exp(-(distance * distance) / sigma2)
-    }
+           let distance = Math.abs(panelMouseX - itemCenterX)
+           let sigma2 = zoomSigma * zoomSigma
+           return 1.0 + (maxZoomFactor - 1.0) * Math.exp(-(distance * distance) / sigma2)
+       }
 
     // --- KDE state-driven launch tracking ---
     //
@@ -319,14 +319,6 @@ Item {
     property real currentScale: 1.0
     property bool _zoomAnimReady: false
 
-    Behavior on currentScale {
-        enabled: dockItem._zoomAnimReady
-        NumberAnimation {
-            duration: Kirigami.Units.shortDuration
-            easing.type: Easing.OutCubic
-        }
-    }
-
     // Update currentScale when zoomFactor changes
     onZoomFactorChanged: currentScale = zoomFactor
 
@@ -335,13 +327,13 @@ Item {
     // zoom animation to prevent the visual glitch where shifted icons animate their scale.
     // Normal mouse-driven zoom doesn't change itemCenterX, so this only fires during
     // model/layout changes.
-    onItemCenterXChanged: {
-        if (_zoomAnimReady) {
-            _zoomAnimReady = false
-            currentScale = zoomFactor
-            Qt.callLater(function() { _zoomAnimReady = true })
-        }
-    }
+     onItemCenterXChanged: {
+       if (_zoomAnimReady) {
+           _zoomAnimReady = false
+           currentScale = zoomFactor
+           Qt.callLater(function() { _zoomAnimReady = true })
+       }
+   }
 
     // On delegate creation: apply zoom instantly (no animation) to avoid glitch
     // when Repeater recreates delegates due to model changes.

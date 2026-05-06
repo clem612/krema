@@ -771,35 +771,41 @@ Item {
                running: Qt.application.arguments.indexOf("--debug-geom") !== -1
                property string lastState: ""
 
-               onTriggered: {
-                   if (hoveredIndex === -1) {
-                       if (lastState !== "IDLE") {
-                           console.log("\x1b[90m[DEBUG] Dock Idle (No Hover)\x1b[0m");
-                           lastState = "IDLE";
-                       }
-                       return;
-                   }
+	       onTriggered: {
+                  if (hoveredIndex === -1) {
+                      if (lastState !== "IDLE") {
+                          console.log("\x1b[90m[DEBUG] Dock Idle (No Hover)\x1b[0m");
+                          lastState = "IDLE";
+                      }
+                      return;
+                  }
 
-                   let item = dockRepeater.itemAt(hoveredIndex);
-                   if (!item) return;
+                  let item = dockRepeater.itemAt(hoveredIndex);
+                  if (!item) return;
 
-                   let pX = Math.round(dockPanel.x);
-                   let pY = Math.round(dockPanel.y);
-                   let pW = Math.round(dockPanel.width);
-                   let pH = Math.round(dockPanel.height);
+                  let pX = Math.round(dockPanel.x);
+                  let pY = Math.round(dockPanel.y);
+                  let pW = Math.round(dockPanel.width);
+                  let pH = Math.round(dockPanel.height);
 
-                   let iX = Math.round(item.x);
-                   let iW = Math.round(item.width);
-                   let zF = item.zoomFactor.toFixed(2);
-                   let iCX = Math.round(item.itemCenterX);
+                  let iX = Math.round(item.x);
+                  let iW = Math.round(item.width);
+                  
+                  // Exposing the Fight: Target vs Actual
+                  let zTarget = item.zoomFactor.toFixed(2);
+                  let zActual = item.currentScale.toFixed(2);
+                  
+                  let mX = Math.round(item.panelMouseX);
+                  let cX = Math.round(item.itemCenterX);
 
-                   let currentState = `${hoveredIndex}-${pW}-${pX}-${iW}-${iX}-${zF}`;
+                  // Add zActual to the state string so it prints every time the animation changes
+                  let currentState = `${hoveredIndex}-${pW}-${pX}-${iW}-${iX}-${zTarget}-${zActual}-${mX}-${cX}`;
 
-                   if (currentState !== lastState) {
-                       console.log(`\x1b[36m[PANEL]\x1b[0m Pos:(${pX}, ${pY}) Size:${pW}x${pH}  >>>  \x1b[32m[ICON ${hoveredIndex}]\x1b[0m Pos: X:${iX} (Center: ${iCX}) | Size:${iW}px | Zoom:${zF}x`);
-                       lastState = currentState;
-                   }
-               }
+                  if (currentState !== lastState) {
+                      console.log(`\x1b[36m[PANEL]\x1b[0m Pos:(${pX}, ${pY}) Size:${pW}x${pH}  >>>  \x1b[32m[ICON ${hoveredIndex}]\x1b[0m Mouse:${mX} Center:${cX} | Target Zoom:${zTarget}x \x1b[33mActual Zoom:${zActual}x\x1b[0m`);
+                      lastState = currentState;
+                  }
+              }
            }
 
            // Create a local alias for Edit Mode that won't crash on startup
@@ -994,8 +1000,9 @@ Item {
                 id: dockRow
 		z: 2
                 flow: DockView.isVertical ? Flow.TopToBottom : Flow.LeftToRight
-                spacing: DockSettings.iconSpacing
-                
+
+		spacing: DockSettings.iconSpacing
+
                 // GRAVITY: Align items to the bottom/right edge of the Flow container
                 layoutDirection: Qt.LeftToRight
 
@@ -1069,13 +1076,15 @@ Item {
                          panelMouseInside: dockPanel.mouseInside
                          spacing: DockSettings.iconSpacing
 
-                         // The center is based on the absolute index, NOT the shifting width
-                         itemCenterX: {
-                             let slot = iconSize + spacing;
-                             let totalUnscaled = (dockRepeater.count * slot) - spacing;
-                             let start = DockView.isVertical ? (root.height - totalUnscaled) / 2 : (root.width - totalUnscaled) / 2;
-                             return start + (index * slot) + (iconSize / 2);
-                         }
+			 // THE GOLDEN JITTER FIX:
+                             itemCenterX: {
+                                 let slot = iconSize + spacing;
+                                 let totalUnscaled = (dockRepeater.count * slot) - spacing;
+                                 let center = DockView.isVertical ? root.height / 2 : root.width / 2;
+                                 let unscaledIconCenter = (index * slot) + (iconSize / 2) - (totalUnscaled / 2);
+                                 return center + unscaledIconCenter;
+                             }
+
                     // Drag and drop visual feedback
                     isDragSource: root._dragActive && root._dragSourceIndex === index
                     isExternalDropTarget: externalDropArea.containsDrag
