@@ -118,9 +118,9 @@ Item {
             anchors.centerIn: parent
             width: Kirigami.Units.iconSizes.large
             height: Kirigami.Units.iconSizes.large
-            source: {
-                let name = DockModel.iconName(root.parentIndex)
-                return (name && name.length > 0) ? name : "application-x-executable"
+	    source: {
+                    let data = DockModel.iconData(root.parentIndex)
+                    return data ? data : "application-x-executable"
             }
             visible: !pipeWireItem.ready
         }

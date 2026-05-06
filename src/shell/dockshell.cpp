@@ -41,34 +41,35 @@ DockShell::~DockShell() = default;
 
 void DockShell::initialize(DockPlatform::Edge edge, DockPlatform::VisibilityMode visibilityMode)
 {
-    // Pass per-screen settings to DockView for correct surface sizing
+    // 1. Create the settings object FIRST
+    m_settingsWindow = std::make_unique<SettingsWindow>(m_settings, m_view.get(), this);
+
+    // 2. Pass per-screen settings to DockView
     m_view->setScreenSettings(m_screenSettings);
 
-    // Set context properties for shell-owned objects (must be before QML loading).
-    // Context properties are per-engine, unlike qmlRegisterSingletonType which is
-    // process-global. This supports multiple DockShell instances (M8: multi-monitor).
+    // 3. Set context properties (SettingsController is now valid!)
     auto *ctx = m_view->engine()->rootContext();
     ctx->setContextProperty(QStringLiteral("DockView"), m_view.get());
     ctx->setContextProperty(QStringLiteral("DockActions"), m_actions.get());
     ctx->setContextProperty(QStringLiteral("DockContextMenu"), m_contextMenu.get());
     ctx->setContextProperty(QStringLiteral("PreviewController"), m_previewController);
+    ctx->setContextProperty(QStringLiteral("SettingsController"), m_settingsWindow.get());
 
-    // Initialize dock view (creates DockVisibility, registers it, loads QML, shows window)
+    // 4. Initialize dock view
     m_view->initialize(m_model->tasksModel(), m_model->virtualDesktopInfo(), m_model->activityInfo(), edge, visibilityMode);
 
-    // Configure and initialize preview surface (needs dock height for margins)
+    // 5. Configure and initialize preview surface
     m_previewController->setHideDelay(m_settings->previewHideDelay());
     m_previewController->initialize();
 
-    // Apply initial delay settings to visibility controller
+    // 6. Apply initial visibility settings
     m_view->visibilityController()->setShowDelay(m_settings->showDelay());
     m_view->visibilityController()->setHideDelay(m_settings->hideDelay());
     m_view->visibilityController()->setDodgeActiveOnly(m_settings->dodgeActiveOnly());
+    m_view->visibilityController()->setReserveSpace(m_settings->reserveSpace());
+    m_view->visibilityController()->setFloatingPadding(m_view->floatingPadding());
 
-    // Settings window (pass DockView for QML context property access, e.g. isStyleAvailable)
-    m_settingsWindow = std::make_unique<SettingsWindow>(m_settings, m_view.get(), this);
-
-    // Connect all signals
+    // 7. Connect all signals
     connectSettingsSignals();
     connectMenuSignals();
 }
@@ -119,6 +120,7 @@ void DockShell::connectSettingsSignals()
     connect(ss, &ScreenSettings::maxZoomFactorChanged, m_view.get(), &DockView::updateSize);
     connect(ss, &ScreenSettings::floatingChanged, m_view.get(), [this]() {
         m_view->updateSize();
+        m_view->visibilityController()->setFloatingPadding(m_view->floatingPadding());
         Q_EMIT m_view->floatingPaddingChanged();
     });
 
@@ -126,10 +128,8 @@ void DockShell::connectSettingsSignals()
     // and naturally clips at surface boundaries (QML ShaderEffect computes its own margin)
 
     // Background style changes — per-screen overrideable: backgroundOpacity, backgroundStyle, cornerRadius
-    connect(ss, &ScreenSettings::backgroundOpacityChanged, m_view.get(), &DockView::applyBackgroundStyle);
-    connect(ss, &ScreenSettings::backgroundStyleChanged, m_view.get(), &DockView::applyBackgroundStyle);
-    // Tint/accent/system colors are global-only (not per-screen overrideable)
-    connect(s, &KremaSettings::TintColorChanged, m_view.get(), &DockView::applyBackgroundStyle);
+    connect(s, &KremaSettings::configChanged, m_view.get(), &DockView::applyBackgroundStyle);
+    connect(s, &KremaSettings::configChanged, this, []() { /* Saved via Application */ });
     connect(s, &KremaSettings::UseAccentColorChanged, m_view.get(), &DockView::applyBackgroundStyle);
     connect(s, &KremaSettings::UseSystemColorChanged, m_view.get(), &DockView::applyBackgroundStyle);
 
@@ -149,6 +149,10 @@ void DockShell::connectSettingsSignals()
     });
     connect(s, &KremaSettings::DodgeActiveOnlyChanged, this, [this]() {
         m_view->visibilityController()->setDodgeActiveOnly(m_settings->dodgeActiveOnly());
+    });
+
+    connect(s, &KremaSettings::reserveSpaceChanged, this, [this]() {
+        m_view->visibilityController()->setReserveSpace(m_settings->reserveSpace());
     });
 
     // Icon normalization toggle

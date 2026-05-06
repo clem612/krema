@@ -165,29 +165,29 @@ Item {
     property bool isExternalDropTarget: false
 
     // Configuration from DockView
-    property int iconSize: 48
-    property real maxZoomFactor: 1.6
-    property real panelMouseX: -1
-    property bool panelMouseInside: false
-    property int spacing: 4
-    property real itemCenterX: 0
+       property int iconSize: 48
+       property real maxZoomFactor: 1.6
+       property real panelMouseX: -1
+       property bool panelMouseInside: false
+       property int spacing: 4
+       
+       // Re-added the property so the parent can pass the perfect math
+       property real itemCenterX: 0
 
-    // Gaussian sigma factor for the zoom curve (sigma = iconSize * factor).
-    // Controls how many neighboring icons are visibly affected by zoom.
-    // Recommended range: 0.8 (tight) – 1.8 (wide). Default 1.2 ≈ macOS Dock.
-    property real zoomSigmaFactor: 1.2
-    readonly property real zoomSigma: iconSize * zoomSigmaFactor
+       // Gaussian sigma factor
+       property real zoomSigmaFactor: 1.2
+       readonly property real zoomSigma: iconSize * zoomSigmaFactor
 
-    // Computed zoom factor for this item
-    readonly property real zoomFactor: {
-        if (!panelMouseInside || panelMouseX < 0) {
-            return 1.0
-        }
+       // Computed zoom factor for this item
+       readonly property real zoomFactor: {
+           if (!panelMouseInside || panelMouseX < 0) {
+               return 1.0
+           }
 
-        let distance = Math.abs(panelMouseX - itemCenterX)
-        let sigma2 = zoomSigma * zoomSigma
-        return 1.0 + (maxZoomFactor - 1.0) * Math.exp(-(distance * distance) / sigma2)
-    }
+           let distance = Math.abs(panelMouseX - itemCenterX)
+           let sigma2 = zoomSigma * zoomSigma
+           return 1.0 + (maxZoomFactor - 1.0) * Math.exp(-(distance * distance) / sigma2)
+       }
 
     // --- KDE state-driven launch tracking ---
     //
@@ -319,14 +319,6 @@ Item {
     property real currentScale: 1.0
     property bool _zoomAnimReady: false
 
-    Behavior on currentScale {
-        enabled: dockItem._zoomAnimReady
-        NumberAnimation {
-            duration: Kirigami.Units.shortDuration
-            easing.type: Easing.OutCubic
-        }
-    }
-
     // Update currentScale when zoomFactor changes
     onZoomFactorChanged: currentScale = zoomFactor
 
@@ -335,13 +327,13 @@ Item {
     // zoom animation to prevent the visual glitch where shifted icons animate their scale.
     // Normal mouse-driven zoom doesn't change itemCenterX, so this only fires during
     // model/layout changes.
-    onItemCenterXChanged: {
-        if (_zoomAnimReady) {
-            _zoomAnimReady = false
-            currentScale = zoomFactor
-            Qt.callLater(function() { _zoomAnimReady = true })
-        }
-    }
+     onItemCenterXChanged: {
+       if (_zoomAnimReady) {
+           _zoomAnimReady = false
+           currentScale = zoomFactor
+           Qt.callLater(function() { _zoomAnimReady = true })
+       }
+   }
 
     // On delegate creation: apply zoom instantly (no animation) to avoid glitch
     // when Repeater recreates delegates due to model changes.
@@ -366,7 +358,7 @@ Item {
         // Debug: log appId for notification matching verification
         Qt.callLater(function() {
             if (dockItem._appId.length > 0)
-                console.log("[NOTIF-TRACE] DockItem created: '" + dockItem.displayName + "' appId=" + dockItem._appId)
+                console.log("[NOTIF-TRACE] DockIcon created: '" + dockItem.displayName + "' appId=" + dockItem._appId)
         })
     }
 
@@ -375,12 +367,12 @@ Item {
     readonly property int _indicatorSpace: 4 + Kirigami.Units.smallSpacing
 
     // Size: base icon size + fixed indicator space (toward screen edge)
-    width: DockView.isVertical
-        ? (iconSize + _indicatorSpace)
-        : iconSize
-    height: DockView.isVertical
-        ? iconSize
-        : (iconSize + _indicatorSpace)
+        width: DockView.isVertical
+            ? (iconSize + _indicatorSpace)
+            : Math.round(iconSize * currentScale)
+        height: DockView.isVertical
+            ? Math.round(iconSize * currentScale)
+            : (iconSize + _indicatorSpace)
 
     // Scaled transform: grow away from the dock edge
     transform: Scale {
@@ -417,137 +409,151 @@ Item {
     }
 
     // Application icon
-    Image {
-        id: iconImage
-        // Anchors set via states below (iconAnchorStates)
-        width: iconSize
-        height: iconSize
-        source: {
-            // IMPORTANT: Read model.display to create a reactive dependency on
-            // model data. After model reordering (move), the Repeater may update
-            // delegate model data without changing index (position unchanged).
-            // Without this, the binding only tracks dockItem.index and won't
-            // re-evaluate when different data appears at the same position.
-            let _dep = model.display
-            let name = DockModel.iconName(dockItem.index)
-            if (name && name.length > 0) {
-                return "image://icon/" + name + "?v=" + DockView.iconCacheVersion
-            }
-            return ""
-        }
-        sourceSize: Qt.size(Math.ceil(iconSize * maxZoomFactor), Math.ceil(iconSize * maxZoomFactor))
-        smooth: true
-
-        // Transforms: launch bounce + attention animations
-        transform: [
-            Translate { id: bounceTranslate; x: 0; y: 0 },
-            Translate { id: attentionBounceT; x: 0; y: 0 },
-            Rotation {
-                id: attentionRotateT
-                origin.x: iconSize / 2; origin.y: iconSize / 2
-                angle: 0
-            },
-            Scale {
-                id: attentionScaleT
-                origin.x: iconSize / 2; origin.y: iconSize / 2
-                xScale: 1.0; yScale: xScale
-            }
-        ]
-
-        // Highlight for active window / drag source dimming (× blink for type 6)
-        opacity: {
-            let base
-            if (dockItem.isDragSource) base = 0.3
-            else if (dockItem.model.IsActive) base = 1.0
-            else if (dockItem.model.IsMinimized) base = 0.5
-            else base = 0.8
-            return base * dockItem._blinkOpacity
-        }
-
-        Behavior on opacity {
-            // Disable during blink animation — rapid _blinkOpacity changes cause
-            // the Behavior to restart every frame, preventing opacity from changing.
-            enabled: !blinkAnim.running
-            NumberAnimation { duration: Kirigami.Units.shortDuration }
-        }
-
-        // Fallback placeholder when icon is not available
-        Rectangle {
-            id: iconPlaceholder
-            anchors.fill: parent
-            radius: Kirigami.Units.largeSpacing
-            color: Kirigami.Theme.highlightColor
-            visible: iconImage.status !== Image.Ready
-            Accessible.ignored: true
-
-            QQC2.Label {
+    Item {
+            id: iconImage
+            width: iconSize
+            height: iconSize
+            
+            // Valid if EITHER the C++ image loaded successfully OR Kirigami found the RAM icon
+            property bool valid: internalIcon.status === Image.Ready || ramIcon.valid
+            
+            // Backup: Native RAM Icon (Kirigami perfectly understands KDE's raw QIcon memory object)
+            Kirigami.Icon {
+                id: ramIcon
+                width: 128
+                height: 128
                 anchors.centerIn: parent
-                text: {
-                    let name = dockItem.model.display || ""
-                    return name.length > 0 ? name[0].toUpperCase() : "?"
-                }
-                font.pixelSize: iconSize * 0.4
-                font.bold: true
-                color: Kirigami.Theme.highlightedTextColor
-                Accessible.ignored: true
+                scale: iconSize / 128
+                smooth: true
+                visible: internalIcon.status !== Image.Ready
+                source: model.decoration 
             }
-        }
 
-        states: [
-            State {
-                name: "bottom"
-                when: DockView.edge === 1
-                AnchorChanges {
-                    target: iconImage
-                    anchors.top: parent.top
-                    anchors.bottom: undefined
-                    anchors.left: undefined
-                    anchors.right: undefined
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.verticalCenter: undefined
+            // Primary: C++ Normalized Icon (Standard Image natively handles custom image:// URLs)
+            Image {
+                id: internalIcon
+                width: 128
+                height: 128
+                anchors.centerIn: parent
+                scale: iconSize / 128
+                smooth: true
+                sourceSize.width: 128
+                sourceSize.height: 128
+                source: dockItem._appId ? ("image://taskicon/" + dockItem._appId) : ""
+            }
+
+            // Transforms: launch bounce + attention animations
+            transform: [
+                Translate { id: bounceTranslate; x: 0; y: 0 },
+                Translate { id: attentionBounceT; x: 0; y: 0 },
+                Rotation {
+                    id: attentionRotateT
+                    origin.x: iconSize / 2; origin.y: iconSize / 2
+                    angle: 0
+                },
+                Scale {
+                    id: attentionScaleT
+                    origin.x: iconSize / 2; origin.y: iconSize / 2
+                    xScale: 1.0; yScale: xScale
                 }
-            },
-            State {
-                name: "top"
-                when: DockView.edge === 0
-                AnchorChanges {
-                    target: iconImage
-                    anchors.top: undefined
-                    anchors.bottom: parent.bottom
-                    anchors.left: undefined
-                    anchors.right: undefined
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.verticalCenter: undefined
-                }
-            },
-            State {
-                name: "left"
-                when: DockView.edge === 2
-                AnchorChanges {
-                    target: iconImage
-                    anchors.top: undefined
-                    anchors.bottom: undefined
-                    anchors.left: undefined
-                    anchors.right: parent.right
-                    anchors.horizontalCenter: undefined
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-            },
-            State {
-                name: "right"
-                when: DockView.edge === 3
-                AnchorChanges {
-                    target: iconImage
-                    anchors.top: undefined
-                    anchors.bottom: undefined
-                    anchors.left: parent.left
-                    anchors.right: undefined
-                    anchors.horizontalCenter: undefined
-                    anchors.verticalCenter: parent.verticalCenter
+            ]
+
+            // Highlight for active window / drag source dimming (× blink for type 6)
+            opacity: {
+                let base
+                if (dockItem.isDragSource) base = 0.3
+                else if (dockItem.model.IsActive) base = 1.0
+                else if (dockItem.model.IsMinimized) base = 0.5
+                else base = 0.8
+                return base * dockItem._blinkOpacity
+            }
+
+            Behavior on opacity {
+                // Disable during blink animation — rapid _blinkOpacity changes cause
+                // the Behavior to restart every frame, preventing opacity from changing.
+                enabled: !blinkAnim.running
+                NumberAnimation { duration: Kirigami.Units.shortDuration }
+            }
+
+            // Fallback placeholder when icon is not available
+            Rectangle {
+                id: iconPlaceholder
+                anchors.centerIn: parent
+                width: parent.width * 0.85
+                height: parent.height * 0.85
+                radius: Kirigami.Units.largeSpacing
+                color: Kirigami.Theme.highlightColor
+                visible: !iconImage.valid
+                Accessible.ignored: true
+
+                QQC2.Label {
+                    anchors.centerIn: parent
+                    text: {
+                        let name = dockItem.model.display || ""
+                        return name.length > 0 ? name[0].toUpperCase() : "?"
+                    }
+                    font.pixelSize: iconSize * 0.4
+                    font.bold: true
+                    color: Kirigami.Theme.highlightedTextColor
+                    Accessible.ignored: true
                 }
             }
-        ]
-    }
+
+            states: [
+                State {
+                    name: "bottom"
+                    when: DockView.edge === 1
+                    AnchorChanges {
+                        target: iconImage
+                        anchors.top: parent.top
+                        anchors.bottom: undefined
+                        anchors.left: undefined
+                        anchors.right: undefined
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.verticalCenter: undefined
+                    }
+                },
+                State {
+                    name: "top"
+                    when: DockView.edge === 0
+                    AnchorChanges {
+                        target: iconImage
+                        anchors.top: undefined
+                        anchors.bottom: parent.bottom
+                        anchors.left: undefined
+                        anchors.right: undefined
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.verticalCenter: undefined
+                    }
+                },
+                State {
+                    name: "left"
+                    when: DockView.edge === 2
+                    AnchorChanges {
+                        target: iconImage
+                        anchors.top: undefined
+                        anchors.bottom: undefined
+                        anchors.left: undefined
+                        anchors.right: parent.right
+                        anchors.horizontalCenter: undefined
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                },
+                State {
+                    name: "right"
+                    when: DockView.edge === 3
+                    AnchorChanges {
+                        target: iconImage
+                        anchors.top: undefined
+                        anchors.bottom: undefined
+                        anchors.left: parent.left
+                        anchors.right: undefined
+                        anchors.horizontalCenter: undefined
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+            ]
+        }
 
     // Attention glow effect (type 4) — MultiEffect shadow pulse on iconImage
     MultiEffect {
@@ -920,9 +926,24 @@ Item {
             }
 
             Rectangle {
-                width: dockItem.model.IsActive ? 4 : 3
-                height: width
-                radius: width / 2
+		    // --- THE ACTIVE DASH LOGIC ---
+                // If the dock is horizontal, stretch width to 16px when active. Otherwise, 4px.
+                width: DockView.isVertical ? 4 : (dockItem.model.IsActive ? 16 : 4)
+                
+                // If the dock is vertical, stretch height to 16px when active. Otherwise, 4px.
+                height: DockView.isVertical ? (dockItem.model.IsActive ? 16 : 4) : 4
+                
+                // Keep the pill shape completely round at the ends
+                radius: 2
+                
+                // Smoothly animate the stretching effect
+                Behavior on width {
+                    NumberAnimation { duration: 250; easing.type: Easing.OutBack }
+                }
+                Behavior on height {
+                    NumberAnimation { duration: 250; easing.type: Easing.OutBack }
+                }
+                // -----------------------------
                 color: (dockItem._showAttentionAnim && dockItem._attentionType === 5)
                        ? Kirigami.Theme.negativeTextColor
                        : Kirigami.Theme.textColor

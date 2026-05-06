@@ -32,6 +32,8 @@ class DockModel : public QObject
     Q_PROPERTY(QVariant currentDesktop READ currentDesktop NOTIFY currentDesktopChanged)
 
 public:
+    Q_INVOKABLE QString iconName(int index) const;
+
     explicit DockModel(QObject *parent = nullptr);
     ~DockModel() override;
 
@@ -52,8 +54,8 @@ public:
     /// Returns true for launchers, tasks on all desktops, and tasks on current desktop.
     Q_INVOKABLE bool isOnCurrentDesktop(int index) const;
 
-    /// Return the icon theme name for the task at @p index.
-    Q_INVOKABLE QString iconName(int index) const;
+    /// Return the raw icon data (QIcon) for the task at @p index.
+    Q_INVOKABLE QVariant iconData(int index) const;
 
     /// Return the launcher URL for the task at @p index.
     Q_INVOKABLE QUrl launcherUrl(int index) const;

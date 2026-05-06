@@ -55,6 +55,22 @@ ScreenSettings::ScreenSettings(const QString &screenName, KremaSettings *fallbac
         if (!m_group.hasKey(QStringLiteral("CornerRadius")))
             Q_EMIT cornerRadiusChanged();
     });
+    connect(m_fallback, &KremaSettings::PanelHeightChanged, this, [this]() {
+        if (!m_group.hasKey(QStringLiteral("PanelHeight")))
+            Q_EMIT panelHeightChanged();
+    });
+    connect(m_fallback, &KremaSettings::SeparatorStyleChanged, this, [this]() {
+        if (!m_group.hasKey(QStringLiteral("SeparatorStyle")))
+            Q_EMIT separatorStyleChanged();
+    });
+    connect(m_fallback, &KremaSettings::SeparatorOpacityChanged, this, [this]() {
+        if (!m_group.hasKey(QStringLiteral("SeparatorOpacity")))
+            Q_EMIT separatorOpacityChanged();
+    });
+    connect(m_fallback, &KremaSettings::SeparatorWidthChanged, this, [this]() {
+        if (!m_group.hasKey(QStringLiteral("SeparatorWidth")))
+            Q_EMIT separatorWidthChanged();
+    });
 }
 
 QString ScreenSettings::screenName() const
@@ -107,6 +123,26 @@ bool ScreenSettings::floating() const
 int ScreenSettings::cornerRadius() const
 {
     return readWithFallback(QStringLiteral("CornerRadius"), m_fallback->cornerRadius());
+}
+
+int ScreenSettings::panelHeight() const
+{
+    return readWithFallback(QStringLiteral("PanelHeight"), m_fallback->panelHeight());
+}
+
+int ScreenSettings::separatorStyle() const
+{
+    return readWithFallback(QStringLiteral("SeparatorStyle"), m_fallback->separatorStyle());
+}
+
+double ScreenSettings::separatorOpacity() const
+{
+    return readWithFallback(QStringLiteral("SeparatorOpacity"), m_fallback->separatorOpacity());
+}
+
+int ScreenSettings::separatorWidth() const
+{
+    return readWithFallback(QStringLiteral("SeparatorWidth"), m_fallback->separatorWidth());
 }
 
 QStringList ScreenSettings::pinnedLaunchers() const
@@ -173,6 +209,30 @@ void ScreenSettings::setPinnedLaunchers(const QStringList &launchers)
     Q_EMIT pinnedLaunchersChanged();
 }
 
+void ScreenSettings::setPanelHeight(int height)
+{
+    writeOverride(QStringLiteral("PanelHeight"), height);
+    Q_EMIT panelHeightChanged();
+}
+
+void ScreenSettings::setSeparatorStyle(int style)
+{
+    writeOverride(QStringLiteral("SeparatorStyle"), style);
+    Q_EMIT separatorStyleChanged();
+}
+
+void ScreenSettings::setSeparatorOpacity(double opacity)
+{
+    writeOverride(QStringLiteral("SeparatorOpacity"), opacity);
+    Q_EMIT separatorOpacityChanged();
+}
+
+void ScreenSettings::setSeparatorWidth(int width)
+{
+    writeOverride(QStringLiteral("SeparatorWidth"), width);
+    Q_EMIT separatorWidthChanged();
+}
+
 void ScreenSettings::clearOverrides()
 {
     m_group.deleteGroup();
@@ -188,6 +248,10 @@ void ScreenSettings::clearOverrides()
     Q_EMIT floatingChanged();
     Q_EMIT cornerRadiusChanged();
     Q_EMIT pinnedLaunchersChanged();
+    Q_EMIT panelHeightChanged();
+    Q_EMIT separatorStyleChanged();
+    Q_EMIT separatorOpacityChanged();
+    Q_EMIT separatorWidthChanged();
 }
 
 void ScreenSettings::clearOverride(const QString &key)

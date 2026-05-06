@@ -5,55 +5,114 @@ import QtQuick
 import QtQuick.Controls as QQC2
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
-import org.kde.kirigamiaddons.formcard as FormCard
 import com.bhyoo.krema 1.0
 
-FormCard.FormCardPage {
-    title: i18n("Window Preview")
+// Import our custom UI Kit
+import "../components"
 
-    FormCard.FormHeader {
-        title: i18n("Window Preview")
-    }
+QQC2.ScrollView {
+    id: previewPage
+    contentWidth: availableWidth
+    clip: true
 
-    FormCard.FormCard {
-        FormCard.FormSwitchDelegate {
-            id: previewEnabledSwitch
-            text: i18n("Enable window preview")
-            description: i18n("Show window thumbnails when hovering dock items")
-            checked: DockSettings.previewEnabled
-            onToggled: DockSettings.previewEnabled = checked
+    topPadding: 16
+    bottomPadding: 32
+    leftPadding: 16
+    rightPadding: 16
+
+    ColumnLayout {
+        width: parent.width
+        spacing: 32
+
+        // --- SECTION 1: ACTIVATION ---
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 8
+            
+            QQC2.Label { 
+                text: i18n("Master Switch")
+                color: "#80FFFDD0"
+                font.bold: true; font.letterSpacing: 1.1; font.pixelSize: 12
+                Layout.leftMargin: 8
+            }
+            
+            KremaCard {
+                KremaSwitch {
+                    Layout.fillWidth: true
+                    text: i18n("Enable Window Previews")
+                    checked: DockSettings.previewEnabled
+                    onToggled: DockSettings.previewEnabled = checked
+                }
+                QQC2.Label { 
+                    text: i18n("Shows a live thumbnail of open windows when hovering over dock icons."); 
+                    color: "#80FFFDD0"; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.topMargin: -8
+                }
+            }
         }
 
-        FormCard.FormDelegateSeparator {
-            above: previewEnabledSwitch
-        }
+        // --- SECTION 2: DIMENSIONS & TIMING ---
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 8
+            visible: DockSettings.previewEnabled
+            
+            QQC2.Label { 
+                text: i18n("Dimensions & Timing")
+                color: "#80FFFDD0"
+                font.bold: true; font.letterSpacing: 1.1; font.pixelSize: 12
+                Layout.leftMargin: 8
+            }
+            
+            KremaCard {
+                // THUMBNAIL WIDTH
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    RowLayout {
+                        QQC2.Label { Layout.fillWidth: true; text: i18n("Thumbnail Width"); color: "#FFFDD0"; font.bold: true }
+                        QQC2.Label { text: widthSlider.value + "px"; color: "#80FFFDD0"; font.bold: true }
+                    }
+                    QQC2.Slider {
+                        id: widthSlider; Layout.fillWidth: true; 
+                        from: 120; to: 320; stepSize: 20; 
+                        value: DockSettings.previewThumbnailSize; 
+                        onMoved: DockSettings.previewThumbnailSize = value 
+                    }
+                }
 
-        FormCard.FormSpinBoxDelegate {
-            label: i18n("Thumbnail width (px)")
-            from: 120; to: 320; stepSize: 20
-            value: DockSettings.previewThumbnailSize
-            onValueChanged: DockSettings.previewThumbnailSize = value
-            enabled: DockSettings.previewEnabled
-        }
+                Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A" }
 
-        FormCard.FormDelegateSeparator {}
+                // SHOW DELAY
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    RowLayout {
+                        QQC2.Label { Layout.fillWidth: true; text: i18n("Show Delay (Hover)"); color: "#FFFDD0"; font.bold: true }
+                        QQC2.Label { text: hoverSlider.value + "ms"; color: "#80FFFDD0"; font.bold: true }
+                    }
+                    QQC2.Slider {
+                        id: hoverSlider; Layout.fillWidth: true; 
+                        from: 0; to: 2000; stepSize: 50; 
+                        value: DockSettings.previewHoverDelay; 
+                        onMoved: DockSettings.previewHoverDelay = value 
+                    }
+                }
 
-        FormCard.FormSpinBoxDelegate {
-            label: i18n("Hover delay (ms)")
-            from: 0; to: 2000; stepSize: 50
-            value: DockSettings.previewHoverDelay
-            onValueChanged: DockSettings.previewHoverDelay = value
-            enabled: DockSettings.previewEnabled
-        }
+                Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A" }
 
-        FormCard.FormDelegateSeparator {}
-
-        FormCard.FormSpinBoxDelegate {
-            label: i18n("Hide delay (ms)")
-            from: 0; to: 1000; stepSize: 50
-            value: DockSettings.previewHideDelay
-            onValueChanged: DockSettings.previewHideDelay = value
-            enabled: DockSettings.previewEnabled
+                // HIDE DELAY
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    RowLayout {
+                        QQC2.Label { Layout.fillWidth: true; text: i18n("Hide Delay (Exit)"); color: "#FFFDD0"; font.bold: true }
+                        QQC2.Label { text: hideSlider.value + "ms"; color: "#80FFFDD0"; font.bold: true }
+                    }
+                    QQC2.Slider {
+                        id: hideSlider; Layout.fillWidth: true; 
+                        from: 0; to: 1000; stepSize: 50; 
+                        value: DockSettings.previewHideDelay; 
+                        onMoved: DockSettings.previewHideDelay = value 
+                    }
+                }
+            }
         }
     }
 }
