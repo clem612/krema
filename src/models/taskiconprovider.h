@@ -37,7 +37,6 @@ struct IconNormalizationInfo {
 class TaskIconProvider : public QQuickImageProvider
 {
 public:
-    static QIcon resolveSteamIcon(const QString &appId);
     explicit TaskIconProvider(bool normalizationEnabled = true);
 
     QPixmap requestPixmap(const QString &id, QSize *size, const QSize &requestedSize) override;

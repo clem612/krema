@@ -30,10 +30,12 @@ void TaskIconProvider::setNormalizationEnabled(bool enabled)
 {
     m_normalizationEnabled = enabled;
 }
+
 void TaskIconProvider::setIconScale(double scale)
 {
     m_iconScale = std::clamp(scale, 0.5, 1.0);
 }
+
 void TaskIconProvider::clearCache()
 {
     m_cache.clear();
@@ -55,25 +57,22 @@ QPixmap TaskIconProvider::requestPixmap(const QString &id, QSize *size, const QS
     const int targetSize = std::max(requestedSize.width() > 0 ? requestedSize.width() : 48, requestedSize.height() > 0 ? requestedSize.height() : 48);
 
     QIcon icon;
+    bool isDebug = QCoreApplication::arguments().contains(u"--debug-icons"_s);
 
     // 0. STAGE 0: The Steam Hunter
     if (originalId.startsWith(u"steam_app_") || originalId.startsWith(u"steam_icon_")) {
         QString appId = originalId.startsWith(u"steam_app_") ? originalId.mid(10) : originalId.mid(11);
-
         QString nativeExe = resolveSteamExePath(appId);
         if (!nativeExe.isEmpty()) {
             QImage rawImg = PeIconExtractor::extract(nativeExe);
             if (!rawImg.isNull()) {
-                if (QCoreApplication::arguments().contains(u"--debug-icons"_s)) {
+                if (isDebug) {
                     qDebug().noquote() << "\x1b[35m[ICON SOURCE]\x1b[0m" << originalId << "-> \x1b[32mNATIVE EXE EXTRACTOR (Steam Hunter)\x1b[0m (" << nativeExe
                                        << ")";
                 }
                 icon = QIcon(QPixmap::fromImage(rawImg));
-            } else if (QCoreApplication::arguments().contains(u"--debug-icons"_s)) {
-                qDebug().noquote() << "\x1b[31m[EXTRACTOR FAIL]\x1b[0m Found EXE but could not parse icons from:" << nativeExe;
             }
         }
-
         if (icon.isNull()) {
             icon = resolveSteamIconLocal(appId);
         }
@@ -81,24 +80,23 @@ QPixmap TaskIconProvider::requestPixmap(const QString &id, QSize *size, const QS
 
     // 1. STAGE 1: Direct Raw .exe Catch (Non-Steam)
     if (icon.isNull() && originalId.endsWith(u".exe", Qt::CaseInsensitive)) {
-        QString cleanExePath = originalId;
-        if (cleanExePath.startsWith(u'"') && cleanExePath.endsWith(u'"')) {
-            cleanExePath = cleanExePath.mid(1, cleanExePath.length() - 2);
-        }
-        QImage rawImg = PeIconExtractor::extract(cleanExePath);
+        QImage rawImg = PeIconExtractor::extract(originalId);
         if (!rawImg.isNull()) {
-            if (QCoreApplication::arguments().contains(u"--debug-icons"_s)) {
+            if (isDebug) {
                 qDebug().noquote() << "\x1b[35m[ICON SOURCE]\x1b[0m" << originalId << "-> \x1b[32mNATIVE EXE EXTRACTOR (Direct Path)\x1b[0m";
             }
             icon = QIcon(QPixmap::fromImage(rawImg));
         }
     }
 
-    if (icon.isNull() && QIcon::hasThemeIcon(iconName))
+    // 2. STAGE 2: Theme Check
+    // We try loading it directly instead of checking hasThemeIcon first to avoid library glitches
+    if (icon.isNull()) {
         icon = QIcon::fromTheme(iconName);
+    }
 
     // 3. STAGE 3: Desktop File Bridge
-    if (icon.isNull()) {
+    if (icon.isNull() || icon.availableSizes().isEmpty()) {
         QString desktopFile = iconName + u".desktop"_s;
         QStringList paths = QStandardPaths::locateAll(QStandardPaths::ApplicationsLocation, desktopFile);
         if (!paths.isEmpty()) {
@@ -107,59 +105,25 @@ QPixmap TaskIconProvider::requestPixmap(const QString &id, QSize *size, const QS
             QString realIcon = settings.value(u"Icon"_s).toString();
             if (!realIcon.isEmpty()) {
                 if (realIcon.endsWith(u".exe", Qt::CaseInsensitive)) {
-                    QString cleanExePath = realIcon;
-                    if (cleanExePath.startsWith(u'"') && cleanExePath.endsWith(u'"')) {
-                        cleanExePath = cleanExePath.mid(1, cleanExePath.length() - 2);
-                    }
-                    QImage rawImg = PeIconExtractor::extract(cleanExePath);
-                    if (!rawImg.isNull()) {
-                        if (QCoreApplication::arguments().contains(u"--debug-icons"_s)) {
-                            qDebug().noquote() << "\x1b[35m[ICON SOURCE]\x1b[0m" << iconName << "-> \x1b[32mNATIVE EXE EXTRACTOR (Desktop Bridge)\x1b[0m ("
-                                               << cleanExePath << ")";
-                        }
+                    QImage rawImg = PeIconExtractor::extract(realIcon);
+                    if (!rawImg.isNull())
                         icon = QIcon(QPixmap::fromImage(rawImg));
-                    }
-                } else if (QIcon::hasThemeIcon(realIcon)) {
-                    icon = QIcon::fromTheme(realIcon);
+                } else if (realIcon.startsWith(u"steam_app_") || realIcon.startsWith(u"steam_icon_")) {
+                    icon = resolveSteamIconLocal(realIcon.startsWith(u"steam_app_") ? realIcon.mid(10) : realIcon.mid(11));
                 } else {
-                    icon = QIcon(realIcon);
+                    icon = QIcon::fromTheme(realIcon);
+                    if (icon.isNull() || icon.availableSizes().isEmpty())
+                        icon = QIcon(realIcon);
                 }
             }
         }
     }
 
-    if (icon.isNull()) {
-        qDebug() << "[krema.icons] Deferring failure for:" << originalId;
-        return QPixmap();
-    }
-
-    // 2. STAGE 2: Theme Check
-    if (icon.isNull() && QIcon::hasThemeIcon(iconName)) {
-        icon = QIcon::fromTheme(iconName);
-    }
-
-    // 3. STAGE 3: Desktop File Bridge
-    if (icon.isNull()) {
-        QString desktopFile = iconName + u".desktop"_s;
-        QStringList paths = QStandardPaths::locateAll(QStandardPaths::ApplicationsLocation, desktopFile);
-        if (!paths.isEmpty()) {
-            QSettings settings(paths.first(), QSettings::IniFormat);
-            settings.beginGroup(u"Desktop Entry"_s);
-            QString realIcon = settings.value(u"Icon"_s).toString();
-            if (!realIcon.isEmpty()) {
-                if (realIcon.startsWith(u"steam_app_") || realIcon.startsWith(u"steam_icon_")) {
-                    icon = resolveSteamIcon(realIcon.startsWith(u"steam_app_") ? realIcon.mid(10) : realIcon.mid(11));
-                } else if (QIcon::hasThemeIcon(realIcon)) {
-                    icon = QIcon::fromTheme(realIcon);
-                } else {
-                    icon = QIcon(realIcon);
-                }
-            }
+    // 4. FINAL FALLBACK: Only log if we really found nothing AND we're debugging
+    if (icon.isNull() || icon.availableSizes().isEmpty()) {
+        if (isDebug) {
+            qDebug() << "\x1b[31m[ICON FAIL]\x1b[0m No source found for:" << originalId;
         }
-    }
-
-    if (icon.isNull()) {
-        qDebug() << "[krema.icons] Deferring failure for:" << originalId;
         return QPixmap();
     }
 
@@ -196,10 +160,6 @@ QPixmap TaskIconProvider::requestPixmap(const QString &id, QSize *size, const QS
     return result;
 }
 
-// ========================================================================
-// STEAM HUNTING & SCORING HELPERS
-// ========================================================================
-
 QString TaskIconProvider::resolveSteamExePath(const QString &appId)
 {
     using namespace Qt::StringLiterals;
@@ -208,7 +168,6 @@ QString TaskIconProvider::resolveSteamExePath(const QString &appId)
     QStringList libraryPaths;
     libraryPaths << QDir::homePath() + u"/.local/share/Steam"_s;
 
-    // 1. Try to find other drives
     QString vdfPath = QDir::homePath() + u"/.local/share/Steam/steamapps/libraryfolders.vdf"_s;
     QFile vdf(vdfPath);
     if (vdf.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -222,7 +181,6 @@ QString TaskIconProvider::resolveSteamExePath(const QString &appId)
         }
     }
 
-    // 2. Search for the manifest
     for (const QString &lib : libraryPaths) {
         QString manifestPath = lib + u"/steamapps/appmanifest_"_s + appId + u".acf"_s;
         if (!QFile::exists(manifestPath))
@@ -238,7 +196,6 @@ QString TaskIconProvider::resolveSteamExePath(const QString &appId)
                 if (!QDir(gameDir).exists())
                     continue;
 
-                // Found the folder! Now hunt for the biggest .exe
                 QDirIterator dirIt(gameDir, {u"*.exe"_s}, QDir::Files, QDirIterator::Subdirectories);
                 QString bestExe;
                 qint64 maxSize = 0;
@@ -284,25 +241,20 @@ QIcon TaskIconProvider::resolveSteamIconLocal(const QString &appId)
         QString name = fi.fileName().toLower();
         int score = 0;
 
-        // 1. TOP PRIORITY: Transparent high-res logos (Clem will like these best)
         if (name.contains(u"logo"_s) && p.endsWith(u".png"_s))
             score += 1000;
-        // 2. Root hash-named files (Standard Steam icons, usually low-res)
         else if (fi.absolutePath() == root && name.length() >= 30)
             score += 500;
-        // 3. Hero/Header banners (Usually too wide, but better than capsules)
         else if (name.contains(u"hero"_s))
             score += 100;
         else if (name.contains(u"header"_s))
             score += 50;
-        // 4. Capsules (Absolute bottom)
         else
             score += 10;
 
         QImageReader reader(p);
         if (reader.canRead()) {
             QSize sz = reader.size();
-            // Bonus points for higher resolution
             candidates.append({p, score, sz.width() * sz.height()});
         }
     }
