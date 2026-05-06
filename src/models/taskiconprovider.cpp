@@ -7,6 +7,9 @@
 #include <QDirIterator>
 #include <QFileInfo>
 #include <QImageReader>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QPainter>
 #include <QProcess>
 #include <QRegularExpression>
@@ -25,15 +28,39 @@ TaskIconProvider::TaskIconProvider(bool normalizationEnabled)
 {
 }
 
+// --- Setters and Cache Management ---
+
+void TaskIconProvider::setNormalizationEnabled(bool enabled)
+{
+    m_normalizationEnabled = enabled;
+}
+
+void TaskIconProvider::setIconScale(double scale)
+{
+    m_iconScale = std::clamp(scale, 0.5, 1.0);
+}
+
+void TaskIconProvider::clearCache()
+{
+    m_cache.clear();
+}
+
+// --- Core Request Logic ---
+
 QPixmap TaskIconProvider::requestPixmap(const QString &id, QSize *size, const QSize &requestedSize)
 {
+    using namespace Qt::StringLiterals;
+
     const int queryIdx = id.indexOf(QLatin1Char('?'));
     QString iconName = (queryIdx >= 0) ? id.left(queryIdx) : id;
-    QString originalId = iconName;
 
-    if (iconName.endsWith(QLatin1String(".desktop"))) {
+    // Clean protocol and extension for consistent caching and lookup
+    if (iconName.startsWith(u"file://"_s))
+        iconName.remove(0, 7);
+    if (iconName.endsWith(u".desktop"_s))
         iconName.chop(8);
-    }
+
+    QString originalId = iconName;
 
     const int width = requestedSize.width() > 0 ? requestedSize.width() : 48;
     const int height = requestedSize.height() > 0 ? requestedSize.height() : 48;
@@ -41,66 +68,64 @@ QPixmap TaskIconProvider::requestPixmap(const QString &id, QSize *size, const QS
 
     QIcon icon;
 
-    // 1. Strict Theme Check
-    if (QIcon::hasThemeIcon(iconName)) {
+    // 1. STAGE 1: Steam Scraper (Top Priority to ignore generic system icons)
+    if (iconName.startsWith(u"steam_app_"_s)) {
+        icon = resolveSteamIcon(iconName.mid(10));
+    } else if (iconName.startsWith(u"steam_icon_"_s)) {
+        icon = resolveSteamIcon(iconName.mid(11));
+    }
+
+    // 2. STAGE 2: Theme Check
+    if (icon.isNull() && QIcon::hasThemeIcon(iconName)) {
         icon = QIcon::fromTheme(iconName);
     }
 
-    // 2. Desktop File Extraction
+    // 3. STAGE 3: Desktop File Bridge
     if (icon.isNull()) {
-        QString desktopFile = originalId.endsWith(QLatin1String(".desktop")) ? originalId : originalId + QLatin1String(".desktop");
+        QString desktopFile = iconName + u".desktop"_s;
         QStringList paths = QStandardPaths::locateAll(QStandardPaths::ApplicationsLocation, desktopFile);
-
         if (!paths.isEmpty()) {
             QSettings settings(paths.first(), QSettings::IniFormat);
-            settings.beginGroup(QStringLiteral("Desktop Entry"));
-            QString realIconName = settings.value(QStringLiteral("Icon")).toString();
-
-            if (!realIconName.isEmpty()) {
-                if (QIcon::hasThemeIcon(realIconName)) {
-                    icon = QIcon::fromTheme(realIconName);
+            settings.beginGroup(u"Desktop Entry"_s);
+            QString realIcon = settings.value(u"Icon"_s).toString();
+            if (!realIcon.isEmpty()) {
+                if (realIcon.startsWith(u"steam_app_") || realIcon.startsWith(u"steam_icon_")) {
+                    icon = resolveSteamIcon(realIcon.startsWith(u"steam_app_") ? realIcon.mid(10) : realIcon.mid(11));
+                } else if (QIcon::hasThemeIcon(realIcon)) {
+                    icon = QIcon::fromTheme(realIcon);
                 } else {
-                    icon = QIcon(realIconName);
+                    icon = QIcon(realIcon);
                 }
             }
         }
     }
 
-    // 3. Steam Resolver
     if (icon.isNull()) {
-        if (originalId.startsWith(QLatin1String("steam_app_"))) {
-            icon = resolveSteamIcon(originalId.mid(10));
-        } else if (originalId.startsWith(QLatin1String("steam_icon_"))) {
-            icon = resolveSteamIcon(originalId.mid(11));
-        }
-    }
-
-    if (icon.isNull()) {
-        qDebug() << "[krema.icons] Deferring to QML RAM icon for:" << originalId;
+        qDebug() << "[krema.icons] Deferring failure for:" << originalId;
         return QPixmap();
     }
 
+    // Normalization and Processing
     QPixmap result;
-
     if (!m_normalizationEnabled) {
         result = icon.pixmap(QSize(targetSize, targetSize), 1.0);
     } else {
         auto info = analyzeIcon(originalId, icon);
         const bool hasSignificantPadding = info.contentRatio < 0.95;
-        const qreal effectiveRatio = hasSignificantPadding ? info.contentRatio * std::sqrt(info.fillRatio) : info.contentRatio;
+        const double effectiveRatio = hasSignificantPadding ? info.contentRatio * std::sqrt(info.fillRatio) : info.contentRatio;
 
         if (effectiveRatio >= kMinContentRatio) {
-            const qreal shrinkFactor = (info.contentRatio > kEdgeToEdgeFill) ? kEdgeToEdgeFill / info.contentRatio : 1.0;
+            const double shrinkFactor = (info.contentRatio > kEdgeToEdgeFill) ? kEdgeToEdgeFill / info.contentRatio : 1.0;
             result = shrinkPixmap(icon, targetSize, shrinkFactor);
         } else {
             result = normalizePixmap(icon, targetSize, info);
         }
     }
 
-    if (result.isNull()) {
+    if (result.isNull())
         return QPixmap();
-    }
 
+    // Final Scaling
     if (m_iconScale < 1.0) {
         int shrunkSize = static_cast<int>(std::round(targetSize * m_iconScale));
         QImage scaled = result.toImage().scaled(shrunkSize, shrunkSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
@@ -111,37 +136,106 @@ QPixmap TaskIconProvider::requestPixmap(const QString &id, QSize *size, const QS
         painter.end();
     }
 
-    if (size) {
+    if (size)
         *size = result.size();
-    }
     return result;
 }
 
-void TaskIconProvider::setNormalizationEnabled(bool enabled)
+// --- High-Res Steam Resolver (API + Local Fallback) ---
+
+QIcon TaskIconProvider::resolveSteamIcon(const QString &appId)
 {
-    m_normalizationEnabled = enabled;
+    using namespace Qt::StringLiterals;
+    const QString apiKey = u"0e9627f89777d407a9b30a8e30c00ac9"_s; // <-- Paste your API key here
+    QString sgdbDir = QDir::homePath() + u"/.local/share/Steam/steam/games/sgdb/"_s;
+    QDir().mkpath(sgdbDir);
+    QString sgdbPath = sgdbDir + appId + u".png"_s;
+
+    // 1. Check if we already downloaded it from SGDB
+    if (QFile::exists(sgdbPath)) {
+        return QIcon(sgdbPath);
+    }
+
+    // 2. Fetch from SteamGridDB API (Official Styles Only + Timeouts)
+    if (apiKey != u"YOUR_API_KEY_HERE"_s && !apiKey.isEmpty()) {
+        QProcess curl;
+        QString apiUrl = u"https://www.steamgriddb.com/api/v2/icons/steam/"_s + appId + u"?styles=official"_s;
+
+        curl.start(u"curl"_s, {u"-s"_s, u"--connect-timeout"_s, u"2"_s, u"--max-time"_s, u"3"_s, u"-H"_s, u"Authorization: Bearer "_s + apiKey, apiUrl});
+
+        if (curl.waitForFinished(3500)) {
+            QByteArray resp = curl.readAllStandardOutput();
+            QJsonDocument jsonDoc = QJsonDocument::fromJson(resp);
+
+            if (!jsonDoc.isNull() && jsonDoc.isObject()) {
+                QJsonObject jsonObj = jsonDoc.object();
+                if (jsonObj.value(u"success"_s).toBool()) {
+                    QJsonArray dataArr = jsonObj.value(u"data"_s).toArray();
+                    if (!dataArr.isEmpty()) {
+                        QString url = dataArr.first().toObject().value(u"url"_s).toString();
+                        if (!url.isEmpty()) {
+                            QProcess::execute(u"curl"_s, {u"-sL"_s, url, u"-o"_s, sgdbPath});
+                            if (QFile::exists(sgdbPath)) {
+                                return QIcon(sgdbPath);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 3. Fallback: Local High-Res Scraper (with Aspect Ratio logic to avoid pink specks)
+    QString localCache = QDir::homePath() + u"/.local/share/Steam/appcache/librarycache/"_s + appId;
+    if (QDir(localCache).exists()) {
+        QDirIterator it(localCache, {u"*.png"_s, u"*.jpg"_s}, QDir::Files, QDirIterator::Subdirectories);
+
+        struct Candidate {
+            QString path;
+            int res;
+            double aspectScore;
+        };
+        QList<Candidate> candidates;
+
+        while (it.hasNext()) {
+            QString p = it.next();
+            QImageReader reader(p);
+            if (reader.canRead()) {
+                QSize sz = reader.size();
+                double aspect = static_cast<double>(sz.width()) / sz.height();
+
+                // We want square-ish icons or vertical capsules (0.5 to 1.8)
+                // We completely IGNORE ultra-wide text logos
+                if (aspect > 0.5 && aspect < 1.8 && sz.width() >= 64) {
+                    double aspectScore = std::abs(1.0 - aspect);
+                    candidates.append({p, sz.width(), aspectScore});
+                }
+            }
+        }
+
+        if (!candidates.isEmpty()) {
+            // Sort to prioritize square shapes, then higher resolution
+            std::sort(candidates.begin(), candidates.end(), [](const Candidate &a, const Candidate &b) {
+                if (std::abs(a.aspectScore - b.aspectScore) < 0.2) {
+                    return a.res > b.res;
+                }
+                return a.aspectScore < b.aspectScore;
+            });
+            return QIcon(candidates.first().path);
+        }
+    }
+
+    return QIcon();
 }
 
-void TaskIconProvider::setIconScale(qreal scale)
-{
-    m_iconScale = std::clamp(scale, 0.5, 1.0);
-}
-
-void TaskIconProvider::clearCache()
-{
-    m_cache.clear();
-}
+// --- Normalization Helpers ---
 
 QRect TaskIconProvider::findContentBounds(const QImage &image, int threshold)
 {
-    const int w = image.width();
-    const int h = image.height();
-
+    const int w = image.width(), h = image.height();
     if (w == 0 || h == 0)
         return {};
-
     int top = h, bottom = -1, left = w, right = -1;
-
     for (int y = 0; y < h; ++y) {
         const auto *scanline = reinterpret_cast<const QRgb *>(image.constScanLine(y));
         for (int x = 0; x < w; ++x) {
@@ -157,10 +251,7 @@ QRect TaskIconProvider::findContentBounds(const QImage &image, int threshold)
             }
         }
     }
-
-    if (bottom < 0)
-        return {};
-    return QRect(left, top, right - left + 1, bottom - top + 1);
+    return (bottom < 0) ? QRect() : QRect(left, top, right - left + 1, bottom - top + 1);
 }
 
 IconNormalizationInfo TaskIconProvider::analyzeIcon(const QString &iconName, const QIcon &icon)
@@ -175,9 +266,8 @@ IconNormalizationInfo TaskIconProvider::analyzeIcon(const QString &iconName, con
         probeSize = std::max({probeSize, s.width(), s.height()});
 
     QImage probeImage = icon.pixmap(QSize(probeSize, probeSize), 1.0).toImage();
-    if (probeImage.isNull() || probeImage.format() != QImage::Format_ARGB32_Premultiplied) {
+    if (probeImage.isNull() || probeImage.format() != QImage::Format_ARGB32_Premultiplied)
         probeImage = probeImage.convertToFormat(QImage::Format_ARGB32_Premultiplied);
-    }
 
     QRect bounds = findContentBounds(probeImage, kAlphaThreshold);
     IconNormalizationInfo info;
@@ -189,146 +279,73 @@ IconNormalizationInfo TaskIconProvider::analyzeIcon(const QString &iconName, con
         info.contentBounds = QRect(0, 0, probeSize, probeSize);
     } else {
         int contentDim = std::max(bounds.width(), bounds.height());
-        info.contentRatio = static_cast<qreal>(contentDim) / probeSize;
+        info.contentRatio = static_cast<double>(contentDim) / probeSize;
         info.contentBounds = bounds;
-
-        int contentPixels = 0;
+        int pixels = 0;
         for (int y = bounds.top(); y <= bounds.bottom(); ++y) {
             const auto *scanline = reinterpret_cast<const QRgb *>(probeImage.constScanLine(y));
             for (int x = bounds.left(); x <= bounds.right(); ++x) {
                 if (qAlpha(scanline[x]) > kAlphaThreshold)
-                    ++contentPixels;
+                    ++pixels;
             }
         }
-        const qreal bboxArea = static_cast<qreal>(bounds.width()) * bounds.height();
-        info.fillRatio = (bboxArea > 0) ? contentPixels / bboxArea : 1.0;
+        double bboxArea = static_cast<double>(bounds.width()) * bounds.height();
+        info.fillRatio = (bboxArea > 0) ? pixels / bboxArea : 1.0;
     }
-
     m_cache.insert(iconName, info);
     return info;
 }
 
 QPixmap TaskIconProvider::normalizePixmap(const QIcon &icon, int targetSize, const IconNormalizationInfo &info)
 {
-    const qreal margin = (info.fillRatio < 0.95) ? 0.01 : kMinMarginRatio;
-    const qreal maxFill = 1.0 - margin * 2;
-    const qreal effectiveRatio = info.contentRatio * std::sqrt(info.fillRatio);
-    qreal targetFill = std::min(effectiveRatio * kMaxEffectiveScale, maxFill);
+    const double margin = (info.fillRatio < 0.95) ? 0.01 : kMinMarginRatio;
+    const double maxFill = 1.0 - margin * 2;
+    const double effectiveRatio = info.contentRatio * std::sqrt(info.fillRatio);
+    double targetFill = std::min(effectiveRatio * kMaxEffectiveScale, maxFill);
     int targetContentPx = static_cast<int>(std::round(targetSize * targetFill));
-    int requiredLoadSize = static_cast<int>(std::ceil(static_cast<qreal>(targetContentPx) / info.contentRatio));
+    int loadSize = static_cast<int>(std::ceil(static_cast<double>(targetContentPx) / info.contentRatio));
 
-    const auto sizes = icon.availableSizes();
-    int loadSize = requiredLoadSize;
-    if (!sizes.isEmpty()) {
-        int bestSize = 0, largestAvailable = 0;
-        for (const auto &s : sizes) {
-            int maxDim = std::max(s.width(), s.height());
-            if (maxDim >= requiredLoadSize && (bestSize == 0 || maxDim < bestSize))
-                bestSize = maxDim;
-            if (maxDim > largestAvailable)
-                largestAvailable = maxDim;
-        }
-        loadSize = (bestSize > 0) ? bestSize : largestAvailable;
+    QImage img = icon.pixmap(QSize(loadSize, loadSize), 1.0).toImage();
+    if (img.isNull()) {
+        QPixmap f(targetSize, targetSize);
+        f.fill(Qt::transparent);
+        return f;
     }
+    if (img.format() != QImage::Format_ARGB32_Premultiplied)
+        img = img.convertToFormat(QImage::Format_ARGB32_Premultiplied);
 
-    QImage loadedImage = icon.pixmap(QSize(loadSize, loadSize), 1.0).toImage();
-    if (loadedImage.isNull()) {
-        QPixmap fallback(targetSize, targetSize);
-        fallback.fill(Qt::transparent);
-        return fallback;
-    }
-    if (loadedImage.format() != QImage::Format_ARGB32_Premultiplied) {
-        loadedImage = loadedImage.convertToFormat(QImage::Format_ARGB32_Premultiplied);
-    }
-
-    QRect bounds = findContentBounds(loadedImage, kAlphaThreshold);
+    QRect bounds = findContentBounds(img, kAlphaThreshold);
     if (bounds.isEmpty())
         return icon.pixmap(QSize(targetSize, targetSize), 1.0);
 
     int contentDim = std::max(bounds.width(), bounds.height());
-    QRect squareBounds(bounds.center().x() - contentDim / 2, bounds.center().y() - contentDim / 2, contentDim, contentDim);
-    QImage cropped = loadedImage.copy(squareBounds.intersected(loadedImage.rect()));
-    QImage scaled = cropped.scaled(targetContentPx, targetContentPx, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    QRect sq(bounds.center().x() - contentDim / 2, bounds.center().y() - contentDim / 2, contentDim, contentDim);
+    QImage scaled = img.copy(sq.intersected(img.rect())).scaled(targetContentPx, targetContentPx, Qt::KeepAspectRatio, Qt::SmoothTransformation);
 
-    QPixmap result(targetSize, targetSize);
-    result.fill(Qt::transparent);
-    QPainter painter(&result);
-    painter.drawImage((targetSize - scaled.width()) / 2, (targetSize - scaled.height()) / 2, scaled);
-    painter.end();
-    return result;
+    QPixmap res(targetSize, targetSize);
+    res.fill(Qt::transparent);
+    QPainter p(&res);
+    p.drawImage((targetSize - scaled.width()) / 2, (targetSize - scaled.height()) / 2, scaled);
+    p.end();
+    return res;
 }
 
-QPixmap TaskIconProvider::shrinkPixmap(const QIcon &icon, int targetSize, qreal shrinkFactor)
+QPixmap TaskIconProvider::shrinkPixmap(const QIcon &icon, int targetSize, double shrinkFactor)
 {
-    QPixmap original = icon.pixmap(QSize(targetSize, targetSize), 1.0);
-    if (original.isNull()) {
-        QPixmap fallback(targetSize, targetSize);
-        fallback.fill(Qt::transparent);
-        return fallback;
+    QPixmap orig = icon.pixmap(QSize(targetSize, targetSize), 1.0);
+    if (orig.isNull()) {
+        QPixmap f(targetSize, targetSize);
+        f.fill(Qt::transparent);
+        return f;
     }
-
-    int shrunkSize = static_cast<int>(std::round(targetSize * shrinkFactor));
-    QImage scaled = original.toImage().scaled(shrunkSize, shrunkSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-
-    QPixmap result(targetSize, targetSize);
-    result.fill(Qt::transparent);
-    QPainter painter(&result);
-    painter.drawImage((targetSize - scaled.width()) / 2, (targetSize - scaled.height()) / 2, scaled);
-    painter.end();
-    return result;
-}
-
-QIcon TaskIconProvider::resolveSteamIcon(const QString &appId)
-{
-    // 1. YOUR SECRET KEY (Get this from your SGDB profile)
-    const QString apiKey = QStringLiteral("YOUR_API_KEY_HERE");
-
-    // Path where we will save the high-res icon
-    QString iconSaveDir = QDir::homePath() + QLatin1String("/.local/share/Steam/steam/games/sgdb");
-    QDir().mkpath(iconSaveDir);
-    QString iconSavePath = iconSaveDir + QLatin1String("/") + appId + QLatin1String(".png");
-
-    // 2. Cache Check: If we already have the high-res SGDB icon, use it!
-    if (QFile::exists(iconSavePath)) {
-        return QIcon(iconSavePath);
-    }
-
-    // 3. The API Hunt: Search SteamGridDB for this AppID
-    // Endpoint: /icons/steam/{id} returns a list of icons for that Steam game
-    QString searchUrl = QStringLiteral("https://www.steamgriddb.com/api/v2/icons/steam/%1").arg(appId);
-
-    QProcess curlSearch;
-    curlSearch.start(QStringLiteral("curl"),
-                     QStringList() << QStringLiteral("-s") << QStringLiteral("-H") << QStringLiteral("Authorization: Bearer ") + apiKey << searchUrl);
-    curlSearch.waitForFinished(5000);
-
-    QByteArray response = curlSearch.readAllStandardOutput();
-
-    // Quick and dirty JSON parsing for the first icon URL
-    // We look for the "url" key in the JSON response
-    int urlPos = response.indexOf("\"url\":\"");
-    if (urlPos != -1) {
-        int start = urlPos + 7;
-        int end = response.indexOf("\"", start);
-        QString downloadUrl = QString::fromUtf8(response.mid(start, end - start)).replace(QLatin1String("\\/"), QLatin1String("/"));
-
-        qDebug() << "[krema.icons] SGDB: Found high-res icon at" << downloadUrl;
-
-        // 4. Download the actual image
-        QProcess curlDownload;
-        curlDownload.start(QStringLiteral("curl"), QStringList() << QStringLiteral("-sL") << downloadUrl << QStringLiteral("-o") << iconSavePath);
-        curlDownload.waitForFinished(10000);
-
-        if (QFile::exists(iconSavePath) && QFileInfo(iconSavePath).size() > 0) {
-            qDebug() << "[krema.icons] SGDB: High-res download successful!";
-            return QIcon(iconSavePath);
-        }
-    }
-
-    // 5. Fallback: If SGDB fails, use the local Steam cache scanner we built earlier
-    qDebug() << "[krema.icons] SGDB failed or no API key. Falling back to local cache...";
-    // ... insert your existing local cache scanning logic here ...
-    return QIcon();
+    int s = static_cast<int>(std::round(targetSize * shrinkFactor));
+    QImage scaled = orig.toImage().scaled(s, s, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    QPixmap res(targetSize, targetSize);
+    res.fill(Qt::transparent);
+    QPainter p(&res);
+    p.drawImage((targetSize - s) / 2, (targetSize - s) / 2, scaled);
+    p.end();
+    return res;
 }
 
 } // namespace krema
