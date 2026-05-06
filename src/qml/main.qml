@@ -510,103 +510,100 @@ Item {
 
         // Track mouse position for parabolic zoom + drag handling
 	onPositionChanged: function(mouse) {
-           // 1. Calculate our dynamic reach
-           let maxIconHeight = DockSettings.iconSize * DockSettings.maxZoomFactor
-           let dynamicBuffer = 10 + (30 * Math.max(0, DockSettings.maxZoomFactor - 1.0))
-           let totalReach = maxIconHeight + dynamicBuffer
-           
-           let isOutside = false
+            // 1. Capture current geometry and visibility state
+            let pX = dockPanel.x
+            let pY = dockPanel.y
+            let pW = dockPanel.width
+            let pH = dockPanel.height
+            let isVisible = DockVisibility.dockVisible
+            
+            let isInside = false
+            let triggerDepth = 2 // Tiny zone to catch the mouse at screen edges
 
-           // 2. Check boundaries based on the current Edge
-           // Edge 0: Top | Edge 1: Bottom | Edge 2: Left | Edge 3: Right
-           if (DockView.edge === 0) {        // TOP
-               isOutside = mouse.y > totalReach
-           } else if (DockView.edge === 1) { // BOTTOM
-               isOutside = mouse.y < (dockMouseArea.height - totalReach)
-           } else if (DockView.edge === 2) { // LEFT
-               isOutside = mouse.x > totalReach
-           } else if (DockView.edge === 3) { // RIGHT
-               isOutside = mouse.x < (dockMouseArea.width - totalReach)
-           }
+	    // 2. State-Aware Firewall
+            if (isVisible) {
+                // Fetch the mathematically exact pixel overflow
+                let bulge = dockPanel.currentVisualOverflow;
+                
+                // PIXEL-PERFECT: Mouse must be within the panel OR the exact icon bulge
+                if (DockView.isVertical) {
+                    let extLeft = (DockView.edge === 3) ? (pX - bulge) : pX;
+                    let extRight = (DockView.edge === 2) ? (pX + pW + bulge) : (pX + pW);
+                    isInside = (mouse.x >= extLeft - 1 && mouse.x <= extRight + 1 &&
+                                mouse.y >= pY - 1 && mouse.y <= pY + pH + 1);
+                } else {
+                    let extTop = (DockView.edge === 1) ? (pY - bulge) : pY;
+                    let extBottom = (DockView.edge === 0) ? (pY + pH + bulge) : (pY + pH);
+                    isInside = (mouse.x >= pX - 1 && mouse.x <= pX + pW + 1 &&
+                                mouse.y >= extTop - 1 && mouse.y <= extBottom + 1);
+                }
+            } else {
+                // TRIGGER ZONE: Check the screen edge based on dock placement
+                // This allows the dock to "wake up" even when the panel is hidden
+                switch (DockView.edge) {
+                    case 0: // Top
+                        isInside = (mouse.y <= triggerDepth); break
+                    case 1: // Bottom
+                        isInside = (mouse.y >= dockMouseArea.height - triggerDepth); break
+                    case 2: // Left
+                        isInside = (mouse.x <= triggerDepth); break
+                    case 3: // Right
+                        isInside = (mouse.x >= dockMouseArea.width - triggerDepth); break
+                }
+            }
 
-           // 3. The "Reset" Logic
-           if (isOutside) {
-               if (!PreviewController.visible) {
-                   dockPanel.mouseX = -1
-                   dockPanel.mouseY = -1
-                   root._zoomActive = false
-               }
-               root.hoveredIndex = -1
-               root.hoveredName = ""
-               debugHitbox.visible = false
-               DockVisibility.setHovered(false)
-               return 
-           } else {
-               DockVisibility.setHovered(true)
-           } // --- END UNIVERSAL FIREWALL ---
+            // 3. The "Kill Switch"
+            if (!isInside) {
+                // If cursor leaves the panel/trigger, immediately surrender control
+                if (!PreviewController.visible) {
+                    dockPanel.mouseX = -1
+                    dockPanel.mouseY = -1
+                    root._zoomActive = false
+                }
+                root.hoveredIndex = -1
+                root.hoveredName = ""
+                DockVisibility.setHovered(false)
+                return 
+            }
 
-           if (root.keyboardNavigating) {
-               root.keyboardNavigating = false
-               DockVisibility.setKeyboardActive(false)
-           }
+            // 4. If we passed the firewall, signal the hover to unhide or keep visible
+            DockVisibility.setHovered(true)
 
-               if (root.keyboardNavigating) {
-                   root.keyboardNavigating = false
-                   DockVisibility.setKeyboardActive(false)
-               }
+            // 5. Update coordinates for parabolic zoom logic
+            // We map the mouse to the primary axis (Swap for vertical alignment)
+            dockPanel.mouseX = DockView.isVertical ? mouse.y : mouse.x
+            dockPanel.mouseY = DockView.isVertical ? mouse.x : mouse.y
 
-               if (root._dragPending && !root._dragActive) {
-                   let dx = mouse.x - root._dragStartX
-                   let dy = mouse.y - root._dragStartY
-                   if (Math.sqrt(dx * dx + dy * dy) > root._dragThreshold) {
-                       root._dragActive = true
-                       root._dragWasActive = true
-                       DockVisibility.setInteracting(true) 
-                       tooltipItem.show = false
-                       tooltipTimer.stop()
-                   }
-               }
+            // 6. Update which specific icon the mouse is over
+            root.updateHoveredItem()
 
-               if (root._dragActive) {
-                   root._dragCurrentX = mouse.x
-                   root._dragCurrentY = mouse.y
-                   root._dragTargetIndex = computeDropIndex(DockView.isVertical ? mouse.y : mouse.x)
-                   return 
-               }
+            // 7. Reset Keyboard Navigation if mouse moves
+            if (root.keyboardNavigating) {
+                root.keyboardNavigating = false
+                DockVisibility.setKeyboardActive(false)
+            }
 
-               let safeReach = DockSettings.iconSize * DockSettings.maxZoomFactor + 20
-               let inZone = false
-               
-	       if (DockView.isVertical) {
-                     let panelNear = dockPanel.x
-                     let panelFar = dockPanel.x + dockPanel.width
-                     inZone = (DockView.edge === 2)
-                         ? (mouse.x >= panelNear - 20 && mouse.x <= panelNear + safeReach)
-                         : (mouse.x >= panelFar - safeReach && mouse.x <= panelFar + 20)
-                     if (inZone) {
-                         // USE ABSOLUTE COORDINATES (Swap for vertical alignment)
-                         dockPanel.mouseX = mouse.y 
-                         dockPanel.mouseY = mouse.x 
-                     }
-                 } else {
-                     let panelTop = dockPanel.y
-                     let panelBottom = dockPanel.y + dockPanel.height
-                     inZone = (DockView.edge === 0)
-                         ? (mouse.y >= panelTop - 20 && mouse.y <= panelTop + safeReach)
-                         : (mouse.y >= panelBottom - safeReach && mouse.y <= panelBottom + 20)
-                     if (inZone) {
-                         // USE ABSOLUTE COORDINATES
-                         dockPanel.mouseX = mouse.x 
-                         dockPanel.mouseY = mouse.y 
-                     }
-                 }
+            // 8. Handle Reorder Drag (Pending Phase)
+            if (root._dragPending && !root._dragActive) {
+                let dx = mouse.x - root._dragStartX
+                let dy = mouse.y - root._dragStartY
+                // Only start drag if mouse moved past the threshold
+                if (Math.sqrt(dx * dx + dy * dy) > root._dragThreshold) {
+                    root._dragActive = true
+                    root._dragWasActive = true
+                    DockVisibility.setInteracting(true) 
+                    tooltipItem.show = false
+                    tooltipTimer.stop()
+                }
+            }
 
-                 if (!inZone) {
-                     dockPanel.mouseX = -9999
-                     dockPanel.mouseY = -9999
-                 }
-               
-               root.updateHoveredItem()
+            // 9. Handle Reorder Drag (Active Phase)
+            if (root._dragActive) {
+                root._dragCurrentX = mouse.x
+                root._dragCurrentY = mouse.y
+                // Compute the drop index based on the primary axis
+                root._dragTargetIndex = computeDropIndex(DockView.isVertical ? mouse.y : mouse.x)
+            }
         }
     }
 
@@ -761,6 +758,36 @@ Item {
         Rectangle {
             id: dockPanel
            visible: opacity > 0.01
+
+	   // Constantly tracks EXACTLY how far the zoomed icons stick out of the panel boundary
+    property real currentVisualOverflow: {
+        let maxExt = DockSettings.iconSize;
+        for (let i = 0; i < dockRepeater.count; i++) {
+            let item = dockRepeater.itemAt(i);
+            if (item && item.currentScale) {
+                let scaledSize = DockSettings.iconSize * item.currentScale;
+                if (scaledSize > maxExt) maxExt = scaledSize;
+            }
+        }
+        
+        let growth = maxExt - DockSettings.iconSize;
+        let overflow = 0;
+
+        if (DockView.isVertical) {
+            if (DockView.edge === 2) { // Left edge (sticks out right)
+                overflow = Math.max(0, (dockRow.x + DockSettings.iconSize + growth) - width);
+            } else { // Right edge (sticks out left)
+                overflow = Math.max(0, -(dockRow.x - growth));
+            }
+        } else {
+            if (DockView.edge === 1) { // Bottom edge (sticks out top)
+                overflow = Math.max(0, -(dockRow.y - growth));
+            } else { // Top edge (sticks out bottom)
+                overflow = Math.max(0, (dockRow.y + DockSettings.iconSize + growth) - height);
+            }
+        }
+        return overflow;
+    }
 
 	   // --- THE SPAM-FREE ULTIMATE DEBUGGER ---
            Timer {
@@ -966,19 +993,16 @@ Item {
         property real _actualContentHeight: Math.max(dockRow.animatedContentHeight + 6, Kirigami.Units.gridUnit * 6)
 
 	    // This function calculates the "Ghost" area for the OS
+	    // This function calculates the "Ghost" area for the OS
 	    function updateWaylandInputRegion() {
-    if (typeof DockVisibility === "undefined") return;
-    
-    // Tell OS where the blur goes
-    DockVisibility.setPanelRect(dockPanel.x, dockPanel.y, dockPanel.width, dockPanel.height);
-    
-    // Tell OS where the mouse works (2.5x icon size)
-    let maxReach = DockSettings.iconSize * 2.5;
-    
-    // Even though the C++ function name says "Height," the backend 
-    // uses this number as the "depth" away from the screen edge.
-    DockVisibility.setZoomOverflowHeight(maxReach);
-}
+            if (typeof DockVisibility === "undefined") return;
+            
+            DockVisibility.setPanelRect(dockPanel.x, dockPanel.y, dockPanel.width, dockPanel.height);
+            
+            // THE FIX: Pass the absolute pixel-perfect overflow coordinate to Wayland.
+            // If the panel completely swallows the icons, this safely sends 0.
+            DockVisibility.setZoomOverflowHeight(dockPanel.currentVisualOverflow);
+        }
 
 // Trigger the update AND our debug print whenever the panel moves
                 onXChanged: { updateWaylandInputRegion(); printGeometry(); }
