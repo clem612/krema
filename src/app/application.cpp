@@ -25,6 +25,56 @@
 #include <QQuickStyle>
 #include <QtQml>
 
+#include <iostream>
+
+void kremaLogHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg)
+{
+    using namespace Qt::StringLiterals;
+    QByteArray localMsg = msg.toLocal8Bit();
+    QString category = QString::fromLatin1(context.category);
+
+    // ANSI Color Codes
+    const char *reset = "\x1b[0m";
+    const char *red = "\x1b[31m";
+    const char *green = "\x1b[32m";
+    const char *yellow = "\x1b[33m";
+    const char *blue = "\x1b[34m";
+    const char *magenta = "\x1b[35m";
+    const char *cyan = "\x1b[36m";
+    const char *bold = "\x1b[1m";
+
+    const char *color = reset;
+
+    // Clean up tag: Remove "krema." prefix and uppercase it
+    QString tag = category;
+    if (tag.startsWith(u"krema."_s))
+        tag.remove(0, 6);
+    tag = tag.toUpper();
+    if (tag == u"DEFAULT"_s)
+        tag = u"DEBUG"_s;
+
+    // 1. Determine Color by Category
+    if (category.contains(u"model"_s))
+        color = yellow;
+    else if (category.contains(u"notifications"_s) || category.contains(u"notif"_s))
+        color = cyan;
+    else if (category.contains(u"icons"_s))
+        color = magenta;
+    else if (category.contains(u"shell"_s) || category.contains(u"preview"_s))
+        color = green;
+    else if (category.contains(u"config"_s))
+        color = blue;
+    else if (category.contains(u"app"_s))
+        color = bold;
+
+    // 2. Override Color for Warnings/Errors
+    if (type == QtWarningMsg || type == QtCriticalMsg)
+        color = red;
+
+    // 3. Print to terminal
+    std::fprintf(stderr, "%s[%s]%s %s\n", color, tag.toLocal8Bit().constData(), reset, localMsg.constData());
+}
+
 Q_LOGGING_CATEGORY(lcApp, "krema.app")
 
 // Static library resources must be explicitly initialized.
@@ -46,6 +96,9 @@ Application::~Application() = default;
 
 int Application::run()
 {
+    // Install the global color interceptor immediately
+    qInstallMessageHandler(kremaLogHandler);
+
     // Ensure Qt Quick Controls use the KDE Plasma style (needed for Kirigami theming)
     if (QQuickStyle::name().isEmpty()) {
         QQuickStyle::setStyle(QStringLiteral("org.kde.desktop"));
@@ -70,8 +123,7 @@ int Application::run()
     // Initialize Qt resources from static library
     initResources();
 
-    // Must be called before any QWindow is created
-    LayerShellQt::Shell::useLayerShell();
+    // LayerShellQt::Shell::useLayerShell(); // Deprecated and removed for modern Qt 6
 
     // Load settings from KConfig (~/.config/kremarc)
     m_settings = std::make_unique<KremaSettings>();
@@ -85,8 +137,6 @@ int Application::run()
     m_notificationTracker = std::make_unique<NotificationTracker>();
 
     // Register global QML singletons (must be before any QML loading)
-    // Use qmlRegisterSingletonType (not qmlRegisterSingletonInstance) so multiple
-    // QML engines (dock + settings window) can access the same C++ objects.
     auto *model = m_dockModel.get();
     qmlRegisterSingletonType<DockModel>("com.bhyoo.krema", 1, 0, "DockModel", [model](QQmlEngine *, QJSEngine *) -> QObject * {
         QQmlEngine::setObjectOwnership(model, QQmlEngine::CppOwnership);
@@ -118,9 +168,6 @@ int Application::run()
 
     // Auto-save on any setting change
     auto *s = m_settings.get();
-    auto saveSettings = [this]() {
-        m_settings->save();
-    };
     connect(s, &KremaSettings::configChanged, this, [s]() {
         s->save();
     });
@@ -162,7 +209,6 @@ void Application::registerGlobalShortcuts()
     });
 
     // Focus dock for keyboard navigation: Meta+F5
-    // In multi-monitor mode, focuses the dock on the screen containing the cursor.
     auto *focusDockAction = m_actionCollection->addAction(QStringLiteral("focus-dock"));
     focusDockAction->setText(i18nc("@action global shortcut", "Focus Dock"));
     kga->setDefaultShortcut(focusDockAction, {QKeySequence(Qt::META | Qt::Key_F5)});
