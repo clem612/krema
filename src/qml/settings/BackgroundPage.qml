@@ -13,12 +13,12 @@ import "../components"
 
 QQC2.ScrollView {
     id: bgPage
-    contentWidth: availableWidth
     clip: true
 
     ColumnLayout {
-        anchors.fill: parent
-        anchors.margins: 16
+	width: bgPage.availableWidth - 32 // 16px margins on each side
+        x: 16
+        y: 16
         spacing: 32
 
         // --- PILLAR 1: MATERIAL ---

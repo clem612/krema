@@ -84,7 +84,7 @@ QQC2.ScrollView {
         }
 
         // --- FOOTER ACTION ---
-        QQC2.Button {
+	QQC2.Button { id: bugButton
             text: i18n("Report a Bug")
             icon.name: "tools-report-bug"
             icon.color: "#FFFDD0"
@@ -95,13 +95,13 @@ QQC2.ScrollView {
             contentItem: RowLayout {
                 spacing: 8
                 Kirigami.Icon { 
-                    source: parent.icon.name
+		    source: bugButton.icon.name
                     implicitWidth: 18
                     implicitHeight: 18
                     color: "#FFFDD0"
                 }
                 QQC2.Label { 
-                    text: parent.text
+		    text: bugButton.text
                     color: "#FFFDD0"
                     font.bold: true 
                 }

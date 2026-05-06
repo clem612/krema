@@ -20,34 +20,40 @@ Item {
     property var configViewItem: settingsWindow
     readonly property int tileHeight: 44
 
-    // --- THE LOGICAL KREMA CATEGORIZATION ---
+    // --- THE REORGANIZED KREMA CATEGORIZATION ---
     property var menuData: [
         {
-            name: i18n("Theme & Style"),
+            name: i18n("Appearance"),
             icon: "preferences-desktop-theme",
             subItems: [
-                { id: "background", name: i18n("Background"), icon: "preferences-desktop-wallpaper", page: "settings/BackgroundPage.qml" },
-                { id: "shadow", name: i18n("Shadows"), icon: "format-text-shadow", page: "settings/ShadowPage.qml" },
-                { id: "separator", name: i18n("Separator"), icon: "format-stroke-color", page: "settings/SeparatorPage.qml" }
+                { id: "background", name: i18n("Background & Blur"), icon: "preferences-desktop-wallpaper", page: "settings/BackgroundPage.qml" },
+                { id: "shadow", name: i18n("Shadow Effects"), icon: "format-text-shadow", page: "settings/ShadowPage.qml" },
+                { id: "separator", name: i18n("Separators"), icon: "format-stroke-color", page: "settings/SeparatorPage.qml" }
             ]
         },
         {
-            name: i18n("Layout & Size"),
+            name: i18n("Dimensions"),
             icon: "transform-scale",
             subItems: [
-                { id: "icons", name: i18n("Icon Sizing & Gaps"), icon: "preferences-desktop-icons", page: "settings/IconsPage.qml" },
-                { id: "panel", name: i18n("Panel Geometry"), icon: "measure", page: "settings/PanelPage.qml" }
+                { id: "panel", name: i18n("Panel Geometry"), icon: "measure", page: "settings/PanelPage.qml" },
+                { id: "icons", name: i18n("Icon Sizing & Gaps"), icon: "preferences-desktop-icons", page: "settings/IconsPage.qml" }
             ]
         },
         {
-            name: i18n("Behavior & Rules"),
+            name: i18n("Interaction"),
             icon: "preferences-system",
             subItems: [
-                { id: "behavior", name: i18n("General Behavior"), icon: "preferences-system-windows", page: "settings/BehaviorPage.qml" },
-                { id: "visibility", name: i18n("Visibility Rules"), icon: "view-visible", page: "settings/VisibilityPage.qml" },
-                { id: "multimonitor", name: i18n("Multi-Monitor"), icon: "video-display", page: "settings/MonitorPage.qml" },
-                { id: "virtualdesktops", name: i18n("Virtual Desktops"), icon: "preferences-desktop-virtual", page: "settings/VirtualDesktopsPage.qml" },
-                { id: "preview", name: i18n("Window Preview"), icon: "view-preview", page: "settings/PreviewPage.qml" }
+                { id: "visibility", name: i18n("Visibility & Hiding"), icon: "view-visible", page: "settings/VisibilityPage.qml" },
+                { id: "behavior", name: i18n("Animations & Logic"), icon: "preferences-system-windows", page: "settings/BehaviorPage.qml" },
+                { id: "preview", name: i18n("Window Previews"), icon: "view-preview", page: "settings/PreviewPage.qml" }
+            ]
+        },
+        {
+            name: i18n("Workspace"),
+            icon: "video-display",
+            subItems: [
+                { id: "multimonitor", name: i18n("Screen Selection"), icon: "video-display", page: "settings/MonitorPage.qml" },
+                { id: "virtualdesktops", name: i18n("Virtual Desktops"), icon: "preferences-desktop-virtual", page: "settings/VirtualDesktopsPage.qml" }
             ]
         },
         {
@@ -95,7 +101,7 @@ Item {
         anchors.fill: parent
         color: "#1C1A1C" // Deep Roast Base
         radius: 16
-        border.color: "#333133" // Subtle inner rim
+        border.color: "#333133" 
         border.width: 1
         clip: true
 
@@ -103,24 +109,22 @@ Item {
             anchors.fill: parent
             spacing: 0
 
-            // --- LEFT SIDEBAR (Darker Inset) ---
+            // --- LEFT SIDEBAR ---
             Rectangle {
                 Layout.preferredWidth: 240
                 Layout.fillHeight: true
-                color: "#121112" // Darker to push it back visually
+                color: "#121112"
 
                 ColumnLayout {
                     anchors.fill: parent
                     spacing: 0
 
-                    // Sidebar Header
                     Item {
                         Layout.fillWidth: true
                         Layout.preferredHeight: 70
                         RowLayout {
                             anchors.fill: parent
                             anchors.leftMargin: 24
-                            anchors.rightMargin: 16
                             Label { 
                                 text: "Krema"
                                 color: "#FFFDD0" 
@@ -133,7 +137,6 @@ Item {
                         }
                     }
 
-                    // Dynamic Menu Stack
                     StackView { 
                         id: sidebarStack
                         Layout.fillWidth: true
@@ -143,7 +146,6 @@ Item {
                 }
             }
 
-            // Vertical Separator Line
             Rectangle { Layout.preferredWidth: 1; Layout.fillHeight: true; color: "#2A282A" }
 
             // --- RIGHT CONTENT AREA ---
@@ -152,7 +154,6 @@ Item {
                 Layout.fillHeight: true
                 spacing: 0
 
-                // Content Header (Window Controls)
                 Item {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 60
@@ -162,14 +163,12 @@ Item {
                         anchors.rightMargin: 16
                         spacing: 8
 
-                        // Pin Button
                         QQC2.ToolButton { 
                             icon.name: settingsWindow.isPinned ? "window-pin" : "window-unpin"
                             icon.color: settingsWindow.isPinned ? "#FFFDD0" : "#80FFFDD0"
                             onClicked: settingsWindow.isPinned = !settingsWindow.isPinned 
                         }
                         
-                        // Close Button
                         QQC2.ToolButton { 
                             icon.name: "window-close"
                             icon.color: "#80FFFDD0"
@@ -178,19 +177,17 @@ Item {
                     }
                 }
 
-                // The Actual Settings Page
                 Loader { 
                     id: pageLoader
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     Layout.margins: 16
-                    source: "settings/BackgroundPage.qml" // Default landing page
+                    source: "settings/BackgroundPage.qml" 
                 }
             }
         }
     }
 
-    // --- CUSTOM STYLED MENU COMPONENTS ---
     Component {
         id: mainMenuComponent
         ListView {
@@ -205,16 +202,13 @@ Item {
                 height: tileHeight
                 anchors.horizontalCenter: parent.horizontalCenter
                 radius: 8
-                
-                // 1. Dynamic State Logic (Selected > Pressed > Hover > Idle)
                 color: {
                     if (ListView.isCurrentItem) return "#1AFFFDD0"
-                    if (menuMouse.pressed) return "#15FFFDD0" // Tactile click feedback
+                    if (menuMouse.pressed) return "#15FFFDD0"
                     if (menuMouse.containsMouse) return "#0AFFFDD0"
                     return "transparent"
                 }
                 
-                // 2. Viscous Transition (The Krema Feel)
                 Behavior on color {
                     ColorAnimation { duration: 150; easing.type: Easing.OutCubic }
                 }
@@ -223,7 +217,7 @@ Item {
                     id: menuMouse
                     anchors.fill: parent
                     hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor // 3. The Hand Cursor
+                    cursorShape: Qt.PointingHandCursor
                     onClicked: {
                         if (modelData.subItems) sidebarStack.push(subMenuComponent, { "categoryName": modelData.name, "subModel": modelData.subItems })
                         else pageLoader.source = modelData.page
@@ -264,14 +258,11 @@ Item {
             property string categoryName: ""
             property var subModel: []
 
-            // --- Back Button ---
             Rectangle {
                 Layout.preferredWidth: parent.width - 32
                 Layout.alignment: Qt.AlignHCenter
                 height: tileHeight
                 radius: 8
-                
-                // State Logic
                 color: {
                     if (backMouse.pressed) return "#15FFFDD0"
                     if (backMouse.containsMouse) return "#0AFFFDD0"
@@ -284,7 +275,7 @@ Item {
                     id: backMouse
                     anchors.fill: parent
                     hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor // Hand Cursor
+                    cursorShape: Qt.PointingHandCursor
                     onClicked: sidebarStack.pop()
                 }
 
@@ -299,7 +290,6 @@ Item {
 
             Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A"; Layout.leftMargin: 16; Layout.rightMargin: 16 }
 
-            // --- Sub-items List ---
             ListView {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
@@ -313,8 +303,6 @@ Item {
                     height: tileHeight
                     anchors.horizontalCenter: parent.horizontalCenter
                     radius: 8
-                    
-                    // State Logic
                     color: {
                         if (ListView.isCurrentItem) return "#1AFFFDD0"
                         if (subMouse.pressed) return "#15FFFDD0"
@@ -328,7 +316,7 @@ Item {
                         id: subMouse
                         anchors.fill: parent
                         hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor // Hand Cursor
+                        cursorShape: Qt.PointingHandCursor
                         onClicked: pageLoader.source = modelData.page
                     }
 
