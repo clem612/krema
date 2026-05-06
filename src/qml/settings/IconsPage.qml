@@ -52,7 +52,10 @@ QQC2.ScrollView {
                         id: iconSizeSlider; Layout.fillWidth: true; 
                         from: 24; to: 96; stepSize: 4; 
                         value: DockSettings.iconSize; 
-                        onMoved: DockSettings.iconSize = value 
+			onMoved: { 
+                                 DockSettings.iconSize = value;
+                                 DockSettings.save();
+                             }
                     }
                 }
 
@@ -69,7 +72,10 @@ QQC2.ScrollView {
                         id: iconSpacingSlider; Layout.fillWidth: true; 
                         from: 0; to: 16; stepSize: 1; 
                         value: DockSettings.iconSpacing; 
-                        onMoved: DockSettings.iconSpacing = value 
+			onMoved: { 
+                                 DockSettings.iconSpacing = value;
+                                 DockSettings.save();
+                             }
                     }
                 }
 
@@ -86,7 +92,10 @@ QQC2.ScrollView {
                         id: zoomFactorSlider; Layout.fillWidth: true; 
                         from: 1.0; to: 2.0; stepSize: 0.1; 
                         value: DockSettings.maxZoomFactor; 
-                        onMoved: DockSettings.maxZoomFactor = value 
+			onMoved: { 
+                                 DockSettings.maxZoomFactor = value;
+                                 DockSettings.save();
+                             }
                     }
                 }
 
@@ -103,7 +112,10 @@ QQC2.ScrollView {
                         id: iconScaleSlider; Layout.fillWidth: true; 
                         from: 0.5; to: 1.0; stepSize: 0.05; 
                         value: DockSettings.iconScale; 
-                        onMoved: DockSettings.iconScale = value 
+			onMoved: { 
+                                 DockSettings.iconScale = value;
+                                 DockSettings.save();
+                             }
                     }
                 }
 
@@ -114,7 +126,10 @@ QQC2.ScrollView {
                     Layout.fillWidth: true
                     text: i18n("Icon Size Normalization")
                     checked: DockSettings.iconNormalization
-                    onToggled: DockSettings.iconNormalization = checked
+		    onToggled: { 
+                             DockSettings.iconNormalization = checked;
+                             DockSettings.save();
+                         }
                 }
                 QQC2.Label { 
                     text: i18n("Automatically adjusts icons with excess transparent padding so they appear visually consistent."); 

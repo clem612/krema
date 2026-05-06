@@ -55,7 +55,10 @@ QQC2.ScrollView {
                         Layout.maximumWidth: 180
                         model: [i18n("Classic Line"), i18n("Blueprint Dots")]
                         currentIndex: DockSettings.separatorStyle
-                        onActivated: function(index) { DockSettings.separatorStyle = index }
+			onActivated: function(index) { 
+                                 DockSettings.separatorStyle = index;
+                                 DockSettings.save();
+                             }
                     }
                 }
 
@@ -73,7 +76,10 @@ QQC2.ScrollView {
                         Layout.fillWidth: true
                         from: 0.0; to: 1.0; stepSize: 0.05
                         value: DockSettings.separatorOpacity
-                        onMoved: DockSettings.separatorOpacity = value
+			onMoved: {
+                                 DockSettings.separatorOpacity = value;
+                                 DockSettings.save();
+                             }
                     }
                 }
             }

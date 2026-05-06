@@ -48,7 +48,10 @@ QQC2.ScrollView {
                        Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
                        model: [i18n("None"), i18n("Bounce"), i18n("Glow")]
                        currentIndex: DockSettings.attentionAnimation
-                       onActivated: function(index) { DockSettings.attentionAnimation = index }
+		       onActivated: function(index) { 
+                              DockSettings.attentionAnimation = index;
+                              DockSettings.save();
+                          }
                    }
                 }
 
@@ -68,7 +71,10 @@ QQC2.ScrollView {
                         id: attentionDurationSlider; Layout.fillWidth: true; 
                         from: 0; to: 60; stepSize: 1; 
                         value: DockSettings.attentionAnimationDuration; 
-                        onMoved: DockSettings.attentionAnimationDuration = value 
+			onMoved: {
+                                 DockSettings.attentionAnimationDuration = value;
+                                 DockSettings.save();
+                             }
                     }
                 }
 
@@ -90,7 +96,10 @@ QQC2.ScrollView {
                        Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
                        model: [i18n("None"), i18n("Dot"), i18n("Number")]
                        currentIndex: DockSettings.badgeDisplayMode
-                       onActivated: function(index) { DockSettings.badgeDisplayMode = index }
+		       onActivated: function(index) { 
+                              DockSettings.badgeDisplayMode = index;
+                              DockSettings.save();
+                          }
                    }
                 }
             }

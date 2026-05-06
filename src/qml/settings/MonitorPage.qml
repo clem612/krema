@@ -53,7 +53,10 @@ QQC2.ScrollView {
                         Layout.maximumWidth: 200 // Prevents the dropdown from stretching too wide
                         model: [i18n("Primary monitor only"), i18n("All monitors"), i18n("Follow active screen")]
                         currentIndex: DockSettings.monitorMode
-                        onActivated: function(index) { DockSettings.monitorMode = index }
+			onActivated: function(index) { 
+                                 DockSettings.monitorMode = index;
+                                 DockSettings.save();
+                             }
                     }
                 }
             }

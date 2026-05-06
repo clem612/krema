@@ -46,7 +46,10 @@ QQC2.ScrollView {
                     Layout.fillWidth: true
                     text: i18n("Enable High-Fidelity Shadows")
                     checked: DockSettings.shadowEnabled
-                    onToggled: DockSettings.shadowEnabled = checked
+		    onToggled: {
+                             DockSettings.shadowEnabled = checked;
+                             DockSettings.save();
+                         }
                 }
             }
         }
@@ -78,7 +81,10 @@ QQC2.ScrollView {
                         id: lightXSlider; Layout.fillWidth: true; 
                         from: -300; to: 300; stepSize: 10; 
                         value: DockSettings.shadowLightX; 
-                        onMoved: DockSettings.shadowLightX = value 
+			onMoved: {
+                                 DockSettings.shadowLightX = value;
+                                 DockSettings.save();
+                             }
                     }
                 }
 
@@ -95,7 +101,10 @@ QQC2.ScrollView {
                         id: lightYSlider; Layout.fillWidth: true; 
                         from: -300; to: 300; stepSize: 10; 
                         value: DockSettings.shadowLightY; 
-                        onMoved: DockSettings.shadowLightY = value 
+			onMoved: {
+                                 DockSettings.shadowLightY = value;
+                                 DockSettings.save();
+                             }
                     }
                 }
 
@@ -112,7 +121,10 @@ QQC2.ScrollView {
                         id: lightZSlider; Layout.fillWidth: true; 
                         from: 100; to: 2000; stepSize: 20; 
                         value: DockSettings.shadowLightZ; 
-                        onMoved: DockSettings.shadowLightZ = value 
+			onMoved: {
+                                 DockSettings.shadowLightZ = value;
+                                 DockSettings.save();
+                             }
                     }
                 }
             }
@@ -145,7 +157,10 @@ QQC2.ScrollView {
                         id: elevationSlider; Layout.fillWidth: true; 
                         from: 1; to: 50; stepSize: 1; 
                         value: DockSettings.shadowElevation; 
-                        onMoved: DockSettings.shadowElevation = value 
+			onMoved: {
+                                 DockSettings.shadowElevation = value;
+                                 DockSettings.save();
+                             }
                     }
                 }
 
@@ -162,7 +177,10 @@ QQC2.ScrollView {
                         id: lightRadiusSlider; Layout.fillWidth: true; 
                         from: 0.5; to: 20.0; stepSize: 0.5; 
                         value: DockSettings.shadowLightRadius; 
-                        onMoved: DockSettings.shadowLightRadius = value 
+			onMoved: {
+                                 DockSettings.shadowLightRadius = value;
+                                 DockSettings.save();
+                             }
                     }
                 }
 
@@ -179,7 +197,10 @@ QQC2.ScrollView {
                         id: intensitySlider; Layout.fillWidth: true; 
                         from: 0.0; to: 1.0; stepSize: 0.05; 
                         value: DockSettings.shadowIntensity; 
-                        onMoved: DockSettings.shadowIntensity = value 
+			onMoved: {
+                                 DockSettings.shadowIntensity = value;
+                                 DockSettings.save();
+                             }
                     }
                 }
 
@@ -208,6 +229,9 @@ QQC2.ScrollView {
         id: shadowColorDialog; 
         title: i18n("Choose shadow color"); 
         selectedColor: DockSettings.shadowColor; 
-        onAccepted: DockSettings.shadowColor = selectedColor 
+	onAccepted: {
+                 DockSettings.shadowColor = selectedColor;
+                 DockSettings.save();
+             }
     }
 }

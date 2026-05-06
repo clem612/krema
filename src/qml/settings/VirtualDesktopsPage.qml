@@ -54,7 +54,10 @@ QQC2.ScrollView {
                         Layout.maximumWidth: 180
                         model: [i18n("Show all windows"), i18n("Dim other desktops"), i18n("Current desktop only")]
                         currentIndex: DockSettings.virtualDesktopMode
-                        onActivated: function(index) { DockSettings.virtualDesktopMode = index }
+			onActivated: function(index) { 
+                                 DockSettings.virtualDesktopMode = index;
+                                 DockSettings.save();
+                             }
                     }
                 }
 
@@ -75,7 +78,10 @@ QQC2.ScrollView {
                         id: dimOpacitySlider; Layout.fillWidth: true; 
                         from: 0.1; to: 0.9; stepSize: 0.05; 
                         value: DockSettings.otherDesktopOpacity; 
-                        onMoved: DockSettings.otherDesktopOpacity = value 
+			onMoved: {
+                                 DockSettings.otherDesktopOpacity = value;
+                                 DockSettings.save();
+                             }
                     }
                 }
             }

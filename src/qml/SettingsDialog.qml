@@ -89,11 +89,15 @@ Item {
     }
 
     onVisibleChanged: {
-        if (typeof DockVisibility !== "undefined") {
-            DockVisibility.liveEditMode = settingsWindow.visible;
-            DockVisibility.setInteracting(settingsWindow.visible);
-        }
-    }
+           if (typeof DockVisibility !== "undefined") {
+               DockVisibility.liveEditMode = settingsWindow.visible;
+               DockVisibility.setInteracting(settingsWindow.visible);
+           }
+           // Save to disk whenever the window is hidden
+           if (!settingsWindow.visible && typeof DockSettings !== "undefined") {
+               DockSettings.save();
+           }
+       }
 
     // --- THE MAIN CHASSIS ---
     Rectangle {

@@ -41,7 +41,10 @@ QQC2.ScrollView {
                     Layout.fillWidth: true
                     text: i18n("Enable Window Previews")
                     checked: DockSettings.previewEnabled
-                    onToggled: DockSettings.previewEnabled = checked
+		    onToggled: { 
+                                 DockSettings.previewEnabled = checked;
+                                 DockSettings.save();
+                             }
                 }
                 QQC2.Label { 
                     text: i18n("Shows a live thumbnail of open windows when hovering over dock icons."); 
@@ -75,7 +78,10 @@ QQC2.ScrollView {
                         id: widthSlider; Layout.fillWidth: true; 
                         from: 120; to: 320; stepSize: 20; 
                         value: DockSettings.previewThumbnailSize; 
-                        onMoved: DockSettings.previewThumbnailSize = value 
+			onMoved: { 
+                                 DockSettings.previewThumbnailSize = value;
+                                 DockSettings.save();
+                             }
                     }
                 }
 
@@ -92,7 +98,10 @@ QQC2.ScrollView {
                         id: hoverSlider; Layout.fillWidth: true; 
                         from: 0; to: 2000; stepSize: 50; 
                         value: DockSettings.previewHoverDelay; 
-                        onMoved: DockSettings.previewHoverDelay = value 
+			onMoved: { 
+                                 DockSettings.previewHoverDelay = value;
+                                 DockSettings.save();
+                             }
                     }
                 }
 
@@ -109,7 +118,10 @@ QQC2.ScrollView {
                         id: hideSlider; Layout.fillWidth: true; 
                         from: 0; to: 1000; stepSize: 50; 
                         value: DockSettings.previewHideDelay; 
-                        onMoved: DockSettings.previewHideDelay = value 
+			onMoved: { 
+                                 DockSettings.previewHideDelay = value;
+                                 DockSettings.save();
+                             }
                     }
                 }
             }

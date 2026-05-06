@@ -52,7 +52,10 @@ QQC2.ScrollView {
                        Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
                        model: [i18n("Always Visible"), i18n("Auto Hide"), i18n("Dodge Windows")]
                        currentIndex: DockSettings.visibilityMode
-                       onActivated: function(index) { DockSettings.visibilityMode = index }
+		       onActivated: function(index) { 
+                          DockSettings.visibilityMode = index;
+                          DockSettings.save();
+                      }
                    }
                 }
 
@@ -67,7 +70,10 @@ QQC2.ScrollView {
                     visible: DockSettings.visibilityMode === 0
                     text: i18n("Reserve Screen Space")
                     checked: DockSettings.reserveSpace
-                    onToggled: DockSettings.reserveSpace = checked
+		    onToggled: {
+                       DockSettings.reserveSpace = checked;
+                       DockSettings.save();
+                   }
                 }
 
                 // CONDITIONAL: DODGE ACTIVE ONLY
@@ -76,7 +82,10 @@ QQC2.ScrollView {
                     visible: DockSettings.visibilityMode === 2
                     text: i18n("Only Dodge Active Window")
                     checked: DockSettings.dodgeActiveOnly
-                    onToggled: DockSettings.dodgeActiveOnly = checked
+		    onToggled: {
+                       DockSettings.dodgeActiveOnly = checked;
+                       DockSettings.save();
+                   }
                 }
             }
         }
@@ -106,11 +115,14 @@ QQC2.ScrollView {
                         }
                     }
 		    KremaComboBox {
-                       Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                       model: [i18n("Top"), i18n("Bottom"), i18n("Left"), i18n("Right")]
-                       currentIndex: DockSettings.edge
-                       onActivated: function(index) { DockSettings.edge = index }
-                   }
+                      Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                      model: [i18n("Top"), i18n("Bottom"), i18n("Left"), i18n("Right")]
+                      currentIndex: DockSettings.edge
+                      onActivated: function(index) { 
+                          DockSettings.edge = index;
+                          DockSettings.save();
+                      }
+                  }
 	       }
             }
         }
