@@ -839,16 +839,16 @@ Item {
            property bool isEditMode: typeof DockVisibility !== "undefined" && DockVisibility.liveEditMode
 
 	   // For Vertical Docks: Width is Thickness (Slider), Height is Length (Instant Sync)
-	   width: {
+          width: {
               if (!DockView.isVertical) return _actualContentWidth;
-              // THE CEILING: Cap panel thickness so it never exceeds icons + padding
-              return Math.min(DockSettings.panelHeight, dockRow.animatedContentWidth + 12);
+              // THE CEILING: Restored to Math.min so it doesn't grow infinitely!
+              return Math.min(DockSettings.panelHeight, dockRow.animatedContentWidth + 24);
           }
 
           height: {
               if (DockView.isVertical) return _actualContentHeight;
-              // THE CEILING: Cap panel thickness so it never exceeds icons + padding
-              return Math.min(DockSettings.panelHeight, dockRow.animatedContentHeight + 12);
+              // THE CEILING: Restored to Math.min so it doesn't grow infinitely!
+              return Math.min(DockSettings.panelHeight, dockRow.animatedContentHeight + 24);
           }
            
            // CORNERS
@@ -989,8 +989,9 @@ Item {
            property bool mouseInside: mouseX !== -9999 && root._zoomActive && !root._dragActive
 
 	// This calculates the size of ONLY the icons + padding
-	property real _actualContentWidth: Math.max(dockRow.implicitWidth + Kirigami.Units.largeSpacing * 2, Kirigami.Units.gridUnit * 6)
-        property real _actualContentHeight: Math.max(dockRow.animatedContentHeight + 6, Kirigami.Units.gridUnit * 6)
+	// Increased padding to give dashes/dots horizontal breathing room away from the rounded corners
+	property real _actualContentWidth: Math.max(dockRow.animatedContentWidth + Math.max(36, DockSettings.cornerRadius * 1.6), Kirigami.Units.gridUnit * 6)
+        property real _actualContentHeight: Math.max(dockRow.animatedContentHeight + Math.max(36, DockSettings.cornerRadius * 1.6), Kirigami.Units.gridUnit * 6)
 
 	    // This function calculates the "Ghost" area for the OS
 	    // This function calculates the "Ghost" area for the OS
@@ -1046,20 +1047,18 @@ Item {
 		// DYNAMIC GROUNDING (Supports all 4 Edges)
                  x: {
                      if (DockView.isVertical) {
-                         // If Left-aligned (Edge 2), stick to left with 6px gap
-                         if (DockView.edge === 2) return 6;
-                         // If Right-aligned (Edge 3), stick to right
-                         if (DockView.edge === 3) return dockPanel.width - animatedContentWidth - 6;
+                         // Increased gap from 6 to 10 for indicator breathing room
+                         if (DockView.edge === 2) return 10;
+                         if (DockView.edge === 3) return dockPanel.width - animatedContentWidth - 10;
                      }
                      // If horizontal, center the row
                      return (dockPanel.width - animatedContentWidth) / 2;
                  }
                  y: {
                      if (!DockView.isVertical) {
-                         // If Bottom-aligned (Edge 1), stick to bottom with 6px gap
-                         if (DockView.edge === 1) return dockPanel.height - animatedContentHeight - 6;
-                         // If Top-aligned (Edge 0), stick to top with 6px gap
-                         if (DockView.edge === 0) return 6;
+                         // Increased gap from 6 to 10 for indicator breathing room
+                         if (DockView.edge === 1) return dockPanel.height - animatedContentHeight - 10;
+                         if (DockView.edge === 0) return 10;
                      }
                      // If vertical, center the row vertically
                      return (dockPanel.height - animatedContentHeight) / 2;
