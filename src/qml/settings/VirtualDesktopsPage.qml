@@ -49,16 +49,29 @@ QQC2.ScrollView {
                             color: "#80FFFDD0"; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true 
                         }
                     }
-                    KremaComboBox {
-                        Layout.fillWidth: true
-                        Layout.maximumWidth: 180
-                        model: [i18n("Show all windows"), i18n("Dim other desktops"), i18n("Current desktop only")]
-                        currentIndex: DockSettings.virtualDesktopMode
-			onActivated: function(index) { 
-                                 DockSettings.virtualDesktopMode = index;
-                                 DockSettings.save();
-                             }
-                    }
+		    RowLayout {
+                           spacing: 4
+                           Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                           Repeater {
+                               model: [
+                                   { icon: "view-list-details", label: i18n("Show All"), value: 0 },
+                                   { icon: "view-preview", label: i18n("Dim Others"), value: 1 },
+                                   { icon: "preferences-desktop-virtual", label: i18n("Current Only"), value: 2 }
+                               ]
+                               delegate: QQC2.Button {
+                                   id: vdBtn
+                                   property bool isSelected: DockSettings.virtualDesktopMode === modelData.value
+                                   QQC2.ToolTip.visible: hovered; QQC2.ToolTip.text: modelData.label
+                                   contentItem: Kirigami.Icon { source: modelData.icon; color: vdBtn.isSelected ? "#FFFDD0" : "#80FFFDD0"; implicitWidth: 18; implicitHeight: 18 }
+                                   background: Rectangle {
+                                       implicitWidth: 50; implicitHeight: 34; radius: 8
+                                       color: vdBtn.isSelected ? "#26FFFDD0" : (vdBtn.hovered ? "#13FFFDD0" : "transparent")
+                                       border.color: vdBtn.isSelected ? "#4DFFFDD0" : "transparent"; border.width: 1
+                                   }
+                                   onClicked: { DockSettings.virtualDesktopMode = modelData.value; DockSettings.save(); }
+                               }
+                           }
+                       }
                 }
 
                 Rectangle { 

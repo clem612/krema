@@ -1,65 +1,87 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// SPDX-FileCopyrightText: 2026 Krema Contributors
-
 import QtQuick
 import QtQuick.Controls as QQC2
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 import com.bhyoo.krema 1.0
-
-// Import our custom UI Kit
 import "../components"
 
 QQC2.ScrollView {
-    id: monitorPage
-    contentWidth: availableWidth
-    clip: true
+   id: monitorPage
+   contentWidth: availableWidth
+   clip: true
+   topPadding: 16
+   bottomPadding: 32
+   leftPadding: 16
+   rightPadding: 16
 
-    // Standard spacing used across all pages
-    topPadding: 16
-    bottomPadding: 32
-    leftPadding: 16
-    rightPadding: 16
+   ColumnLayout {
+       width: parent.width
+       spacing: 32
 
-    ColumnLayout {
-        width: parent.width
-        spacing: 32
+       ColumnLayout {
+           Layout.fillWidth: true
+           spacing: 8
+           
+           QQC2.Label { 
+               text: i18n("Monitor Configuration")
+               color: "#80FFFDD0"
+               font.bold: true; font.letterSpacing: 1.1; font.pixelSize: 12
+               Layout.leftMargin: 8
+           }
+           
+           KremaCard {
+               RowLayout {
+                   Layout.fillWidth: true
+                   ColumnLayout {
+                       Layout.fillWidth: true; spacing: 2
+                       QQC2.Label { text: i18n("Display Mode"); color: "#FFFDD0"; font.bold: true }
+                       QQC2.Label { 
+                           text: i18n("Choose which monitors should display the dock."); 
+                           color: "#80FFFDD0"; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true 
+                       }
+                   }
 
-        // --- SECTION 1: MONITOR CONFIG ---
-        ColumnLayout {
-            Layout.fillWidth: true
-            spacing: 8
-            
-            QQC2.Label { 
-                text: i18n("Monitor Configuration")
-                color: "#80FFFDD0" // 50% opacity Krema Accent
-                font.bold: true; font.letterSpacing: 1.1; font.pixelSize: 12
-                Layout.leftMargin: 8
-            }
-            
-            KremaCard {
-                RowLayout {
-                    Layout.fillWidth: true
-                    ColumnLayout {
-                        Layout.fillWidth: true; spacing: 2
-                        QQC2.Label { text: i18n("Display Mode"); color: "#FFFDD0"; font.bold: true }
-                        QQC2.Label { 
-                            text: i18n("Choose which monitors should display the dock."); 
-                            color: "#80FFFDD0"; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true 
-                        }
-                    }
-                    KremaComboBox {
-                        Layout.fillWidth: true
-                        Layout.maximumWidth: 200 // Prevents the dropdown from stretching too wide
-                        model: [i18n("Primary monitor only"), i18n("All monitors"), i18n("Follow active screen")]
-                        currentIndex: DockSettings.monitorMode
-			onActivated: function(index) { 
-                                 DockSettings.monitorMode = index;
-                                 DockSettings.save();
-                             }
-                    }
-                }
-            }
-        }
-    }
+                   RowLayout {
+                       spacing: 4
+                       Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                       Repeater {
+                           model: [
+                               { icon: "video-display", label: i18n("Primary"), value: 0 },
+                               { icon: "video-display-symbolic", label: i18n("All"), value: 1 },
+                               { icon: "input-mouse", label: i18n("Follow"), value: 2 }
+                           ]
+                           delegate: QQC2.Button {
+                               id: monBtn
+                               property bool isSelected: DockSettings.monitorMode === modelData.value
+                               leftPadding: 12; rightPadding: 12
+
+                               contentItem: RowLayout {
+                                   spacing: 8
+                                   Kirigami.Icon {
+                                       source: modelData.icon
+                                       color: monBtn.isSelected ? "#FFFDD0" : "#80FFFDD0"
+                                       implicitWidth: 16; implicitHeight: 16
+                                   }
+                                   QQC2.Label {
+                                       text: modelData.label
+                                       color: monBtn.isSelected ? "#FFFDD0" : "#80FFFDD0"
+                                       font.pointSize: 9; font.bold: monBtn.isSelected
+                                   }
+                               }
+
+                               background: Rectangle {
+                                   implicitHeight: 34; radius: 8
+                                   color: monBtn.isSelected ? "#26FFFDD0" : (monBtn.hovered ? "#13FFFDD0" : "transparent")
+                                   border.color: monBtn.isSelected ? "#4DFFFDD0" : "transparent"; border.width: 1
+                                   Behavior on color { ColorAnimation { duration: 150 } }
+                               }
+                               onClicked: { DockSettings.monitorMode = modelData.value; DockSettings.save(); }
+                           }
+                       }
+                   }
+               }
+           }
+       }
+   }
 }

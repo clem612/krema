@@ -7,38 +7,40 @@ import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 import QtQuick.Window
 import com.bhyoo.krema 1.0
-
-// Import our custom UI Kit
 import "../components"
 
 QQC2.ScrollView {
-    id: bgPage
-    clip: true
+   id: bgPage
+   contentWidth: availableWidth
+   clip: true
 
-    ColumnLayout {
-	width: bgPage.availableWidth - 32 // 16px margins on each side
-        x: 16
-        y: 16
-        spacing: 32
+   topPadding: 16
+   bottomPadding: 32
+   leftPadding: 16
+   rightPadding: 16
 
-        // --- PILLAR 1: MATERIAL ---
-        ColumnLayout {
-            Layout.fillWidth: true
-            spacing: 8
-            
-            QQC2.Label { 
-                text: i18n("Base Material")
-                color: "#80FFFDD0" // 50% opacity Krema Accent
-                font.bold: true
-                font.letterSpacing: 1.1
-                font.pixelSize: 12
-                Layout.leftMargin: 8
-            }
-            
-            KremaCard {
-                RowLayout {
-                    Layout.fillWidth: true
-		    ColumnLayout {
+   ColumnLayout {
+       width: parent.width
+       spacing: 32
+
+       // --- PILLAR 1: MATERIAL ---
+       ColumnLayout {
+           Layout.fillWidth: true
+           spacing: 8
+           
+           QQC2.Label { 
+               text: i18n("Base Material")
+               color: "#80FFFDD0" // 50% opacity Krema Accent
+               font.bold: true
+               font.letterSpacing: 1.1
+               font.pixelSize: 12
+               Layout.leftMargin: 8
+           }
+           
+           KremaCard {
+               RowLayout {
+                   Layout.fillWidth: true
+                   ColumnLayout {
                        Layout.fillWidth: true
                        spacing: 2
                        QQC2.Label { 
@@ -51,163 +53,194 @@ QQC2.ScrollView {
                            text: i18n("The primary texture of the dock background.")
                            color: "#80FFFDD0"
                            font.pixelSize: 12
-                           wrapMode: Text.WordWrap // Allows the text to break into multiple lines
-                           Layout.fillWidth: true  // Forces the label to respect layout boundaries
+                           wrapMode: Text.WordWrap 
+                           Layout.fillWidth: true  
                        }
                    }
-		    KremaComboBox {
+                   RowLayout {
+                       spacing: 4
                        Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                       
-                       model: [i18n("Adaptive (System Default)"), i18n("Solid Color"), i18n("Acrylic (Translucent)")]
-                       currentIndex: DockSettings.backgroundStyle
-                       onActivated: function(index) { DockSettings.backgroundStyle = index }
+                       Repeater {
+                           model: [
+                               { icon: "color-management", label: i18n("Adaptive"), value: 0 },
+                               { icon: "format-fill-color", label: i18n("Solid"), value: 1 },
+                               { icon: "view-glass", label: i18n("Acrylic"), value: 2 }
+                           ]
+                           delegate: QQC2.Button {
+                               id: bgBtn
+                               property bool isSelected: DockSettings.backgroundStyle === modelData.value
+                               leftPadding: 12; rightPadding: 12
+
+                               contentItem: RowLayout {
+                                   spacing: 8
+                                   Kirigami.Icon {
+                                       source: modelData.icon
+                                       color: bgBtn.isSelected ? "#FFFDD0" : "#80FFFDD0"
+                                       implicitWidth: 16; implicitHeight: 16
+                                   }
+                                   QQC2.Label {
+                                       text: modelData.label
+                                       color: bgBtn.isSelected ? "#FFFDD0" : "#80FFFDD0"
+                                       font.pointSize: 9; font.bold: bgBtn.isSelected
+                                   }
+                               }
+
+                               background: Rectangle {
+                                   implicitHeight: 34; radius: 8
+                                   color: bgBtn.isSelected ? "#26FFFDD0" : (bgBtn.hovered ? "#13FFFDD0" : "transparent")
+                                   border.color: bgBtn.isSelected ? "#4DFFFDD0" : "transparent"; border.width: 1
+                                   Behavior on color { ColorAnimation { duration: 150 } }
+                               }
+                               onClicked: { DockSettings.backgroundStyle = modelData.value; DockSettings.save(); }
+                           }
+                       }
                    }
-                }
-            }
-        }
+               }
+           }
+       }
 
-        // --- PILLAR 2: COLOR & OPACITY ---
-        ColumnLayout {
-            Layout.fillWidth: true
-            spacing: 8
-            
-            QQC2.Label { 
-                text: i18n("Color & Opacity")
-                color: "#80FFFDD0"
-                font.bold: true
-                font.letterSpacing: 1.1
-                font.pixelSize: 12
-                Layout.leftMargin: 8
-            }
-            
-            KremaCard {
-                KremaSwitch {
-                    Layout.fillWidth: true
-                    visible: DockSettings.backgroundStyle > 0
-                    text: i18n("Use System Accent Color")
-                    checked: DockSettings.useSystemColor
-                    onToggled: DockSettings.useSystemColor = checked
-                }
+       // --- PILLAR 2: COLOR & OPACITY ---
+       ColumnLayout {
+           Layout.fillWidth: true
+           spacing: 8
+           
+           QQC2.Label { 
+               text: i18n("Color & Opacity")
+               color: "#80FFFDD0"
+               font.bold: true
+               font.letterSpacing: 1.1
+               font.pixelSize: 12
+               Layout.leftMargin: 8
+           }
+           
+           KremaCard {
+               KremaSwitch {
+                   Layout.fillWidth: true
+                   visible: DockSettings.backgroundStyle > 0
+                   text: i18n("Use System Accent Color")
+                   checked: DockSettings.useSystemColor
+                   onToggled: { DockSettings.useSystemColor = checked; DockSettings.save(); }
+               }
 
-                Rectangle { 
-                    Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A"
-                    visible: DockSettings.backgroundStyle > 0 && !DockSettings.useSystemColor 
-                }
+               Rectangle { 
+                   Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A"
+                   visible: DockSettings.backgroundStyle > 0 && !DockSettings.useSystemColor 
+               }
 
-                RowLayout {
-                    Layout.fillWidth: true
-                    visible: DockSettings.backgroundStyle > 0 && !DockSettings.useSystemColor
-                    QQC2.Label { Layout.fillWidth: true; text: i18n("Custom Tint Color"); color: "#FFFDD0"; font.bold: true }
-                    Rectangle {
-                        width: 48; height: 28; radius: 6
-                        color: DockSettings.tintColor
-                        border.color: "#333133"; border.width: 1
-                        MouseArea { 
-                            anchors.fill: parent; cursorShape: Qt.PointingHandCursor
-                            onClicked: colorPickerPopup.open() 
-                        }
-                    }
-                }
+               RowLayout {
+                   Layout.fillWidth: true
+                   visible: DockSettings.backgroundStyle > 0 && !DockSettings.useSystemColor
+                   QQC2.Label { Layout.fillWidth: true; text: i18n("Custom Tint Color"); color: "#FFFDD0"; font.bold: true }
+                   Rectangle {
+                       width: 48; height: 28; radius: 6
+                       color: DockSettings.tintColor
+                       border.color: "#333133"; border.width: 1
+                       MouseArea { 
+                           anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                           onClicked: colorPickerPopup.open() 
+                       }
+                   }
+               }
 
-                Rectangle { 
-                    Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A"
-                    visible: DockSettings.backgroundStyle > 0 
-                }
+               Rectangle { 
+                   Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A"
+                   visible: DockSettings.backgroundStyle > 0 
+               }
 
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    RowLayout {
-                        QQC2.Label { Layout.fillWidth: true; text: i18n("Background Opacity"); color: "#FFFDD0"; font.bold: true }
-                        QQC2.Label { text: Math.round(opacitySlider.value * 100) + "%"; color: "#80FFFDD0"; font.bold: true }
-                    }
-                    QQC2.Slider {
-                        id: opacitySlider
-                        Layout.fillWidth: true
-                        from: 0.0; to: 1.0; stepSize: 0.05
-                        value: DockSettings.backgroundOpacity
-                        onMoved: DockSettings.backgroundOpacity = value
-                    }
-                }
-            }
-        }
+               ColumnLayout {
+                   Layout.fillWidth: true
+                   RowLayout {
+                       QQC2.Label { Layout.fillWidth: true; text: i18n("Background Opacity"); color: "#FFFDD0"; font.bold: true }
+                       QQC2.Label { text: Math.round(opacitySlider.value * 100) + "%"; color: "#80FFFDD0"; font.bold: true }
+                   }
+                   QQC2.Slider {
+                       id: opacitySlider
+                       Layout.fillWidth: true
+                       from: 0.0; to: 1.0; stepSize: 0.05
+                       value: DockSettings.backgroundOpacity
+                       onMoved: { DockSettings.backgroundOpacity = value; DockSettings.save(); }
+                   }
+               }
+           }
+       }
 
-    // --- CUSTOM COLOR PICKER POPUP ---
-    QQC2.Popup {
-        id: colorPickerPopup
-        parent: bgPage.Window.window ? bgPage.Window.window.contentItem : bgPage
-        x: Math.round((parent.width - width) / 2)
-        y: Math.round((parent.height - height) / 2)
-        width: Kirigami.Units.gridUnit * 18
-        modal: true
-        focus: true
-        closePolicy: QQC2.Popup.CloseOnEscape | QQC2.Popup.CloseOnPressOutside
+       // --- CUSTOM COLOR PICKER POPUP ---
+       QQC2.Popup {
+           id: colorPickerPopup
+           parent: bgPage.Window.window ? bgPage.Window.window.contentItem : bgPage
+           x: Math.round((parent.width - width) / 2)
+           y: Math.round((parent.height - height) / 2)
+           width: Kirigami.Units.gridUnit * 18
+           modal: true
+           focus: true
+           closePolicy: QQC2.Popup.CloseOnEscape | QQC2.Popup.CloseOnPressOutside
 
-        // Krema Theming for the Popup background
-        background: Rectangle {
-            color: "#1C1A1C"
-            radius: 12
-            border.color: "#333133"
-            border.width: 1
-        }
+           // Krema Theming for the Popup background
+           background: Rectangle {
+               color: "#1C1A1C"
+               radius: 12
+               border.color: "#333133"
+               border.width: 1
+           }
 
-        property real rVal: 0
-        property real gVal: 0
-        property real bVal: 0
-        property color tempColor: Qt.rgba(rVal, gVal, bVal, 1.0)
+           property real rVal: 0
+           property real gVal: 0
+           property real bVal: 0
+           property color tempColor: Qt.rgba(rVal, gVal, bVal, 1.0)
 
-        onOpened: {
-            let c = Qt.color(DockSettings.tintColor);
-            rVal = c.r; gVal = c.g; bVal = c.b;
-        }
+           onOpened: {
+               let c = Qt.color(DockSettings.tintColor);
+               rVal = c.r; gVal = c.g; bVal = c.b;
+           }
 
-        contentItem: ColumnLayout {
-            spacing: Kirigami.Units.largeSpacing
+           contentItem: ColumnLayout {
+               spacing: Kirigami.Units.largeSpacing
 
-            QQC2.Label {
-                text: i18n("Custom Tint Color")
-                font.weight: Font.Bold
-                color: "#FFFDD0"
-                Layout.alignment: Qt.AlignHCenter
-            }
+               QQC2.Label {
+                   text: i18n("Custom Tint Color")
+                   font.weight: Font.Bold
+                   color: "#FFFDD0"
+                   Layout.alignment: Qt.AlignHCenter
+               }
 
-            Rectangle {
-                Layout.fillWidth: true
-                height: Kirigami.Units.gridUnit * 4
-                radius: 8
-                color: colorPickerPopup.tempColor
-                border.color: "#333133"
-                border.width: 1
-            }
+               Rectangle {
+                   Layout.fillWidth: true
+                   height: Kirigami.Units.gridUnit * 4
+                   radius: 8
+                   color: colorPickerPopup.tempColor
+                   border.color: "#333133"
+                   border.width: 1
+               }
 
-            GridLayout {
-                columns: 2
-                Layout.fillWidth: true
-                QQC2.Label { text: "R:"; color: "#80FFFDD0"; font.bold: true }
-                QQC2.Slider { Layout.fillWidth: true; from: 0; to: 1; value: colorPickerPopup.rVal; onMoved: colorPickerPopup.rVal = value }
-                QQC2.Label { text: "G:"; color: "#80FFFDD0"; font.bold: true }
-                QQC2.Slider { Layout.fillWidth: true; from: 0; to: 1; value: colorPickerPopup.gVal; onMoved: colorPickerPopup.gVal = value }
-                QQC2.Label { text: "B:"; color: "#80FFFDD0"; font.bold: true }
-                QQC2.Slider { Layout.fillWidth: true; from: 0; to: 1; value: colorPickerPopup.bVal; onMoved: colorPickerPopup.bVal = value }
-            }
+               GridLayout {
+                   columns: 2
+                   Layout.fillWidth: true
+                   QQC2.Label { text: "R:"; color: "#80FFFDD0"; font.bold: true }
+                   QQC2.Slider { Layout.fillWidth: true; from: 0; to: 1; value: colorPickerPopup.rVal; onMoved: colorPickerPopup.rVal = value }
+                   QQC2.Label { text: "G:"; color: "#80FFFDD0"; font.bold: true }
+                   QQC2.Slider { Layout.fillWidth: true; from: 0; to: 1; value: colorPickerPopup.gVal; onMoved: colorPickerPopup.gVal = value }
+                   QQC2.Label { text: "B:"; color: "#80FFFDD0"; font.bold: true }
+                   QQC2.Slider { Layout.fillWidth: true; from: 0; to: 1; value: colorPickerPopup.bVal; onMoved: colorPickerPopup.bVal = value }
+               }
 
-            RowLayout {
-                Layout.fillWidth: true
-                Item { Layout.fillWidth: true }
-                QQC2.Button { 
-                    text: i18n("Cancel")
-                    onClicked: colorPickerPopup.close() 
-                }
-                QQC2.Button {
-                    text: i18n("Save")
-                    highlighted: true
-                    onClicked: {
-                        DockSettings.tintColor = colorPickerPopup.tempColor.toString();
-                        DockSettings.save();
-                        colorPickerPopup.close();
-                    }
-                }
-            }
-        }
-    }
-}
+               RowLayout {
+                   Layout.fillWidth: true
+                   Item { Layout.fillWidth: true }
+                   QQC2.Button { 
+                       text: i18n("Cancel")
+                       onClicked: colorPickerPopup.close() 
+                   }
+                   QQC2.Button {
+                       text: i18n("Save")
+                       highlighted: true
+                       onClicked: {
+                           DockSettings.tintColor = colorPickerPopup.tempColor.toString();
+                           DockSettings.save();
+                           colorPickerPopup.close();
+                       }
+                   }
+               }
+           }
+       }
+   }
 }
