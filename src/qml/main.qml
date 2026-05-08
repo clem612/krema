@@ -48,9 +48,7 @@ Item {
             let item = dockRepeater.itemAt(hoveredIndex)
             if (item) {
                 dockPanel.mouseX = item.itemCenterX
-                dockPanel.mouseY = dockRow.y + item.height / 2
-                _zoomActive = true
-            }
+                dockPanel.mouseY = dockRow.y + item.height / 2            }
         }
         root.forceActiveFocus()
     }
@@ -95,7 +93,6 @@ Item {
         if (item) {
             dockPanel.mouseX = item.itemCenterX
             dockPanel.mouseY = dockRow.y + item.height / 2
-            _zoomActive = true
 
             // Announce to screen reader
             let msg = item.displayName
@@ -335,11 +332,13 @@ Item {
     // Throttling property to stop the terminal spam
     function updateHoveredItem() {
         if (dockPanel.mouseX === -9999) {
-            hoveredIndex = -1; hoveredName = ""; _zoomActive = false;
+            hoveredIndex = -1; hoveredName = "";
             return;
         }
 
-        let mPos = DockView.isVertical ? dockMouseArea.mouseY : dockMouseArea.mouseX;
+        let mX = dockMouseArea.mouseX;
+        let mY = dockMouseArea.mouseY;
+        let mPos = DockView.isVertical ? mY : mX;
         let bestIndex = -1;
 
         // Find exactly where the first icon starts visually on the screen
@@ -349,20 +348,27 @@ Item {
         let startPos = firstItem.mapToItem(dockMouseArea, 0, 0);
         let currentEdge = DockView.isVertical ? startPos.y : startPos.x;
 
-        // Build the timeline using your idea: the actual, current zoomed sizes
+        // Pixel-perfect hit testing loop
         for (let i = 0; i < dockRepeater.count; i++) {
             let item = dockRepeater.itemAt(i);
             if (!item) continue;
 
-            // item.width/height is already mathematically bound to the zoom factor!
             let itemSize = DockView.isVertical ? item.height : item.width;
             
-            // Push the boundary forward by the exact size of this zoomed icon
+            // Advance boundary to the end of this icon
             currentEdge += itemSize;
 
-            // If the mouse hasn't crossed this swollen boundary yet, this is our icon
             if (mPos <= currentEdge) {
-                bestIndex = i;
+                // If we are within the icon's visual slot (not in leading spacing)
+                if (mPos >= currentEdge - itemSize) {
+                    // Precise 2D hit test: map mouse to iconImage's local space.
+                    // QML's mapFromItem handles all transforms (zoom scale, etc.)
+                    let localPos = item.iconImage.mapFromItem(dockMouseArea, mX, mY);
+                    if (localPos.x >= 0 && localPos.x <= item.iconSize &&
+                        localPos.y >= 0 && localPos.y <= item.iconSize) {
+                        bestIndex = i;
+                    }
+                }
                 break;
             }
             
@@ -370,20 +376,14 @@ Item {
             currentEdge += DockSettings.iconSpacing;
         }
 
-        // Catch-all for the far edges
-        if (bestIndex === -1 && dockRepeater.count > 0) {
-            bestIndex = dockRepeater.count - 1;
-        }
-
         if (bestIndex >= 0) {
-            _zoomActive = true;
             if (hoveredIndex !== bestIndex) {
                 hoveredIndex = bestIndex;
                 hoveredName = dockRepeater.itemAt(bestIndex).displayName;
                 tooltipTimer.restart();
             }
         } else {
-            hoveredIndex = -1; hoveredName = ""; _zoomActive = false;
+            hoveredIndex = -1; hoveredName = "";
         }
     }
 
@@ -395,7 +395,7 @@ Item {
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
 
         // Track hover state for visibility controller
-        onEntered: DockVisibility.setHovered(true)
+        onEntered: { } // Handled by onPositionChanged for precision
         onExited: {
             // Keep zoom state when preview is visible (dock→preview mouse transition)
             if (!PreviewController.visible) {
@@ -552,7 +552,27 @@ Item {
                 }
             }
 
-            // 3. The "Kill Switch"
+            // Sync with visibility controller
+            DockVisibility.setHovered(isInside);
+
+            // 3. Centralized Zoom Suppression (The Orbit Check)
+            // Even if we are "inside" the expanded surface, icons should only zoom
+            // if the mouse is within their visual reach (Orbit).
+            let maxReach = (DockSettings.iconSize * DockSettings.maxZoomFactor) / 2 + 40;
+            let secondaryAxisDist = 0;
+            
+            // PIXEL-PERFECT: Calculate distance from mouse to the ACTUAL center of the icons (dockRow)
+            if (DockView.isVertical) {
+                let rowCenter = pX + dockRow.x + dockRow.width / 2;
+                secondaryAxisDist = Math.abs(mouse.x - rowCenter);
+            } else {
+                let rowCenter = pY + dockRow.y + dockRow.height / 2;
+                secondaryAxisDist = Math.abs(mouse.y - rowCenter);
+            }
+
+            let withinOrbit = (secondaryAxisDist <= maxReach);
+
+            // 4. The "Kill Switch"
             if (!isInside) {
                 // If cursor leaves the panel/trigger, immediately surrender control
                 if (!PreviewController.visible) {
@@ -566,13 +586,16 @@ Item {
                 return 
             }
 
-            // 4. If we passed the firewall, signal the hover to unhide or keep visible
-            DockVisibility.setHovered(true)
-
             // 5. Update coordinates for parabolic zoom logic
             // We map the mouse to the primary axis (Swap for vertical alignment)
-            dockPanel.mouseX = DockView.isVertical ? mouse.y : mouse.x
-            dockPanel.mouseY = DockView.isVertical ? mouse.x : mouse.y
+            // If outside orbit, force -1 to suppress zoom without killing the global hover state.
+            if (withinOrbit) {
+                dockPanel.mouseX = mouse.x
+                dockPanel.mouseY = mouse.y
+            } else {
+                dockPanel.mouseX = -1
+                dockPanel.mouseY = -1
+            }
 
             // 6. Update which specific icon the mouse is over
             root.updateHoveredItem()
@@ -790,19 +813,33 @@ Item {
     }
 
 	   // --- THE SPAM-FREE ULTIMATE DEBUGGER ---
-           Timer {
-               id: ultimateDebugger
-               interval: 100
-               repeat: true
-               // ONLY run if the terminal command includes our custom flag
-               running: Qt.application.arguments.indexOf("--debug-geom") !== -1
-               property string lastState: ""
+	   Timer {
+	       id: ultimateDebugger
+	       interval: 100
+	       repeat: true
+	       // ONLY run if the terminal command includes our custom flag
+	       running: Qt.application.arguments.indexOf("--debug-geom") !== -1
 
-	       onTriggered: {
-                  if (hoveredIndex === -1) {
-                      if (lastState !== "IDLE") {
+	       property string lastIconState: ""
+	       property string lastZoomState: ""
+
+	   onTriggered: {
+                  let mX_abs = Math.round(dockMouseArea.mouseX);
+                  let mY_abs = Math.round(dockMouseArea.mouseY);
+
+	          if (hoveredIndex === -1) {
+                      // Check for "Ghost Zoom": zoom logic is still receiving coordinates
+                      // even though no icon is hit.
+                      if (dockPanel.mouseX !== -1 && dockPanel.mouseY !== -1) {
+                          let ghostLog = `GHOST: Mouse_Rel(${Math.round(dockPanel.mouseX)},${Math.round(dockPanel.mouseY)}) | Mouse_Abs(${mX_abs},${mY_abs})`;
+                          if (ghostLog !== lastZoomState) {
+                              console.log(`\x1b[31m[GHOST]\x1b[0m ${ghostLog}`);
+                              lastZoomState = ghostLog;
+                          }
+                      } else if (lastIconState !== "IDLE") {
                           console.log("\x1b[90m[DEBUG] Dock Idle (No Hover)\x1b[0m");
-                          lastState = "IDLE";
+                          lastIconState = "IDLE";
+                          lastZoomState = "IDLE";
                       }
                       return;
                   }
@@ -817,24 +854,27 @@ Item {
 
                   let iX = Math.round(item.x);
                   let iW = Math.round(item.width);
-                  
-                  // Exposing the Fight: Target vs Actual
+
+                  // 1. Icon Hover & Position Status
+                  let iconLog = `ICON-${hoveredIndex}-${iX}-${iW}-${item.mouseInside}`;
+                  if (iconLog !== lastIconState) {
+                      console.log(`\x1b[32m[ICON ${hoveredIndex}]\x1b[0m Pos:${iX} Width:${iW} Inside:${item.mouseInside} Name: ${item.displayName}`);
+                      lastIconState = iconLog;
+                  }
+
+                  // 2. Zoom & Panel Geometry Status
                   let zTarget = item.zoomFactor.toFixed(2);
                   let zActual = item.currentScale.toFixed(2);
-                  
                   let mX = Math.round(item.panelMouseX);
                   let cX = Math.round(item.itemCenterX);
-
-                  // Add zActual to the state string so it prints every time the animation changes
-                  let currentState = `${hoveredIndex}-${pW}-${pX}-${iW}-${iX}-${zTarget}-${zActual}-${mX}-${cX}`;
-
-                  if (currentState !== lastState) {
-                      console.log(`\x1b[36m[PANEL]\x1b[0m Pos:(${pX}, ${pY}) Size:${pW}x${pH}  >>>  \x1b[32m[ICON ${hoveredIndex}]\x1b[0m Mouse:${mX} Center:${cX} | Target Zoom:${zTarget}x \x1b[33mActual Zoom:${zActual}x\x1b[0m`);
-                      lastState = currentState;
+                  
+                  let zoomLog = `${pW}-${pX}-${zTarget}-${zActual}-${mX}-${cX}-${mY_abs}`;
+                  if (zoomLog !== lastZoomState) {
+                      console.log(`\x1b[36m[ZOOM]\x1b[0m Panel:(${pX},${pY}) ${pW}x${pH} | Mouse_Abs(${mX_abs},${mY_abs}) Center:${cX} | Target:${zTarget}x \x1b[33mActual:${zActual}x\x1b[0m`);
+                      lastZoomState = zoomLog;
                   }
-              }
-           }
-
+	      }
+	   }
            // Create a local alias for Edit Mode that won't crash on startup
            property bool isEditMode: typeof DockVisibility !== "undefined" && DockVisibility.liveEditMode
 
@@ -986,7 +1026,7 @@ Item {
            // Zoom activates when mouse hits an icon (_zoomActive=true) and stays
            // active until mouse leaves the panel zone (mouseX !== -9999). 
            // Zoom is disabled during drag so all icons return to base scale.
-           property bool mouseInside: mouseX !== -9999 && root._zoomActive && !root._dragActive
+           property bool mouseInside: dockMouseArea.containsMouse && !root._dragActive
 
 	// This calculates the size of ONLY the icons + padding
 	// Increased padding to give dashes/dots horizontal breathing room away from the rounded corners
@@ -1089,7 +1129,7 @@ Item {
                     iconSize: DockSettings.iconSize
                     maxZoomFactor: DockSettings.maxZoomFactor
 		    // --- STRICT ABSOLUTE MATH ---
-                         panelMouseX: DockView.isVertical ? dockMouseArea.mouseY : dockMouseArea.mouseX
+                         panelMouseX: dockPanel.mouseX
                          panelMouseInside: dockPanel.mouseInside
                          spacing: DockSettings.iconSpacing
 

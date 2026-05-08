@@ -186,7 +186,8 @@ Item {
 
            let distance = Math.abs(panelMouseX - itemCenterX)
            let sigma2 = zoomSigma * zoomSigma
-           return 1.0 + (maxZoomFactor - 1.0) * Math.exp(-(distance * distance) / sigma2)
+           // Standard Gaussian (2.0 * sigma^2) for smoother wave transition
+           return 1.0 + (maxZoomFactor - 1.0) * Math.exp(-(distance * distance) / (2.0 * sigma2))
        }
 
     // --- KDE state-driven launch tracking ---
@@ -220,6 +221,8 @@ Item {
     property bool _noOpOverride: false
     property bool _waitingForWindow: false
     property int _childCountAtLaunch: 0
+
+    property alias iconImage: iconImage
 
     // --- State change handlers ---
 
@@ -369,9 +372,9 @@ Item {
     // Size: base icon size + fixed indicator space (toward screen edge)
         width: DockView.isVertical
             ? (iconSize + _indicatorSpace)
-            : Math.round(iconSize * currentScale)
+            : (iconSize * currentScale)
         height: DockView.isVertical
-            ? Math.round(iconSize * currentScale)
+            ? (iconSize * currentScale)
             : (iconSize + _indicatorSpace)
 
     // Scaled transform: grow away from the dock edge

@@ -211,6 +211,7 @@ Item {
         width: popupContent.implicitWidth + 2 * Kirigami.Units.largeSpacing
         height: popupContent.implicitHeight + 2 * Kirigami.Units.largeSpacing
         y: {
+            if (!DockView) return PreviewController.contentY
             if (DockView.edge === 0) return 0                            // Top → top edge
             if (DockView.edge === 1) return parent.height - height       // Bottom → bottom edge
             return PreviewController.contentY                            // Left/Right → centered
