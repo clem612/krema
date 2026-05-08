@@ -39,7 +39,7 @@
       <default>true</default>
     </entry>
 
-    <entry name="IconScale" type="Double">
+    <entry name="IndicatorOffset" type="Double">
       <label>Icon scale within the allocated cell (1.0 = fill, smaller = more padding)</label>
       <default>1.0</default>
       <min>0.5</min>

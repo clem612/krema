@@ -101,19 +101,19 @@ QQC2.ScrollView {
 
                 Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A" }
 
-                // ICON SCALE (Global internal scale)
+                // INDICATOR OFFSET (Global internal scale/padding)
                 ColumnLayout {
                     Layout.fillWidth: true
                     RowLayout {
-                        QQC2.Label { Layout.fillWidth: true; text: i18n("Global Icon Scale"); color: "#FFFDD0"; font.bold: true }
-                        QQC2.Label { text: Math.round(iconScaleSlider.value * 100) + "%"; color: "#80FFFDD0"; font.bold: true }
+                        QQC2.Label { Layout.fillWidth: true; text: i18n("Indicator Offset"); color: "#FFFDD0"; font.bold: true }
+                        QQC2.Label { text: Math.round(indicatorOffsetSlider.value * 100) + "%"; color: "#80FFFDD0"; font.bold: true }
                     }
                     QQC2.Slider {
-                        id: iconScaleSlider; Layout.fillWidth: true; 
+                        id: indicatorOffsetSlider; Layout.fillWidth: true; 
                         from: 0.5; to: 1.0; stepSize: 0.05; 
-                        value: DockSettings.iconScale; 
+                        value: DockSettings.indicatorOffset; 
 			onMoved: { 
-                                 DockSettings.iconScale = value;
+                                 DockSettings.indicatorOffset = value;
                                  DockSettings.save();
                              }
                     }

@@ -874,8 +874,8 @@ Item {
         spacing: Kirigami.Units.smallSpacing
         Accessible.ignored: true
 
-        // Margin compensation for icon padding from iconScale
-        property real _iconPaddingCompensation: iconImage.height * (1.0 - DockSettings.iconScale) / 2.0
+        // Margin compensation for icon padding from indicatorOffset
+        property real _iconPaddingCompensation: iconImage.height * (1.0 - DockSettings.indicatorOffset) / 2.0
 
         states: [
             State {

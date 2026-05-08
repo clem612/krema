@@ -81,12 +81,27 @@ QStringList iconCandidates(const QModelIndex &idx)
         }
     };
 
+    // 1. Primary identification
     addCandidate(appId);
     addCandidate(stripped);
     addCandidate(segment);
     addCandidate(launcherName);
     addCandidate(display);
 
+    // 2. THE IDENTITY BRIDGE: Hard-coded fixes for common KDE App ID mismatches.
+    // This ensures running windows merge with their pinned launchers correctly.
+    if (stripped == QLatin1String("org.kde.dolphin") || stripped == QLatin1String("dolphin")) {
+        addCandidate(QStringLiteral("org.kde.dolphin"));
+        addCandidate(QStringLiteral("dolphin"));
+    } else if (stripped == QLatin1String("org.kde.systemsettings") || stripped == QLatin1String("systemsettings")) {
+        addCandidate(QStringLiteral("org.kde.systemsettings"));
+        addCandidate(QStringLiteral("systemsettings"));
+    } else if (stripped == QLatin1String("org.kde.konsole") || stripped == QLatin1String("konsole")) {
+        addCandidate(QStringLiteral("org.kde.konsole"));
+        addCandidate(QStringLiteral("konsole"));
+    }
+
+    // 3. Steam-specific mapping
     if (stripped.startsWith(QLatin1String("steam_app_"))) {
         QString steamThemeName = stripped;
         steamThemeName.replace(QLatin1String("steam_app_"), QLatin1String("steam_icon_"));

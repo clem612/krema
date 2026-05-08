@@ -31,9 +31,9 @@ void TaskIconProvider::setNormalizationEnabled(bool enabled)
     m_normalizationEnabled = enabled;
 }
 
-void TaskIconProvider::setIconScale(double scale)
+void TaskIconProvider::setIndicatorOffset(double offset)
 {
-    m_iconScale = std::clamp(scale, 0.5, 1.0);
+    m_indicatorOffset = std::clamp(offset, 0.5, 1.0);
 }
 
 void TaskIconProvider::clearCache()
@@ -145,8 +145,8 @@ QPixmap TaskIconProvider::requestPixmap(const QString &id, QSize *size, const QS
     if (result.isNull())
         return QPixmap();
 
-    if (m_iconScale < 1.0) {
-        int shrunkSize = static_cast<int>(std::round(targetSize * m_iconScale));
+    if (m_indicatorOffset < 1.0) {
+        int shrunkSize = static_cast<int>(std::round(targetSize * m_indicatorOffset));
         QImage scaled = result.toImage().scaled(shrunkSize, shrunkSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
         result = QPixmap(targetSize, targetSize);
         result.fill(Qt::transparent);

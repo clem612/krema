@@ -162,9 +162,9 @@ void DockShell::connectSettingsSignals()
         m_view->bumpIconCacheVersion();
     });
 
-    // Icon scale
-    connect(s, &KremaSettings::IconScaleChanged, this, [this]() {
-        m_view->iconProvider()->setIconScale(m_settings->iconScale());
+    // Indicator offset (formerly Icon scale)
+    connect(s, &KremaSettings::IndicatorOffsetChanged, this, [this]() {
+        m_view->iconProvider()->setIndicatorOffset(m_settings->indicatorOffset());
         m_view->iconProvider()->clearCache();
         m_view->bumpIconCacheVersion();
     });

@@ -55,3 +55,6 @@ Before answering any prompts, Gemini must:
 - **State Stability (The Safe Floor):** No optimization may allow UI-critical variables (width, height, scale, overflow) to reach 0 or null unless destroying the dock.
 - **Heterogeneous Model Logic:** Docks are not uniform. Logic must account for separators and indicators. Assuming all items are identical Icons is a BUG.
 - **Verified Feature Integrity:** Working features (Steam icons, dash indicators) must be flagged in the "Proposal Phase" if their code path changes.
+
+## 9. Documentation Standards
+- **English-Only:** ALL documentation files (`.md`), including `GEMINI.md`, `ROADMAP.md`, `.claude/work-state.md`, and any session artifacts, MUST be written exclusively in English. If existing documentation is in another language, translate it to English before editing.

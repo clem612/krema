@@ -329,6 +329,33 @@ Item {
         }
     }
 
+    // Detailed hit-test breakdown to expose deadzones
+    function traceHitTest(mX, mY) {
+        let mPos = DockView.isVertical ? mY : mX;
+        let firstItem = dockRepeater.itemAt(0);
+        if (!firstItem) return "NO-ITEMS";
+        
+        let startPos = firstItem.mapToItem(dockMouseArea, 0, 0);
+        let currentEdge = DockView.isVertical ? startPos.y : startPos.x;
+
+        let trace = "";
+        for (let i = 0; i < dockRepeater.count; i++) {
+            let item = dockRepeater.itemAt(i);
+            if (!item) continue;
+            let itemSize = DockView.isVertical ? item.height : item.width;
+            let slotStart = currentEdge;
+            let slotEnd = currentEdge + itemSize;
+            
+            if (mPos >= slotStart - 1 && mPos <= slotEnd + 1) {
+                let localPos = item.iconImage.mapFromItem(dockMouseArea, mX, mY);
+                trace = `ICON-${i}: Slot(${Math.round(slotStart)}-${Math.round(slotEnd)}) | Local(${localPos.x.toFixed(2)},${localPos.y.toFixed(2)}) | Bounds(0-${item.iconSize})`;
+                break;
+            }
+            currentEdge += itemSize + DockSettings.iconSpacing;
+        }
+        return trace || "BETWEEN-ICONS";
+    }
+
     // Throttling property to stop the terminal spam
     function updateHoveredItem() {
         if (dockPanel.mouseX === -9999) {
@@ -355,25 +382,22 @@ Item {
 
             let itemSize = DockView.isVertical ? item.height : item.width;
             
-            // Advance boundary to the end of this icon
-            currentEdge += itemSize;
-
-            if (mPos <= currentEdge) {
-                // If we are within the icon's visual slot (not in leading spacing)
-                if (mPos >= currentEdge - itemSize) {
-                    // Precise 2D hit test: map mouse to iconImage's local space.
-                    // QML's mapFromItem handles all transforms (zoom scale, etc.)
-                    let localPos = item.iconImage.mapFromItem(dockMouseArea, mX, mY);
-                    if (localPos.x >= 0 && localPos.x <= item.iconSize &&
-                        localPos.y >= 0 && localPos.y <= item.iconSize) {
-                        bestIndex = i;
-                    }
+            // FUZZY HIT-TEST: We add a 10px buffer to account for significant shifts
+            if (mPos >= currentEdge - 10 && mPos <= currentEdge + itemSize + 10) {
+                // Precise 2D hit test: map mouse to iconImage's local space.
+                let localPos = item.iconImage.mapFromItem(dockMouseArea, mX, mY);
+                
+                // THE IRONCLAD FIX: Allow up to 10px negative offset to swallow shifts
+                if (localPos.x >= -10.0 && localPos.x <= item.iconSize + 10.0 &&
+                    localPos.y >= -10.0 && localPos.y <= item.iconSize + 10.0) {
+                    bestIndex = i;
+                    // We found our best candidate, stop checking
+                    break;
                 }
-                break;
             }
             
-            // Add the spacing before checking the next icon's territory
-            currentEdge += DockSettings.iconSpacing;
+            // Advance boundary: current icon + spacing
+            currentEdge += itemSize + DockSettings.iconSpacing;
         }
 
         if (bestIndex >= 0) {
@@ -835,57 +859,68 @@ Item {
 	       property string lastZoomState: ""
 
 	   onTriggered: {
-                  let mX_abs = Math.round(dockMouseArea.mouseX);
-                  let mY_abs = Math.round(dockMouseArea.mouseY);
+	   let mX_abs = Math.round(dockMouseArea.mouseX);
+	   let mY_abs = Math.round(dockMouseArea.mouseY);
 
-	          if (hoveredIndex === -1) {
-                      // Check for "Ghost Zoom": zoom logic is still receiving coordinates
-                      // even though no icon is hit.
-                      if (dockPanel.mouseX !== -1 && dockPanel.mouseY !== -1) {
-                          let ghostLog = `GHOST: Mouse_Rel(${Math.round(dockPanel.mouseX)},${Math.round(dockPanel.mouseY)}) | Mouse_Abs(${mX_abs},${mY_abs})`;
-                          if (ghostLog !== lastZoomState) {
-                              console.log(`\x1b[31m[GHOST]\x1b[0m ${ghostLog}`);
-                              lastZoomState = ghostLog;
-                          }
-                      } else if (lastIconState !== "IDLE") {
-                          console.log("\x1b[90m[DEBUG] Dock Idle (No Hover)\x1b[0m");
-                          lastIconState = "IDLE";
-                          lastZoomState = "IDLE";
-                      }
-                      return;
-                  }
-
-                  let item = dockRepeater.itemAt(hoveredIndex);
-                  if (!item) return;
-
-                  let pX = Math.round(dockPanel.x);
-                  let pY = Math.round(dockPanel.y);
-                  let pW = Math.round(dockPanel.width);
-                  let pH = Math.round(dockPanel.height);
-
-                  let iX = Math.round(item.x);
-                  let iW = Math.round(item.width);
-
-                  // 1. Icon Hover & Position Status
-                  let iconLog = `ICON-${hoveredIndex}-${iX}-${iW}-${item.mouseInside}`;
-                  if (iconLog !== lastIconState) {
-                      console.log(`\x1b[32m[ICON ${hoveredIndex}]\x1b[0m Pos:${iX} Width:${iW} Inside:${item.mouseInside} Name: ${item.displayName}`);
-                      lastIconState = iconLog;
-                  }
-
-                  // 2. Zoom & Panel Geometry Status
-                  let zTarget = item.zoomFactor.toFixed(2);
-                  let zActual = item.currentScale.toFixed(2);
-                  let mX = Math.round(item.panelMouseX);
-                  let cX = Math.round(item.itemCenterX);
-                  
-                  let zoomLog = `${pW}-${pX}-${zTarget}-${zActual}-${mX}-${cX}-${mY_abs}`;
-                  if (zoomLog !== lastZoomState) {
-                      console.log(`\x1b[36m[ZOOM]\x1b[0m Panel:(${pX},${pY}) ${pW}x${pH} | Mouse_Abs(${mX_abs},${mY_abs}) Center:${cX} | Target:${zTarget}x \x1b[33mActual:${zActual}x\x1b[0m`);
-                      lastZoomState = zoomLog;
-                  }
-	      }
+	      if (hoveredIndex === -1) {
+	   // Check for "Ghost Zoom" or "Deadzone"
+	   if (dockPanel.mouseX !== -1 && dockPanel.mouseY !== -1) {
+	   let ghostLog = `GHOST: Mouse_Abs(${mX_abs},${mY_abs})`;
+	   if (ghostLog !== lastZoomState) {
+	   console.log(`\x1b[31m[GHOST]\x1b[0m ${ghostLog}`);
+	   lastZoomState = ghostLog;
 	   }
+	   } else if (lastIconState !== "IDLE") {
+	   console.log("\x1b[90m[DEBUG] Dock Idle (No Hover)\x1b[0m");
+	   lastIconState = "IDLE";
+	   lastZoomState = "IDLE";
+	   }
+	   return;
+	   }
+
+	   let item = dockRepeater.itemAt(hoveredIndex);
+	   if (!item) return;
+
+	   let pX = Math.round(dockPanel.x);
+	   let pY = Math.round(dockPanel.y);
+	   let pW = Math.round(dockPanel.width);
+	   let pH = Math.round(dockPanel.height);
+
+	   let iX = Math.round(item.x);
+	   let iW = Math.round(item.width);
+
+	   // 1. Icon Hover & Position Status
+	   let iconLog = `ICON-${hoveredIndex}-${iX}-${iW}-${item.mouseInside}`;
+	   if (iconLog !== lastIconState) {
+	   console.log(`\x1b[32m[ICON ${hoveredIndex}]\x1b[0m Pos:${iX} Width:${iW} Inside:${item.mouseInside} Name: ${item.displayName}`);
+	   lastIconState = iconLog;
+	   }
+
+	   // 2. Zoom & Panel Geometry Status
+	   let zTarget = item.zoomFactor.toFixed(2);
+	   let zActual = item.currentScale.toFixed(2);
+	   let mX = Math.round(item.panelMouseX);
+	   let cX = Math.round(item.itemCenterX);
+
+	   let zoomLog = `${pW}-${pX}-${zTarget}-${zActual}-${mX}-${cX}-${mY_abs}`;
+	   if (zoomLog !== lastZoomState) {
+	   console.log(`\x1b[36m[ZOOM]\x1b[0m Panel:(${pX},${pY}) ${pW}x${pH} | Mouse_Abs(${mX_abs},${mY_abs}) Center:${cX} | Target:${zTarget}x \x1b[33mActual:${zActual}x\x1b[0m`);
+	   lastZoomState = zoomLog;
+	   }
+
+	   /* --- SUPER-VISION HIT-MAP (Commented out for future use) ---
+	   let logLine = `[MAP] M(${mX_abs},${mY_abs}) | `;
+	   for (let i = 0; i < dockRepeater.count; i++) {
+	   let item = dockRepeater.itemAt(i);
+	   if (!item) continue;
+	   let localPos = item.iconImage.mapFromItem(dockMouseArea, mX_abs, mY_abs);
+	   let isHit = (localPos.x >= -10.0 && localPos.x <= item.iconSize + 10.0 &&
+	   localPos.y >= -10.0 && localPos.y <= item.iconSize + 10.0);
+	   logLine += `${isHit ? "●" : "○"} I${i}:${Math.round(localPos.x)},${Math.round(localPos.y)} `;
+	   }
+	   console.log(logLine);
+	   */
+	   }	   }
            // Create a local alias for Edit Mode that won't crash on startup
            property bool isEditMode: typeof DockVisibility !== "undefined" && DockVisibility.liveEditMode
 
