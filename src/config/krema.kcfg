@@ -50,7 +50,7 @@
       <label>Panel corner radius</label>
       <default>12</default>
       <min>0</min>
-      <max>24</max>
+      <max>100</max>
     </entry>
 
     <entry name="Floating" type="Bool">

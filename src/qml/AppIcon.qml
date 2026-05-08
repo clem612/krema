@@ -164,6 +164,9 @@ Item {
     property bool isDragSource: false
     property bool isExternalDropTarget: false
 
+    // Hover state (driven from main.qml)
+    property bool isHovered: false
+
     // Configuration from DockView
        property int iconSize: 48
        property real maxZoomFactor: 1.6
@@ -416,6 +419,31 @@ Item {
             id: iconImage
             width: iconSize
             height: iconSize
+
+            // --- HOVER GLOW ---
+            // A subtle radial glow that follows the icon shape
+            Rectangle {
+                id: hoverGlow
+                anchors.centerIn: parent
+                width: parent.width * 1.2
+                height: parent.height * 1.2
+                radius: width / 2
+                
+                // Pure white glow, very soft
+                color: "white"
+                opacity: dockItem.isHovered ? 0.3 : 0.0
+                
+                // Fast, snappy transition
+                Behavior on opacity {
+                    NumberAnimation { duration: Kirigami.Units.shortDuration }
+                }
+                
+                layer.enabled: true
+                layer.effect: MultiEffect {
+                    blurEnabled: true
+                    blur: 1.5
+                }
+            }
             
             // Valid if EITHER the C++ image loaded successfully OR Kirigami found the RAM icon
             property bool valid: internalIcon.status === Image.Ready || ramIcon.valid

@@ -511,35 +511,41 @@ Item {
         // Track mouse position for parabolic zoom + drag handling
 	onPositionChanged: function(mouse) {
             // 1. Capture current geometry and visibility state
-            let pX = dockPanel.x
-            let pY = dockPanel.y
-            let pW = dockPanel.width
-            let pH = dockPanel.height
             let isVisible = DockVisibility.dockVisible
-            
             let isInside = false
             let triggerDepth = 2 // Tiny zone to catch the mouse at screen edges
 
+            // PIXEL-PERFECT INSTANT MATH (No Lag)
+            // We use implicitWidth/Height because they update INSTANTLY, 
+            // while the physical panel width/height are animated and "laggy".
+            let instantRowW = dockRow.implicitWidth
+            let instantRowH = dockRow.implicitHeight
+            let instantPanelW = DockView.isVertical ? Math.min(DockSettings.panelHeight, instantRowW + 24) : Math.max(instantRowW + Math.max(36, DockSettings.cornerRadius * 1.6), Kirigami.Units.gridUnit * 6)
+            let instantPanelH = DockView.isVertical ? Math.max(instantRowH + Math.max(36, DockSettings.cornerRadius * 1.6), Kirigami.Units.gridUnit * 6) : Math.min(DockSettings.panelHeight, instantRowH + 24)
+            
+            // Calculate where the panel WOULD be if it weren't animating
+            let instantPanelX = DockView.isVertical ? dockPanel._panelEdgePos : (parent.width - instantPanelW) / 2
+            let instantPanelY = DockView.isVertical ? (parent.height - instantPanelH) / 2 : dockPanel._panelEdgePos
+
 	    // 2. State-Aware Firewall
             if (isVisible) {
-                // Fetch the mathematically exact pixel overflow
+                // Fetch the mathematically exact pixel overflow (instant)
                 let bulge = dockPanel.currentVisualOverflow;
                 
-                // PIXEL-PERFECT: Mouse must be within the panel OR the exact icon bulge
+                // BOUNDARY CHECK: Mouse must be within the instant mathematical boundaries
                 if (DockView.isVertical) {
-                    let extLeft = (DockView.edge === 3) ? (pX - bulge) : pX;
-                    let extRight = (DockView.edge === 2) ? (pX + pW + bulge) : (pX + pW);
+                    let extLeft = (DockView.edge === 3) ? (instantPanelX - bulge) : instantPanelX;
+                    let extRight = (DockView.edge === 2) ? (instantPanelX + instantPanelW + bulge) : (instantPanelX + instantPanelW);
                     isInside = (mouse.x >= extLeft - 1 && mouse.x <= extRight + 1 &&
-                                mouse.y >= pY - 1 && mouse.y <= pY + pH + 1);
+                                mouse.y >= instantPanelY - 1 && mouse.y <= instantPanelY + instantPanelH + 1);
                 } else {
-                    let extTop = (DockView.edge === 1) ? (pY - bulge) : pY;
-                    let extBottom = (DockView.edge === 0) ? (pY + pH + bulge) : (pY + pH);
-                    isInside = (mouse.x >= pX - 1 && mouse.x <= pX + pW + 1 &&
+                    let extTop = (DockView.edge === 1) ? (instantPanelY - bulge) : instantPanelY;
+                    let extBottom = (DockView.edge === 0) ? (instantPanelY + instantPanelH + bulge) : (instantPanelY + instantPanelH);
+                    isInside = (mouse.x >= instantPanelX - 1 && mouse.x <= instantPanelX + instantPanelW + 1 &&
                                 mouse.y >= extTop - 1 && mouse.y <= extBottom + 1);
                 }
             } else {
                 // TRIGGER ZONE: Check the screen edge based on dock placement
-                // This allows the dock to "wake up" even when the panel is hidden
                 switch (DockView.edge) {
                     case 0: // Top
                         isInside = (mouse.y <= triggerDepth); break
@@ -563,10 +569,14 @@ Item {
             
             // PIXEL-PERFECT: Calculate distance from mouse to the ACTUAL center of the icons (dockRow)
             if (DockView.isVertical) {
-                let rowCenter = pX + dockRow.x + dockRow.width / 2;
+                // rowX is grounded inside the instant panel
+                let rowX = (DockView.edge === 2) ? 10 : (instantPanelW - instantRowW - 10);
+                let rowCenter = instantPanelX + rowX + instantRowW / 2;
                 secondaryAxisDist = Math.abs(mouse.x - rowCenter);
             } else {
-                let rowCenter = pY + dockRow.y + dockRow.height / 2;
+                // rowY is grounded inside the instant panel
+                let rowY = (DockView.edge === 0) ? 10 : (instantPanelH - instantRowH - 10);
+                let rowCenter = instantPanelY + rowY + instantRowH / 2;
                 secondaryAxisDist = Math.abs(mouse.y - rowCenter);
             }
 
@@ -590,8 +600,9 @@ Item {
             // We map the mouse to the primary axis (Swap for vertical alignment)
             // If outside orbit, force -1 to suppress zoom without killing the global hover state.
             if (withinOrbit) {
-                dockPanel.mouseX = mouse.x
-                dockPanel.mouseY = mouse.y
+                // IMPORTANT: icons expect panelMouseX to be the "Primary Axis" (Flow axis)
+                dockPanel.mouseX = DockView.isVertical ? mouse.y : mouse.x
+                dockPanel.mouseY = DockView.isVertical ? mouse.x : mouse.y
             } else {
                 dockPanel.mouseX = -1
                 dockPanel.mouseY = -1
@@ -1125,6 +1136,7 @@ Item {
                     // AppIcon's own required properties
 
                     z: (root.hoveredIndex === index) ? 1 : 0
+                    isHovered: (root.hoveredIndex === index)
                     isKeyboardFocused: root.keyboardNavigating && root.hoveredIndex === index
                     iconSize: DockSettings.iconSize
                     maxZoomFactor: DockSettings.maxZoomFactor
