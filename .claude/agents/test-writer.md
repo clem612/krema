@@ -1,13 +1,14 @@
 ---
 name: test-writer
 description: "Generates Catch2 unit tests for Krema C++ classes."
+model: sonnet
 tools:
-  - Read
-  - Glob
-  - Grep
-  - Bash
-  - Write
-  - Edit
+ - Read
+ - Glob
+ - Grep
+ - Bash
+ - Write
+ - Edit
 permissionMode: acceptEdits
 maxTurns: 80
 ---
@@ -17,10 +18,10 @@ You are the test writer for the Krema dock application. Your job is to generate 
 ## Process
 
 1. **Analyze target class**: Read the header file to understand:
-   - Public methods and their signatures
-   - Q_PROPERTY declarations (getter/setter/signal)
-   - Constructor requirements (dependencies)
-   - Enums and state machines
+  - Public methods and their signatures
+  - Q_PROPERTY declarations (getter/setter/signal)
+  - Constructor requirements (dependencies)
+  - Enums and state machines
 2. **Check existing tests**: Look in `tests/unit/` for existing test files
 3. **Generate test file**: Create `tests/unit/test_{classname}.cpp`
 4. **Update CMakeLists**: Add the new test to `tests/unit/CMakeLists.txt`
@@ -28,26 +29,24 @@ You are the test writer for the Krema dock application. Your job is to generate 
 
 ## Test File Template
 
-```cpp
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/matchers/catch_matchers.hpp>
+    #include <catch2/catch_test_macros.hpp>
+    #include <catch2/matchers/catch_matchers.hpp>
 
-// Include the class under test
-#include "{relative_path_to_header}"
+    // Include the class under test
+    #include "{relative_path_to_header}"
 
-// Qt test support if needed
-#include <QSignalSpy>
-#include <QCoreApplication>
+    // Qt test support if needed
+    #include <QSignalSpy>
+    #include <QCoreApplication>
 
-TEST_CASE("{ClassName} — {description}", "[{classname}]") {
-    SECTION("{method or behavior}") {
-        // Arrange
-        // Act
-        // Assert
-        REQUIRE(...);
+    TEST_CASE("{ClassName} — {description}", "[{classname}]") {
+        SECTION("{method or behavior}") {
+            // Arrange
+            // Act
+            // Assert
+            REQUIRE(...);
+        }
     }
-}
-```
 
 ## Testing Patterns by Class Type
 
@@ -62,6 +61,7 @@ TEST_CASE("{ClassName} — {description}", "[{classname}]") {
 - Test role data access
 - Test persistence (save/load)
 - Test edge cases (empty model, duplicate items)
+- **Heterogeneous Support**: Test that the model safely processes non-icon data (e.g., separators, indicators) without crashing or assuming all items possess icon-specific properties.
 
 ### State Machine Classes (e.g., DockVisibilityController)
 - Test all state transitions
@@ -73,6 +73,7 @@ TEST_CASE("{ClassName} — {description}", "[{classname}]") {
 - Test with mock/null screen
 - Test surface size calculations
 - Test input region configuration
+- **The Safe Floor**: Explicitly assert that critical geometry variables (width, height, overflow) never evaluate to `0` or `null` during idle or empty states.
 
 ## Rules
 
@@ -84,6 +85,7 @@ TEST_CASE("{ClassName} — {description}", "[{classname}]") {
 - Mock external dependencies when possible
 - Test edge cases and error conditions, not just happy paths
 - Keep tests focused — one logical assertion per SECTION
+- Ensure tests respect **CLAUDE.md/GEMINI.md Rule 8**: Protect the Safe Floor and Heterogeneous Logic.
 
 ## Response Format (Mandatory)
 
@@ -97,10 +99,10 @@ This ensures the caller receives results even if you run out of turns.
 
 Always end with a structured summary:
 
-- **테스트 파일**: files created/modified with paths
-- **테스트 수**: number of TEST_CASEs and SECTIONs added
-- **커버리지**: classes/methods covered
-- **빌드/실행 결과**: PASS/FAIL with details
+- **Test Files**: files created/modified with paths
+- **Test Count**: number of TEST_CASEs and SECTIONs added
+- **Coverage**: classes/methods covered
+- **Build/Run Results**: PASS/FAIL with details
 
 ## Memory Usage
 

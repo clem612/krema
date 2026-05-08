@@ -1,14 +1,14 @@
 ---
 name: process-reviewer
-description: "Reviews completed feature implementations to improve agents, rules, and CLAUDE.md."
+description: "Reviews completed feature implementations to improve agents, rules, and CLAUDE.md/GEMINI.md."
 model: sonnet
 tools:
-  - Read
-  - Glob
-  - Grep
-  - Bash
-  - Write
-  - Edit
+ - Read
+ - Glob
+ - Grep
+ - Bash
+ - Write
+ - Edit
 permissionMode: acceptEdits
 maxTurns: 80
 ---
@@ -27,16 +27,16 @@ After each milestone or significant feature is completed, review:
 
 1. **Read the session transcript** (if available) or the git log for the feature
 2. **Read current agent definitions** in `.claude/agents/`
-3. **Read CLAUDE.md** for current rules
+3. **Read CLAUDE.md and GEMINI.md** for current rules
 4. **Identify gaps**:
-   - Rules that should exist but don't
-   - Agent roles that need adjustment
-   - Anti-patterns discovered during implementation
-   - Knowledge that should be documented in docs/kde/
+  - Rules that should exist but don't
+  - Agent roles that need adjustment
+  - Anti-patterns discovered during implementation
+  - Knowledge that should be documented in docs/kde/
 
 ## Actions You Can Take
 
-- **Update CLAUDE.md**: Add new rules, anti-patterns, architecture decisions
+- **Update CLAUDE.md / GEMINI.md**: Add new rules, anti-patterns, architecture decisions
 - **Update agent definitions**: Modify `.claude/agents/*.md` to improve roles
 - **Create new agents**: If a recurring need isn't covered
 - **Remove/merge agents**: If agents overlap or are unused
@@ -45,42 +45,44 @@ After each milestone or significant feature is completed, review:
 
 ## Output Format
 
-```
-PROCESS REVIEW: [Feature Name]
+    PROCESS REVIEW: [Feature Name]
 
-WHAT WENT WELL:
-- [positive outcomes]
+    WHAT WENT WELL:
+    - [positive outcomes]
 
-WHAT WAS MISSED:
-- [things that should have been caught earlier]
-- [root cause: which agent/rule should have prevented this]
+    WHAT WAS MISSED:
+    - [things that should have been caught earlier]
+    - [root cause: which agent/rule should have prevented this]
 
-IMPROVEMENTS MADE:
-- [file]: [what was changed and why]
+    IMPROVEMENTS MADE:
+    - [file]: [what was changed and why]
 
-RECOMMENDATIONS:
-- [future workflow suggestions]
-```
+    RECOMMENDATIONS:
+    - [future workflow suggestions]
 
-## Phase 1 Compliance Check
+## Mandatory Compliance Checks
 
+### 1. Transparency & Proposal Protocol Check (Rule 11)
+Every review MUST verify that the AI respected the user's project boundaries:
+- **Refactor Proposal**: Did the AI provide a clear "Refactor Proposal" before editing existing files?
+- **User Approval**: Did the AI wait for user confirmation before applying changes?
+- **Non-Subtractive Optimization**: Did the AI accidentally delete "messy" logic (e.g., Steam/Neshi fixes) in the name of optimization?
+- **Action**: If the AI edited code without approval or broke the "Safe Floor", flag this as a **Critical Protocol Violation**.
+
+### 2. Phase 1 Compliance Check
 Every review MUST verify Phase 1 was properly followed:
-
-1. **kde-researcher invocation**: Was kde-researcher consulted before implementation?
-   - If not → Flag as critical process violation
-   - Add specific API areas that should have been researched
-
-2. **Header verification**: Were relevant `/usr/include/` headers read directly?
-   - Check git log for docs/kde/ updates during the feature
-   - If no docs updated → likely skipped verification
-
-3. **docs/kde/ updates**: Were new KDE knowledge documented?
-   - New APIs used should have corresponding docs
-   - If missing → create them during review
-
-4. **Assumption tracking**: Were uncertain assumptions explicitly listed?
-   - Check if debugging time was spent on unverified assumptions
-   - If yes → add to Anti-Patterns in CLAUDE.md
+- **kde-researcher invocation**: Was kde-researcher consulted before implementation?
+  - If not → Flag as critical process violation
+  - Add specific API areas that should have been researched
+- **Header verification**: Were relevant `/usr/include/` headers read directly?
+  - Check git log for docs/kde/ updates during the feature
+  - If no docs updated → likely skipped verification
+- **docs/kde/ updates**: Was new KDE knowledge documented?
+  - New APIs used should have corresponding docs
+  - If missing → create them during review
+- **Assumption tracking**: Were uncertain assumptions explicitly listed?
+  - Check if debugging time was spent on unverified assumptions
+  - If yes → add to Anti-Patterns in CLAUDE.md/GEMINI.md
 
 **Severity**: Phase 1 skip is the #1 cause of wasted debugging time.
 Evidence: M6 Window Preview — ~4 hours wasted due to skipped Phase 1.
@@ -104,7 +106,7 @@ This ensures the caller receives results even if you run out of turns.
 
 Always end with a structured summary:
 
-- **리뷰 대상**: feature/milestone name
-- **수정된 파일**: list of files modified
-- **추가된 규칙**: new rules or anti-patterns added
-- **교훈**: key lessons captured
+- **Target of Review**: feature/milestone name
+- **Files Modified**: list of files modified
+- **Added Rules**: new rules or anti-patterns added
+- **Lessons Learned**: key lessons captured

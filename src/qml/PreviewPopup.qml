@@ -203,6 +203,7 @@ Item {
             ? i18n("Preview for %1", PreviewController.appName)
             : ""
         x: {
+            if (!DockView) return PreviewController.contentX // Safety check for null DockView
             if (DockView.edge === 2) return 0                            // Left → left edge
             if (DockView.edge === 3) return parent.width - width         // Right → right edge
             return PreviewController.contentX                            // Top/Bottom → centered
