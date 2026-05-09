@@ -1557,14 +1557,14 @@ Item {
     Loader {
             id: settingsUnifiedLoader
             x: {
-                if (DockSettings.edge === 2) return blueprintGhost.width + 20; // Left
-                if (DockSettings.edge === 3) return parent.width - blueprintGhost.width - width - 20; // Right
-                return (parent.width - width) / 2; // Center horizontally for Top/Bottom
+                if (DockSettings.edge === 2) return blueprintGhost.width; // Left (Touch)
+                if (DockSettings.edge === 3) return parent.width - blueprintGhost.width - width; // Right (Touch)
+                return (parent.width - width) / 2; // Center horizontally
             }
             y: {
-                if (DockSettings.edge === 0) return blueprintGhost.height + 20; // Top
-                if (DockSettings.edge === 1) return parent.height - blueprintGhost.height - height - 20; // Bottom
-                return (parent.height - height) / 2; // Center vertically for Left/Right
+                if (DockSettings.edge === 0) return blueprintGhost.height; // Top (Touch)
+                if (DockSettings.edge === 1) return parent.height - blueprintGhost.height - height; // Bottom (Touch)
+                return (parent.height - height) / 2; // Center vertically
             }
                                     
             // 1. Let C++ dictate if this loader is active

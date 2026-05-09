@@ -25,7 +25,7 @@ QQC2.ScrollView {
            
            QQC2.Label { 
                text: i18n("App Attention & Badges")
-               color: "#80FFFDD0"
+               color: theme.textDim
                font.bold: true; font.letterSpacing: 1.1; font.pixelSize: 12
                Layout.leftMargin: 8
            }
@@ -35,10 +35,10 @@ QQC2.ScrollView {
                    Layout.fillWidth: true
                    ColumnLayout {
                        Layout.fillWidth: true; spacing: 2
-                       QQC2.Label { text: i18n("Attention Animation"); color: "#FFFDD0"; font.bold: true }
+                       QQC2.Label { text: i18n("Attention Animation"); color: theme.text; font.bold: true }
                        QQC2.Label { 
                           text: i18n("Visual feedback when an app needs you.")
-                          color: "#80FFFDD0"; font.pixelSize: 12
+                          color: theme.textDim; font.pixelSize: 12
                           wrapMode: Text.WordWrap; Layout.fillWidth: true 
                       }
                   }
@@ -61,20 +61,20 @@ QQC2.ScrollView {
                                   spacing: 8
                                   Kirigami.Icon {
                                       source: modelData.icon
-                                      color: attBtn.isSelected ? "#FFFDD0" : "#80FFFDD0"
+                                      color: attBtn.isSelected ? theme.text : theme.textDim
                                       implicitWidth: 16; implicitHeight: 16
                                   }
                                   QQC2.Label {
                                       text: modelData.label
-                                      color: attBtn.isSelected ? "#FFFDD0" : "#80FFFDD0"
+                                      color: attBtn.isSelected ? theme.text : theme.textDim
                                       font.pointSize: 9; font.bold: attBtn.isSelected
                                   }
                               }
 
                               background: Rectangle {
                                   implicitHeight: 34; radius: 8
-                                  color: attBtn.isSelected ? "#26FFFDD0" : (attBtn.hovered ? "#13FFFDD0" : "transparent")
-                                  border.color: attBtn.isSelected ? "#4DFFFDD0" : "transparent"; border.width: 1
+                                  color: attBtn.isSelected ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.25) : (attBtn.hovered ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.12) : "transparent")
+                                  border.color: attBtn.isSelected ? theme.accent : "transparent"; border.width: 1
                                   Behavior on color { ColorAnimation { duration: 150 } }
                               }
                               onClicked: { DockSettings.attentionAnimation = modelData.value; DockSettings.save(); }
@@ -88,10 +88,10 @@ QQC2.ScrollView {
                ColumnLayout {
                    Layout.fillWidth: true
                    RowLayout {
-                       QQC2.Label { Layout.fillWidth: true; text: i18n("Animation Duration"); color: "#FFFDD0"; font.bold: true }
+                       QQC2.Label { Layout.fillWidth: true; text: i18n("Animation Duration"); color: theme.text; font.bold: true }
                        QQC2.Label { 
                            text: attentionDurationSlider.value === 0 ? i18n("Infinite") : attentionDurationSlider.value + "s"
-                           color: "#80FFFDD0"; font.bold: true 
+                           color: theme.textDim; font.bold: true 
                        }
                    }
                    QQC2.Slider {
@@ -108,10 +108,10 @@ QQC2.ScrollView {
                    Layout.fillWidth: true
                    ColumnLayout {
                        Layout.fillWidth: true; spacing: 2
-                       QQC2.Label { text: i18n("Badge Display"); color: "#FFFDD0"; font.bold: true }
+                       QQC2.Label { text: i18n("Badge Display"); color: theme.text; font.bold: true }
                        QQC2.Label { 
                           text: i18n("Notification count styles.")
-                          color: "#80FFFDD0"; font.pixelSize: 12
+                          color: theme.textDim; font.pixelSize: 12
                           wrapMode: Text.WordWrap; Layout.fillWidth: true 
                       }
                   }
@@ -134,20 +134,20 @@ QQC2.ScrollView {
                                   spacing: 8
                                   Kirigami.Icon {
                                       source: modelData.icon
-                                      color: badgeBtn.isSelected ? "#FFFDD0" : "#80FFFDD0"
+                                      color: badgeBtn.isSelected ? theme.text : theme.textDim
                                       implicitWidth: 16; implicitHeight: 16
                                   }
                                   QQC2.Label {
                                       text: modelData.label
-                                      color: badgeBtn.isSelected ? "#FFFDD0" : "#80FFFDD0"
+                                      color: badgeBtn.isSelected ? theme.text : theme.textDim
                                       font.pointSize: 9; font.bold: badgeBtn.isSelected
                                   }
                               }
 
                               background: Rectangle {
                                   implicitHeight: 34; radius: 8
-                                  color: badgeBtn.isSelected ? "#26FFFDD0" : (badgeBtn.hovered ? "#13FFFDD0" : "transparent")
-                                  border.color: badgeBtn.isSelected ? "#4DFFFDD0" : "transparent"; border.width: 1
+                                  color: badgeBtn.isSelected ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.25) : (badgeBtn.hovered ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.12) : "transparent")
+                                  border.color: badgeBtn.isSelected ? theme.accent : "transparent"; border.width: 1
                                   Behavior on color { ColorAnimation { duration: 150 } }
                               }
                               onClicked: { DockSettings.badgeDisplayMode = modelData.value; DockSettings.save(); }

@@ -43,12 +43,12 @@ QQC2.ScrollView {
                     text: "Krema"
                     font.bold: true
                     font.pixelSize: 32
-                    color: "#FFFDD0" 
+                    color: theme.text 
                     Layout.alignment: Qt.AlignHCenter
                 }
                 QQC2.Label {
                     text: i18n("A fast, modular dock for KDE Plasma 6")
-                    color: "#80FFFDD0"
+                    color: theme.textDim
                     font.pixelSize: 14
                     Layout.alignment: Qt.AlignHCenter
                 }
@@ -62,24 +62,24 @@ QQC2.ScrollView {
             
             RowLayout {
                 Layout.fillWidth: true
-                QQC2.Label { text: i18n("Version"); color: "#80FFFDD0"; Layout.fillWidth: true }
-                QQC2.Label { text: "1.0.0-beta"; color: "#FFFDD0"; font.bold: true }
+                QQC2.Label { text: i18n("Version"); color: theme.textDim; Layout.fillWidth: true }
+                QQC2.Label { text: "1.0.0-beta"; color: theme.text; font.bold: true }
             }
 
             Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A" }
 
             RowLayout {
                 Layout.fillWidth: true
-                QQC2.Label { text: i18n("Author"); color: "#80FFFDD0"; Layout.fillWidth: true }
-                QQC2.Label { text: "Byeonghoon Yoo"; color: "#FFFDD0"; font.bold: true }
+                QQC2.Label { text: i18n("Author"); color: theme.textDim; Layout.fillWidth: true }
+                QQC2.Label { text: "Byeonghoon Yoo"; color: theme.text; font.bold: true }
             }
 
             Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A" }
 
             RowLayout {
                 Layout.fillWidth: true
-                QQC2.Label { text: i18n("License"); color: "#80FFFDD0"; Layout.fillWidth: true }
-                QQC2.Label { text: "GPL-3.0-or-later"; color: "#FFFDD0"; font.bold: true }
+                QQC2.Label { text: i18n("License"); color: theme.textDim; Layout.fillWidth: true }
+                QQC2.Label { text: "GPL-3.0-or-later"; color: theme.text; font.bold: true }
             }
         }
 
@@ -87,7 +87,7 @@ QQC2.ScrollView {
 	QQC2.Button { id: bugButton
             text: i18n("Report a Bug")
             icon.name: "tools-report-bug"
-            icon.color: "#FFFDD0"
+            icon.color: theme.text
             flat: true
             Layout.alignment: Qt.AlignHCenter
             
@@ -98,11 +98,11 @@ QQC2.ScrollView {
 		    source: bugButton.icon.name
                     implicitWidth: 18
                     implicitHeight: 18
-                    color: "#FFFDD0"
+                    color: theme.text
                 }
                 QQC2.Label { 
 		    text: bugButton.text
-                    color: "#FFFDD0"
+                    color: theme.text
                     font.bold: true 
                 }
             }

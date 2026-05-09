@@ -25,7 +25,7 @@ QQC2.ScrollView {
            
            QQC2.Label { 
                text: i18n("Appearance")
-               color: "#80FFFDD0"
+               color: theme.textDim
                font.bold: true; font.letterSpacing: 1.1; font.pixelSize: 12
                Layout.leftMargin: 8
            }
@@ -35,8 +35,8 @@ QQC2.ScrollView {
                    Layout.fillWidth: true
                    ColumnLayout {
                        Layout.fillWidth: true; spacing: 2
-                       QQC2.Label { text: i18n("Style"); color: "#FFFDD0"; font.bold: true }
-                       QQC2.Label { text: i18n("The visual design of the divider."); color: "#80FFFDD0"; font.pixelSize: 12 }
+                       QQC2.Label { text: i18n("Style"); color: theme.text; font.bold: true }
+                       QQC2.Label { text: i18n("The visual design of the divider."); color: theme.textDim; font.pixelSize: 12 }
                    }
 
                    RowLayout {
@@ -56,20 +56,20 @@ QQC2.ScrollView {
                                    spacing: 8
                                    Kirigami.Icon {
                                        source: modelData.icon
-                                       color: sepBtn.isSelected ? "#FFFDD0" : "#80FFFDD0"
+                                       color: sepBtn.isSelected ? theme.text : theme.textDim
                                        implicitWidth: 16; implicitHeight: 16
                                    }
                                    QQC2.Label {
                                        text: modelData.label
-                                       color: sepBtn.isSelected ? "#FFFDD0" : "#80FFFDD0"
+                                       color: sepBtn.isSelected ? theme.text : theme.textDim
                                        font.pointSize: 9; font.bold: sepBtn.isSelected
                                    }
                                }
 
                                background: Rectangle {
                                    implicitHeight: 34; radius: 8
-                                   color: sepBtn.isSelected ? "#26FFFDD0" : (sepBtn.hovered ? "#13FFFDD0" : "transparent")
-                                   border.color: sepBtn.isSelected ? "#4DFFFDD0" : "transparent"; border.width: 1
+                                   color: sepBtn.isSelected ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.25) : (sepBtn.hovered ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.12) : "transparent")
+                                   border.color: sepBtn.isSelected ? theme.accent : "transparent"; border.width: 1
                                    Behavior on color { ColorAnimation { duration: 150 } }
                                }
                                onClicked: { DockSettings.separatorStyle = modelData.value; DockSettings.save(); }
@@ -83,8 +83,8 @@ QQC2.ScrollView {
                ColumnLayout {
                    Layout.fillWidth: true
                    RowLayout {
-                       QQC2.Label { Layout.fillWidth: true; text: i18n("Opacity"); color: "#FFFDD0"; font.bold: true }
-                       QQC2.Label { text: Math.round(sepOpacitySlider.value * 100) + "%"; color: "#80FFFDD0"; font.bold: true }
+                       QQC2.Label { Layout.fillWidth: true; text: i18n("Opacity"); color: theme.text; font.bold: true }
+                       QQC2.Label { text: Math.round(sepOpacitySlider.value * 100) + "%"; color: theme.textDim; font.bold: true }
                    }
                    QQC2.Slider {
                        id: sepOpacitySlider; Layout.fillWidth: true

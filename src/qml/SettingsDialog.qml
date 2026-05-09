@@ -9,299 +9,390 @@ import org.kde.kirigami as Kirigami
 import com.bhyoo.krema 1.0
 
 Item {
-   objectName: "configuration"
-   id: settingsWindow
+    objectName: "configuration"
+    id: root
 
-   // --- KREMA DIMENSIONS ---
-   implicitWidth: 780 // Slightly wider to accommodate horizontal tabs comfortably
-   implicitHeight: 620
+    // --- KREMA DYNAMIC THEME ENGINE ---
+    QtObject {
+        id: theme
+        property bool isDark: DockSettings.settingsThemeMode === 1
+        
+        readonly property color base: isDark ? "#181B20" : "#EBE9E4"    // Dark: Midnight Navy
+        readonly property color sidebar: isDark ? "#111418" : "#D8DCE0" // Dark: Deep Charcoal-Blue
+        readonly property color card: isDark ? "#22262B" : "#FDFBFA"    // Dark: Slate Roast
+        readonly property color accent: isDark ? "#7BA4B5" : "#5C7C8A"  // Nordic Blue
+        readonly property color text: isDark ? "#F9F7F2" : "#181C20"
+        readonly property color textDim: isDark ? "#949DA6" : "#5C646B" // Dark: Cool Muted Blue
+        readonly property color border: isDark ? "#2E343A" : "#CAD0D6" // Dark: Steel Edge
+    }
 
-   property bool isPinned: false
-   property var configViewItem: settingsWindow
-   
-   // State Tracking for Tabs
-   property int currentCategoryIndex: 0
-   property int currentSubItemIndex: 0
+    implicitWidth: 840
+    implicitHeight: 660
 
-   // --- THE REORGANIZED KREMA CATEGORIZATION ---
-   property var menuData: [
-       {
-           name: i18n("Appearance"),
-           icon: "preferences-desktop-theme",
-           subItems: [
-               { id: "background", name: i18n("Background & Blur"), icon: "preferences-desktop-wallpaper", page: "settings/BackgroundPage.qml" },
-               { id: "shadow", name: i18n("Shadow Effects"), icon: "format-text-shadow", page: "settings/ShadowPage.qml" },
-               { id: "separator", name: i18n("Separators"), icon: "format-stroke-color", page: "settings/SeparatorPage.qml" }
-           ]
-       },
-       {
-           name: i18n("Dimensions"),
-           icon: "transform-scale",
-           subItems: [
-               { id: "panel", name: i18n("Panel Geometry"), icon: "measure", page: "settings/PanelPage.qml" },
-               { id: "icons", name: i18n("Icon Sizing & Gaps"), icon: "preferences-desktop-icons", page: "settings/IconsPage.qml" }
-           ]
-       },
-       {
-           name: i18n("Interaction"),
-           icon: "preferences-system",
-           subItems: [
-               { id: "visibility", name: i18n("Visibility & Hiding"), icon: "view-visible", page: "settings/VisibilityPage.qml" },
-               { id: "behavior", name: i18n("Animations & Logic"), icon: "preferences-system-windows", page: "settings/BehaviorPage.qml" },
-               { id: "preview", name: i18n("Window Previews"), icon: "view-preview", page: "settings/PreviewPage.qml" }
-           ]
-       },
-       {
-           name: i18n("Workspace"),
-           icon: "video-display",
-           subItems: [
-               { id: "multimonitor", name: i18n("Screen Selection"), icon: "video-display", page: "settings/MonitorPage.qml" },
-               { id: "virtualdesktops", name: i18n("Virtual Desktops"), icon: "preferences-desktop-virtual", page: "settings/VirtualDesktopsPage.qml" }
-           ]
-       },
-       {
-           id: "about",
-           name: i18n("About Krema"),
-           icon: "help-about",
-           page: "settings/AboutPage.qml"
-       }
-   ]
+    property bool isPinned: false
+    property var configViewItem: root
+    
+    property int currentCategoryIndex: 0
+    property int currentSubItemIndex: 0
 
-   function open(module) {
-       settingsWindow.visible = true
-       if (!module) return
-       var target = module.toString().toLowerCase()
+    property var menuData: [
+        {
+            name: i18n("Appearance"),
+            icon: "preferences-desktop-theme",
+            subItems: [
+                { id: "background", name: i18n("Background & Blur"), icon: "preferences-desktop-wallpaper", page: "settings/BackgroundPage.qml" },
+                { id: "shadow", name: i18n("Shadow Effects"), icon: "format-text-shadow", page: "settings/ShadowPage.qml" },
+                { id: "separator", name: i18n("Separators"), icon: "format-stroke-color", page: "settings/SeparatorPage.qml" }
+            ]
+        },
+        {
+            name: i18n("Dimensions"),
+            icon: "transform-scale",
+            subItems: [
+                { id: "panel", name: i18n("Panel Geometry"), icon: "measure", page: "settings/PanelPage.qml" },
+                { id: "icons", name: i18n("Icon Sizing & Gaps"), icon: "preferences-desktop-icons", page: "settings/IconsPage.qml" }
+            ]
+        },
+        {
+            name: i18n("Interaction"),
+            icon: "preferences-system",
+            subItems: [
+                { id: "visibility", name: i18n("Visibility & Hiding"), icon: "view-visible", page: "settings/VisibilityPage.qml" },
+                { id: "behavior", name: i18n("Animations & Logic"), icon: "preferences-system-windows", page: "settings/BehaviorPage.qml" },
+                { id: "preview", name: i18n("Window Previews"), icon: "view-preview", page: "settings/PreviewPage.qml" }
+            ]
+        },
+        {
+            name: i18n("Workspace"),
+            icon: "video-display",
+            subItems: [
+                { id: "multimonitor", name: i18n("Screen Selection"), icon: "video-display", page: "settings/MonitorPage.qml" },
+                { id: "virtualdesktops", name: i18n("Virtual Desktops"), icon: "preferences-desktop-virtual", page: "settings/VirtualDesktopsPage.qml" }
+            ]
+        },
+        {
+            id: "about",
+            name: i18n("About Krema"),
+            icon: "help-about",
+            page: "settings/AboutPage.qml"
+        }
+    ]
 
-       for (var i = 0; i < settingsWindow.menuData.length; i++) {
-           var cat = settingsWindow.menuData[i]
-           if (cat.id === target) {
-               currentCategoryIndex = i
-               pageLoader.source = cat.page
-               return
-           }
-           if (cat.subItems) {
-               for (var j = 0; j < cat.subItems.length; j++) {
-                   if (cat.subItems[j].id === target) {
-                       currentCategoryIndex = i
-                       currentSubItemIndex = j
-                       pageLoader.source = cat.subItems[j].page
-                       return
-                   }
-               }
-           }
-       }
-   }
+    function open(module) {
+        root.visible = true
+        if (!module) return
+        var target = module.toString().toLowerCase()
 
-   onVisibleChanged: {
-       if (typeof DockVisibility !== "undefined") {
-           DockVisibility.liveEditMode = settingsWindow.visible;
-           DockVisibility.setInteracting(settingsWindow.visible);
-       }
-       // Save to disk whenever the window is hidden (Kill-Proofing)
-       if (!settingsWindow.visible && typeof DockSettings !== "undefined") {
-           DockSettings.save();
-       }
-   }
+        for (var i = 0; i < root.menuData.length; i++) {
+            var cat = root.menuData[i]
+            if (cat.id === target) {
+                currentCategoryIndex = i
+                pageLoader.source = cat.page
+                return
+            }
+            if (cat.subItems) {
+                for (var j = 0; j < cat.subItems.length; j++) {
+                    if (cat.subItems[j].id === target) {
+                        currentCategoryIndex = i
+                        currentSubItemIndex = j
+                        pageLoader.source = cat.subItems[j].page
+                        return
+                    }
+                }
+            }
+        }
+    }
 
-   // --- THE MAIN CHASSIS ---
-   Rectangle {
-       id: settingsChassis
-       anchors.fill: parent
-       color: "#1C1A1C" // Deep Roast Base
-       radius: 16
-       border.color: "#333133" 
-       border.width: 1
-       clip: true
+    onVisibleChanged: {
+        if (typeof DockVisibility !== "undefined") {
+            DockVisibility.liveEditMode = root.visible;
+            DockVisibility.setInteracting(root.visible);
+        }
+        if (!root.visible && typeof DockSettings !== "undefined") {
+            DockSettings.save();
+        }
+    }
 
-       ColumnLayout {
-           anchors.fill: parent
-           spacing: 0
+    // --- THE MAIN CHASSIS ---
+    Rectangle {
+        id: settingsChassis
+        anchors.fill: parent
+        color: theme.base
+        
+        // --- ADAPTIVE CORNER RADII (Qt 6.8+) ---
+        // Top edge sharp
+        topLeftRadius: (DockSettings.edge === 0 || DockSettings.edge === 2) ? 0 : 20
+        topRightRadius: (DockSettings.edge === 0 || DockSettings.edge === 3) ? 0 : 20
+        // Bottom edge sharp
+        bottomLeftRadius: (DockSettings.edge === 1 || DockSettings.edge === 2) ? 0 : 20
+        bottomRightRadius: (DockSettings.edge === 1 || DockSettings.edge === 3) ? 0 : 20
 
-           // --- 1. TOP NAVIGATION BAR (MAIN CATEGORIES) ---
-           Rectangle {
-               Layout.fillWidth: true
-               Layout.preferredHeight: 60
-               color: "#121112"
+        border.color: theme.border
+        border.width: 1
+        clip: true
 
-               RowLayout {
-                   anchors.fill: parent
-                   anchors.leftMargin: 24
-                   anchors.rightMargin: 16
-                   spacing: 16
+        RowLayout {
+            anchors.fill: parent
+            spacing: 0
 
-                   // BRANDING
-                   Label { 
-                       text: "Krema"
-                       color: "#FFFDD0" 
-                       font.bold: true
-                       font.pixelSize: 18
-                       font.letterSpacing: 1.2
-                       Layout.rightMargin: 16
-                   }
+            // 1. SIDEBAR
+            Rectangle {
+                id: sidebarContainer
+                Layout.fillHeight: true
+                Layout.preferredWidth: 220
+                color: theme.sidebar
+                
+                // Sidebar must match the rounded corners of the chassis
+                topLeftRadius: settingsChassis.topLeftRadius
+                bottomLeftRadius: settingsChassis.bottomLeftRadius
+                topRightRadius: 0
+                bottomRightRadius: 0
 
-                   // MAIN TABS
-                   ListView {
-                       id: mainTabBar
-                       Layout.fillWidth: true
-                       Layout.fillHeight: true
-                       orientation: ListView.Horizontal
-                       model: settingsWindow.menuData
-                       currentIndex: settingsWindow.currentCategoryIndex
-                       clip: true
-                       boundsBehavior: Flickable.StopAtBounds
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 16
+                    spacing: 24
 
-                       delegate: Item {
-                           width: contentRow.width + 32
-                           height: ListView.view.height
-                           
-                           property bool isSelected: index === settingsWindow.currentCategoryIndex
+                    RowLayout {
+                        Layout.leftMargin: 8
+                        spacing: 12
+                        Rectangle {
+                            width: 32; height: 32; radius: 8
+                            color: theme.text
+                            Label { anchors.centerIn: parent; text: "K"; color: theme.base; font.bold: true; font.pixelSize: 18 }
+                        }
+                        Label { 
+                            text: "Krema"
+                            color: theme.text
+                            font.bold: true
+                            font.pixelSize: 20
+                            font.letterSpacing: 1.2
+                        }
+                    }
 
-                           Rectangle {
-                               anchors.bottom: parent.bottom
-                               width: parent.width
-                               height: 3
-                               color: "#FFFDD0"
-                               visible: isSelected
-                           }
+                    ListView {
+                        id: sidebarMenu
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        model: root.menuData
+                        currentIndex: root.currentCategoryIndex
+                        spacing: 8
+                        interactive: false
 
-                           RowLayout {
-                               id: contentRow
-                               anchors.centerIn: parent
-                               spacing: 8
-                               Kirigami.Icon { 
-                                   source: modelData.icon
-                                   color: isSelected ? "#FFFDD0" : "#80FFFDD0"
-                                   Layout.preferredWidth: 18; Layout.preferredHeight: 18 
-                               }
-                               Label { 
-                                   text: modelData.name
-                                   color: isSelected ? "#FFFDD0" : "#80FFFDD0"
-                                   font.bold: isSelected
-                               }
-                           }
+                        delegate: Item {
+                            width: ListView.view.width
+                            height: 48
+                            property bool isSelected: index === root.currentCategoryIndex
 
-                           MouseArea {
-                               anchors.fill: parent
-                               hoverEnabled: true
-                               cursorShape: Qt.PointingHandCursor
-                               onClicked: {
-                                   settingsWindow.currentCategoryIndex = index;
-                                   var cat = settingsWindow.menuData[index];
-                                   if (cat.subItems) {
-                                       settingsWindow.currentSubItemIndex = 0;
-                                       pageLoader.source = cat.subItems[0].page;
-                                   } else {
-                                       pageLoader.source = cat.page;
-                                   }
-                               }
-                           }
-                       }
-                   }
+                            Rectangle {
+                                anchors.fill: parent
+                                anchors.margins: 2
+                                radius: 10
+                                color: isSelected ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.3) : (sidebarMouse.containsMouse ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.1) : "transparent")
+                                Behavior on color { ColorAnimation { duration: 150 } }
+                            }
 
-                   // WINDOW CONTROLS
-                   RowLayout {
-                       spacing: 8
-                       QQC2.ToolButton { 
-                           icon.name: settingsWindow.isPinned ? "window-pin" : "window-unpin"
-                           icon.color: settingsWindow.isPinned ? "#FFFDD0" : "#80FFFDD0"
-                           onClicked: settingsWindow.isPinned = !settingsWindow.isPinned 
-                       }
-                       QQC2.ToolButton { 
-                           icon.name: "window-close"
-                           icon.color: "#80FFFDD0"
-                           onClicked: SettingsController.visible = false 
-                       }
-                   }
-               }
-           }
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: 16
+                                spacing: 12
+                                Kirigami.Icon { 
+                                    source: modelData.icon
+                                    color: isSelected ? theme.text : theme.textDim
+                                    Layout.preferredWidth: 20; Layout.preferredHeight: 20 
+                                }
+                                Label { 
+                                    text: modelData.name
+                                    color: isSelected ? theme.text : theme.textDim
+                                    font.weight: isSelected ? Font.DemiBold : Font.Normal
+                                }
+                            }
 
-           Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A" }
+                            MouseArea {
+                                id: sidebarMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    root.currentCategoryIndex = index;
+                                    var cat = root.menuData[index];
+                                    if (cat.subItems) {
+                                        root.currentSubItemIndex = 0;
+                                        pageLoader.source = cat.subItems[0].page;
+                                    } else {
+                                        pageLoader.source = cat.page;
+                                    }
+                                }
+                            }
+                        }
+                    }
 
-           // --- 2. SUB-NAVIGATION BAR (SUB-CATEGORIES) ---
-           Rectangle {
-               id: subNavContainer
-               Layout.fillWidth: true
-               // Only take up space if the current category has subItems
-               Layout.preferredHeight: hasSubItems ? 48 : 0
-               visible: hasSubItems
-               color: "#1C1A1C"
-               clip: true
+                    Label {
+                        text: i18n("v0.8.0 Prototype")
+                        color: theme.textDim
+                        font.pixelSize: 10
+                        Layout.alignment: Qt.AlignHCenter
+                        Layout.bottomMargin: 8
+                    }
+                }
+            }
 
-               property bool hasSubItems: settingsWindow.menuData[settingsWindow.currentCategoryIndex].subItems !== undefined
+            Rectangle { Layout.fillHeight: true; Layout.preferredWidth: 1; color: theme.border }
 
-               ListView {
-                   id: subTabBar
-                   anchors.fill: parent
-                   orientation: ListView.Horizontal
-                   model: subNavContainer.hasSubItems ? settingsWindow.menuData[settingsWindow.currentCategoryIndex].subItems : []
-                   currentIndex: settingsWindow.currentSubItemIndex
-                   clip: true
-                   boundsBehavior: Flickable.StopAtBounds
-                   
-                   // Center the pills if there aren't many
-                   anchors.leftMargin: 16
-                   
-                   delegate: Item {
-                       width: subContent.width + 24
-                       height: ListView.view.height
+            // 2. CONTENT AREA
+            Item {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
 
-                       property bool isSelected: index === settingsWindow.currentSubItemIndex
+                // --- CONTENT BACKGROUND (matches right rounded corners) ---
+                Rectangle {
+                    anchors.fill: parent
+                    color: theme.base
+                    topRightRadius: settingsChassis.topRightRadius
+                    bottomRightRadius: settingsChassis.bottomRightRadius
+                    z: -1
+                }
 
-                       Rectangle {
-                           anchors.centerIn: parent
-                           width: parent.width
-                           height: 28
-                           radius: 14 // Pill shape
-                           color: isSelected ? "#1AFFFDD0" : (subMouse.containsMouse ? "#0AFFFDD0" : "transparent")
-                           Behavior on color { ColorAnimation { duration: 150 } }
-                       }
+                // --- BULLETPROOF HEADER ---
+                Rectangle {
+                    id: headerArea
+                    anchors.top: parent.top
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    height: 64
+                    color: "transparent"
+                    z: 100
 
-                       RowLayout {
-                           id: subContent
-                           anchors.centerIn: parent
-                           spacing: 6
-                           Kirigami.Icon { 
-                               source: modelData.icon || ""
-                               color: isSelected ? "#FFFDD0" : "#80FFFDD0"
-                               Layout.preferredWidth: 14; Layout.preferredHeight: 14
-                           }
-                           Label { 
-                               text: modelData.name
-                               color: isSelected ? "#FFFDD0" : "#80FFFDD0"
-                               font.weight: isSelected ? Font.Medium : Font.Normal
-                           }
-                       }
+                    // DYNAMIC SUB-NAVIGATION BAR
+                    ListView {
+                        id: subTabBar
+                        anchors.top: parent.top
+                        anchors.bottom: parent.bottom
+                        anchors.left: parent.left
+                        anchors.right: windowControls.left
+                        anchors.leftMargin: 40
+                        anchors.rightMargin: 16
+                        orientation: ListView.Horizontal
+                        property bool hasSubs: root.menuData[root.currentCategoryIndex].subItems !== undefined
+                        model: hasSubs ? root.menuData[root.currentCategoryIndex].subItems : []
+                        currentIndex: root.currentSubItemIndex
+                        spacing: 8
+                        clip: true
+                        
+                        opacity: hasSubs ? 1.0 : 0.0
+                        Behavior on opacity { OpacityAnimator { duration: 200 } }
+                        
+                        delegate: Item {
+                            width: subContent.width + 32
+                            height: 64
+                            property bool isSelected: index === root.currentSubItemIndex
 
-                       MouseArea {
-                           id: subMouse
-                           anchors.fill: parent
-                           hoverEnabled: true
-                           cursorShape: Qt.PointingHandCursor
-                           onClicked: {
-                               settingsWindow.currentSubItemIndex = index;
-                               pageLoader.source = modelData.page;
-                           }
-                       }
-                   }
-               }
-           }
+                            Rectangle {
+                                anchors.centerIn: parent
+                                width: parent.width
+                                height: 32
+                                radius: 16
+                                color: isSelected ? theme.text : (subMouse.containsMouse ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.12) : "transparent")
+                                Behavior on color { ColorAnimation { duration: 150 } }
+                            }
 
-           Rectangle { 
-               Layout.fillWidth: true; 
-               Layout.preferredHeight: 1; 
-               color: "#2A282A"
-               visible: subNavContainer.visible 
-           }
+                            RowLayout {
+                                id: subContent
+                                anchors.centerIn: parent
+                                spacing: 8
+                                Label { 
+                                    text: modelData.name
+                                    color: isSelected ? theme.card : theme.text
+                                    font.weight: isSelected ? Font.DemiBold : Font.Normal
+                                    font.pixelSize: 13
+                                }
+                            }
 
-           // --- 3. DYNAMIC CONTENT AREA ---
-           Loader { 
-               id: pageLoader
-               Layout.fillWidth: true
-               Layout.fillHeight: true
-               // Add a tiny bit of margin so scrollbars aren't hugging the edge
-               Layout.margins: 4
-               source: "settings/BackgroundPage.qml" 
-           }
-       }
-   }
+                            MouseArea {
+                                id: subMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    root.currentSubItemIndex = index;
+                                    pageLoader.source = modelData.page;
+                                }
+                            }
+                        }
+                    }
+
+                    // ABSOLUTE WINDOW CONTROLS (Always Visible)
+                    RowLayout {
+                        id: windowControls
+                        anchors.right: parent.right
+                        anchors.rightMargin: 16
+                        anchors.verticalCenter: parent.verticalCenter
+                        height: 40
+                        spacing: 8
+
+                        QQC2.ToolButton { 
+                            id: pinBtn
+                            width: 36; height: 36
+                            ToolTip.visible: hovered
+                            ToolTip.text: root.isPinned ? i18n("Unpin from top") : i18n("Keep Always on Top")
+                            
+                            contentItem: Kirigami.Icon {
+                                source: root.isPinned ? "window-pin" : "window-unpin"
+                                color: root.isPinned ? theme.accent : (pinBtn.hovered ? theme.text : theme.textDim)
+                            }
+
+                            background: Rectangle {
+                                radius: 8
+                                color: pinBtn.hovered ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.12) : "transparent"
+                                Behavior on color { ColorAnimation { duration: 150 } }
+                            }
+                            onClicked: root.isPinned = !root.isPinned 
+                        }
+
+                        QQC2.ToolButton { 
+                            id: closeBtn
+                            width: 36; height: 36
+                            
+                            contentItem: Item {
+                                Kirigami.Icon {
+                                    anchors.fill: parent
+                                    source: "window-close"
+                                    color: closeBtn.hovered ? "#D13438" : theme.textDim 
+                                }
+                            }
+
+                            background: Rectangle {
+                                radius: 8
+                                color: closeBtn.hovered ? Qt.rgba(209, 52, 56, 0.1) : "transparent"
+                                Behavior on color { ColorAnimation { duration: 150 } }
+                            }
+                            onClicked: SettingsController.visible = false 
+                        }
+                    }
+                }
+
+                Rectangle { 
+                    id: headerDivider
+                    anchors.top: parent.top
+                    anchors.topMargin: 64
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.leftMargin: 24
+                    anchors.rightMargin: 24
+                    height: 1
+                    color: theme.border
+                }
+
+                Loader { 
+                    id: pageLoader
+                    anchors.top: headerDivider.bottom
+                    anchors.bottom: parent.bottom
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.margins: 16
+                    source: "settings/BackgroundPage.qml" 
+                }
+            }
+        }
+    }
 }

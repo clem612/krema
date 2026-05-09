@@ -18,7 +18,7 @@ BasicControls.ComboBox {
     contentItem: Text {
         text: control.displayText
         font: control.font
-        color: "#FFFDD0"
+        color: (typeof theme !== "undefined") ? theme.text : "#FFFDD0"
         verticalAlignment: Text.AlignVCenter
         elide: Text.ElideRight
     }
@@ -29,12 +29,20 @@ BasicControls.ComboBox {
         implicitHeight: 32
         radius: 6
         border.width: 1
-        border.color: control.visualFocus || control.popup.visible ? "#80FFFDD0" : "#333133"
+        border.color: {
+            if (typeof theme === "undefined") return control.visualFocus || control.popup.visible ? "#80FFFDD0" : "#333133"
+            return control.visualFocus || control.popup.visible ? theme.accent : theme.border
+        }
         
         color: {
-            if (control.pressed || control.popup.visible) return "#15FFFDD0"
-            if (control.hovered) return "#0AFFFDD0"
-            return "#121112"
+            if (typeof theme === "undefined") {
+                if (control.pressed || control.popup.visible) return "#15FFFDD0"
+                if (control.hovered) return "#0AFFFDD0"
+                return "#121112"
+            }
+            if (control.pressed || control.popup.visible) return Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.25)
+            if (control.hovered) return Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.15)
+            return theme.card
         }
         
         Behavior on color { ColorAnimation { duration: 150; easing.type: Easing.OutCubic } }
@@ -47,7 +55,10 @@ BasicControls.ComboBox {
         width: 16
         height: 16
         source: "arrow-down"
-        color: control.hovered || control.popup.visible ? "#FFFDD0" : "#80FFFDD0"
+        color: {
+            if (typeof theme === "undefined") return control.hovered || control.popup.visible ? "#FFFDD0" : "#80FFFDD0"
+            return control.hovered || control.popup.visible ? theme.text : theme.textDim
+        }
     }
 
     // 5. The Popup Menu
@@ -67,8 +78,8 @@ BasicControls.ComboBox {
         }
 
         background: Rectangle {
-            color: "#1C1A1C"
-            border.color: "#333133"
+            color: (typeof theme !== "undefined") ? theme.card : "#1C1A1C"
+            border.color: (typeof theme !== "undefined") ? theme.border : "#333133"
             border.width: 1
             radius: 6
         }
@@ -81,7 +92,10 @@ BasicControls.ComboBox {
         
         contentItem: Text {
             text: modelData
-            color: control.highlightedIndex === index ? "#1C1A1C" : "#FFFDD0"
+            color: {
+                if (typeof theme === "undefined") return control.highlightedIndex === index ? "#1C1A1C" : "#FFFDD0"
+                return control.highlightedIndex === index ? theme.card : theme.text
+            }
             font: control.font
             elide: Text.ElideRight
             verticalAlignment: Text.AlignVCenter
@@ -89,7 +103,10 @@ BasicControls.ComboBox {
         }
         
         background: Rectangle {
-            color: control.highlightedIndex === index ? "#FFFDD0" : "transparent"
+            color: {
+                if (typeof theme === "undefined") return control.highlightedIndex === index ? "#FFFDD0" : "transparent"
+                return control.highlightedIndex === index ? theme.text : "transparent"
+            }
             radius: 4
         }
         

@@ -33,7 +33,7 @@ QQC2.ScrollView {
             
             QQC2.Label { 
                 text: i18n("Sizing & Geometry")
-                color: "#80FFFDD0" // 50% opacity Krema Accent
+                color: theme.textDim // 50% opacity Krema Accent
                 font.bold: true
                 font.letterSpacing: 1.1
                 font.pixelSize: 12
@@ -45,8 +45,8 @@ QQC2.ScrollView {
                 ColumnLayout {
                     Layout.fillWidth: true
                     RowLayout {
-                        QQC2.Label { Layout.fillWidth: true; text: i18n("Base Icon Size"); color: "#FFFDD0"; font.bold: true }
-                        QQC2.Label { text: iconSizeSlider.value + "px"; color: "#80FFFDD0"; font.bold: true }
+                        QQC2.Label { Layout.fillWidth: true; text: i18n("Base Icon Size"); color: theme.text; font.bold: true }
+                        QQC2.Label { text: iconSizeSlider.value + "px"; color: theme.textDim; font.bold: true }
                     }
                     QQC2.Slider {
                         id: iconSizeSlider; Layout.fillWidth: true; 
@@ -65,8 +65,8 @@ QQC2.ScrollView {
                 ColumnLayout {
                     Layout.fillWidth: true
                     RowLayout {
-                        QQC2.Label { Layout.fillWidth: true; text: i18n("Icon Spacing (Gaps)"); color: "#FFFDD0"; font.bold: true }
-                        QQC2.Label { text: iconSpacingSlider.value + "px"; color: "#80FFFDD0"; font.bold: true }
+                        QQC2.Label { Layout.fillWidth: true; text: i18n("Icon Spacing (Gaps)"); color: theme.text; font.bold: true }
+                        QQC2.Label { text: iconSpacingSlider.value + "px"; color: theme.textDim; font.bold: true }
                     }
                     QQC2.Slider {
                         id: iconSpacingSlider; Layout.fillWidth: true; 
@@ -85,8 +85,8 @@ QQC2.ScrollView {
                 ColumnLayout {
                     Layout.fillWidth: true
                     RowLayout {
-                        QQC2.Label { Layout.fillWidth: true; text: i18n("Hover Zoom Factor"); color: "#FFFDD0"; font.bold: true }
-                        QQC2.Label { text: zoomFactorSlider.value.toFixed(1) + "x"; color: "#80FFFDD0"; font.bold: true }
+                        QQC2.Label { Layout.fillWidth: true; text: i18n("Hover Zoom Factor"); color: theme.text; font.bold: true }
+                        QQC2.Label { text: zoomFactorSlider.value.toFixed(1) + "x"; color: theme.textDim; font.bold: true }
                     }
                     QQC2.Slider {
                         id: zoomFactorSlider; Layout.fillWidth: true; 
@@ -105,8 +105,8 @@ QQC2.ScrollView {
                 ColumnLayout {
                     Layout.fillWidth: true
                     RowLayout {
-                        QQC2.Label { Layout.fillWidth: true; text: i18n("Indicator Offset"); color: "#FFFDD0"; font.bold: true }
-                        QQC2.Label { text: Math.round(indicatorOffsetSlider.value * 100) + "%"; color: "#80FFFDD0"; font.bold: true }
+                        QQC2.Label { Layout.fillWidth: true; text: i18n("Indicator Offset"); color: theme.text; font.bold: true }
+                        QQC2.Label { text: Math.round(indicatorOffsetSlider.value * 100) + "%"; color: theme.textDim; font.bold: true }
                     }
                     QQC2.Slider {
                         id: indicatorOffsetSlider; Layout.fillWidth: true; 
@@ -133,7 +133,7 @@ QQC2.ScrollView {
                 }
                 QQC2.Label { 
                     text: i18n("Automatically adjusts icons with excess transparent padding so they appear visually consistent."); 
-                    color: "#80FFFDD0"; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.topMargin: -8
+                    color: theme.textDim; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.topMargin: -8
                 }
             }
         }

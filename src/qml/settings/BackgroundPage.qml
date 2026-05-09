@@ -23,6 +23,81 @@ QQC2.ScrollView {
        width: parent.width
        spacing: 32
 
+       // --- PILLAR 0: THEME ---
+       ColumnLayout {
+           Layout.fillWidth: true
+           spacing: 8
+           
+           QQC2.Label { 
+               text: i18n("Interface Theme")
+               color: theme.textDim
+               font.bold: true
+               font.letterSpacing: 1.1
+               font.pixelSize: 12
+               Layout.leftMargin: 8
+           }
+           
+           KremaCard {
+               RowLayout {
+                   Layout.fillWidth: true
+                   ColumnLayout {
+                       Layout.fillWidth: true
+                       spacing: 2
+                       QQC2.Label { 
+                           text: i18n("Color Mode")
+                           color: theme.text
+                           font.bold: true 
+                       }
+                       QQC2.Label { 
+                           text: i18n("Switch between light and dark aesthetics.")
+                           color: theme.textDim
+                           font.pixelSize: 12
+                       }
+                   }
+                   RowLayout {
+                       spacing: 4
+                       Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                       Repeater {
+                           model: [
+                               { icon: "view-brightness", label: i18n("Light"), value: 0 },
+                               { icon: "view-night", label: i18n("Dark"), value: 1 }
+                           ]
+                           delegate: QQC2.Button {
+                               id: themeBtn
+                               property bool isSelected: DockSettings.settingsThemeMode === modelData.value
+                               leftPadding: 16; rightPadding: 16
+
+                               contentItem: RowLayout {
+                                   spacing: 8
+                                   Kirigami.Icon {
+                                       source: modelData.icon
+                                       color: themeBtn.isSelected ? theme.text : theme.textDim
+                                       implicitWidth: 16; implicitHeight: 16
+                                   }
+                                   QQC2.Label {
+                                       text: modelData.label
+                                       color: themeBtn.isSelected ? theme.text : theme.textDim
+                                       font.pointSize: 9; font.bold: themeBtn.isSelected
+                                   }
+                               }
+
+                               background: Rectangle {
+                                   implicitHeight: 36; radius: 18
+                                   color: themeBtn.isSelected ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.25) : (themeBtn.hovered ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.12) : "transparent")
+                                   border.color: themeBtn.isSelected ? theme.accent : "transparent"; border.width: 1
+                                   Behavior on color { ColorAnimation { duration: 150 } }
+                               }
+                               onClicked: { 
+                                   DockSettings.settingsThemeMode = modelData.value; 
+                                   DockSettings.save(); 
+                               }
+                           }
+                       }
+                   }
+               }
+           }
+       }
+
        // --- PILLAR 1: MATERIAL ---
        ColumnLayout {
            Layout.fillWidth: true
@@ -30,7 +105,7 @@ QQC2.ScrollView {
            
            QQC2.Label { 
                text: i18n("Base Material")
-               color: "#80FFFDD0" // 50% opacity Krema Accent
+               color: theme.textDim // 50% opacity Krema Accent
                font.bold: true
                font.letterSpacing: 1.1
                font.pixelSize: 12
@@ -45,13 +120,13 @@ QQC2.ScrollView {
                        spacing: 2
                        QQC2.Label { 
                            text: i18n("Style")
-                           color: "#FFFDD0"
+                           color: theme.text
                            font.bold: true 
                            Layout.fillWidth: true
                        }
                        QQC2.Label { 
                            text: i18n("The primary texture of the dock background.")
-                           color: "#80FFFDD0"
+                           color: theme.textDim
                            font.pixelSize: 12
                            wrapMode: Text.WordWrap 
                            Layout.fillWidth: true  
@@ -75,20 +150,20 @@ QQC2.ScrollView {
                                    spacing: 8
                                    Kirigami.Icon {
                                        source: modelData.icon
-                                       color: bgBtn.isSelected ? "#FFFDD0" : "#80FFFDD0"
+                                       color: bgBtn.isSelected ? theme.text : theme.textDim
                                        implicitWidth: 16; implicitHeight: 16
                                    }
                                    QQC2.Label {
                                        text: modelData.label
-                                       color: bgBtn.isSelected ? "#FFFDD0" : "#80FFFDD0"
+                                       color: bgBtn.isSelected ? theme.text : theme.textDim
                                        font.pointSize: 9; font.bold: bgBtn.isSelected
                                    }
                                }
 
                                background: Rectangle {
                                    implicitHeight: 34; radius: 8
-                                   color: bgBtn.isSelected ? "#26FFFDD0" : (bgBtn.hovered ? "#13FFFDD0" : "transparent")
-                                   border.color: bgBtn.isSelected ? "#4DFFFDD0" : "transparent"; border.width: 1
+                                   color: bgBtn.isSelected ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.25) : (bgBtn.hovered ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.12) : "transparent")
+                                   border.color: bgBtn.isSelected ? theme.accent : "transparent"; border.width: 1
                                    Behavior on color { ColorAnimation { duration: 150 } }
                                }
                                onClicked: { DockSettings.backgroundStyle = modelData.value; DockSettings.save(); }
@@ -106,7 +181,7 @@ QQC2.ScrollView {
            
            QQC2.Label { 
                text: i18n("Color & Opacity")
-               color: "#80FFFDD0"
+               color: theme.textDim
                font.bold: true
                font.letterSpacing: 1.1
                font.pixelSize: 12
@@ -130,7 +205,7 @@ QQC2.ScrollView {
                RowLayout {
                    Layout.fillWidth: true
                    visible: DockSettings.backgroundStyle > 0 && !DockSettings.useSystemColor
-                   QQC2.Label { Layout.fillWidth: true; text: i18n("Custom Tint Color"); color: "#FFFDD0"; font.bold: true }
+                   QQC2.Label { Layout.fillWidth: true; text: i18n("Custom Tint Color"); color: theme.text; font.bold: true }
                    Rectangle {
                        width: 48; height: 28; radius: 6
                        color: DockSettings.tintColor
@@ -150,8 +225,8 @@ QQC2.ScrollView {
                ColumnLayout {
                    Layout.fillWidth: true
                    RowLayout {
-                       QQC2.Label { Layout.fillWidth: true; text: i18n("Background Opacity"); color: "#FFFDD0"; font.bold: true }
-                       QQC2.Label { text: Math.round(opacitySlider.value * 100) + "%"; color: "#80FFFDD0"; font.bold: true }
+                       QQC2.Label { Layout.fillWidth: true; text: i18n("Background Opacity"); color: theme.text; font.bold: true }
+                       QQC2.Label { text: Math.round(opacitySlider.value * 100) + "%"; color: theme.textDim; font.bold: true }
                    }
                    QQC2.Slider {
                        id: opacitySlider
@@ -199,7 +274,7 @@ QQC2.ScrollView {
                QQC2.Label {
                    text: i18n("Custom Tint Color")
                    font.weight: Font.Bold
-                   color: "#FFFDD0"
+                   color: theme.text
                    Layout.alignment: Qt.AlignHCenter
                }
 
@@ -215,11 +290,11 @@ QQC2.ScrollView {
                GridLayout {
                    columns: 2
                    Layout.fillWidth: true
-                   QQC2.Label { text: "R:"; color: "#80FFFDD0"; font.bold: true }
+                   QQC2.Label { text: "R:"; color: theme.textDim; font.bold: true }
                    QQC2.Slider { Layout.fillWidth: true; from: 0; to: 1; value: colorPickerPopup.rVal; onMoved: colorPickerPopup.rVal = value }
-                   QQC2.Label { text: "G:"; color: "#80FFFDD0"; font.bold: true }
+                   QQC2.Label { text: "G:"; color: theme.textDim; font.bold: true }
                    QQC2.Slider { Layout.fillWidth: true; from: 0; to: 1; value: colorPickerPopup.gVal; onMoved: colorPickerPopup.gVal = value }
-                   QQC2.Label { text: "B:"; color: "#80FFFDD0"; font.bold: true }
+                   QQC2.Label { text: "B:"; color: theme.textDim; font.bold: true }
                    QQC2.Slider { Layout.fillWidth: true; from: 0; to: 1; value: colorPickerPopup.bVal; onMoved: colorPickerPopup.bVal = value }
                }
 

@@ -31,7 +31,7 @@ QQC2.ScrollView {
             
             QQC2.Label { 
                 text: i18n("Geometry & Structure")
-                color: "#80FFFDD0"
+                color: theme.textDim
                 font.bold: true; font.letterSpacing: 1.1; font.pixelSize: 12
                 Layout.leftMargin: 8
             }
@@ -41,8 +41,8 @@ QQC2.ScrollView {
                 ColumnLayout {
                     Layout.fillWidth: true
                     RowLayout {
-                        QQC2.Label { Layout.fillWidth: true; text: i18n("Panel Thickness"); color: "#FFFDD0"; font.bold: true }
-                        QQC2.Label { text: thicknessSlider.value + "px"; color: "#80FFFDD0"; font.bold: true }
+                        QQC2.Label { Layout.fillWidth: true; text: i18n("Panel Thickness"); color: theme.text; font.bold: true }
+                        QQC2.Label { text: thicknessSlider.value + "px"; color: theme.textDim; font.bold: true }
                     }
                     QQC2.Slider {
                         id: thicknessSlider; Layout.fillWidth: true; 
@@ -61,8 +61,8 @@ QQC2.ScrollView {
                 ColumnLayout {
                     Layout.fillWidth: true
                     RowLayout {
-                        QQC2.Label { Layout.fillWidth: true; text: i18n("Corner Radius"); color: "#FFFDD0"; font.bold: true }
-                        QQC2.Label { text: radiusSlider.value + "px"; color: "#80FFFDD0"; font.bold: true }
+                        QQC2.Label { Layout.fillWidth: true; text: i18n("Corner Radius"); color: theme.text; font.bold: true }
+                        QQC2.Label { text: radiusSlider.value + "px"; color: theme.textDim; font.bold: true }
                     }
                     QQC2.Slider {
                         id: radiusSlider; Layout.fillWidth: true; 
@@ -83,7 +83,7 @@ QQC2.ScrollView {
                 }
                 QQC2.Label { 
                     text: i18n("Detaches the dock from the screen edge for a modern, pill-shaped look."); 
-                    color: "#80FFFDD0"; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.topMargin: -8
+                    color: theme.textDim; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.topMargin: -8
                 }
             }
         }

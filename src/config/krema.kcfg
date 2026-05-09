@@ -282,5 +282,12 @@
       <default>0.5</default>
     </entry>
 
+    <entry name="SettingsThemeMode" type="Int">
+      <label>Settings UI theme (0=Light, 1=Dark)</label>
+      <default>1</default>
+      <min>0</min>
+      <max>1</max>
+    </entry>
+
   </group>
 </kcfg>

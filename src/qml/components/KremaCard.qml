@@ -7,10 +7,10 @@ Rectangle {
     Layout.fillWidth: true
     implicitHeight: contentLayout.implicitHeight + 32
     
-    // The "Inset" look: slightly darker than the main #1C1A1C chassis
-    color: "#121112" 
+    // The "Elevated" look: slightly lighter than the main theme base
+    color: (typeof theme !== "undefined") ? theme.card : "#121112" 
     radius: 12
-    border.color: "#2A282A" // Subtle stroke
+    border.color: (typeof theme !== "undefined") ? theme.border : "#2A282A" 
     border.width: 1
 
     // This allows us to put anything inside the card when we use it

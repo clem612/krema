@@ -31,7 +31,7 @@ QQC2.ScrollView {
             
             QQC2.Label { 
                 text: i18n("Master Switch")
-                color: "#80FFFDD0"
+                color: theme.textDim
                 font.bold: true; font.letterSpacing: 1.1; font.pixelSize: 12
                 Layout.leftMargin: 8
             }
@@ -48,7 +48,7 @@ QQC2.ScrollView {
                 }
                 QQC2.Label { 
                     text: i18n("Shows a live thumbnail of open windows when hovering over dock icons."); 
-                    color: "#80FFFDD0"; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.topMargin: -8
+                    color: theme.textDim; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.topMargin: -8
                 }
             }
         }
@@ -61,7 +61,7 @@ QQC2.ScrollView {
             
             QQC2.Label { 
                 text: i18n("Dimensions & Timing")
-                color: "#80FFFDD0"
+                color: theme.textDim
                 font.bold: true; font.letterSpacing: 1.1; font.pixelSize: 12
                 Layout.leftMargin: 8
             }
@@ -71,8 +71,8 @@ QQC2.ScrollView {
                 ColumnLayout {
                     Layout.fillWidth: true
                     RowLayout {
-                        QQC2.Label { Layout.fillWidth: true; text: i18n("Thumbnail Width"); color: "#FFFDD0"; font.bold: true }
-                        QQC2.Label { text: widthSlider.value + "px"; color: "#80FFFDD0"; font.bold: true }
+                        QQC2.Label { Layout.fillWidth: true; text: i18n("Thumbnail Width"); color: theme.text; font.bold: true }
+                        QQC2.Label { text: widthSlider.value + "px"; color: theme.textDim; font.bold: true }
                     }
                     QQC2.Slider {
                         id: widthSlider; Layout.fillWidth: true; 
@@ -91,8 +91,8 @@ QQC2.ScrollView {
                 ColumnLayout {
                     Layout.fillWidth: true
                     RowLayout {
-                        QQC2.Label { Layout.fillWidth: true; text: i18n("Show Delay (Hover)"); color: "#FFFDD0"; font.bold: true }
-                        QQC2.Label { text: hoverSlider.value + "ms"; color: "#80FFFDD0"; font.bold: true }
+                        QQC2.Label { Layout.fillWidth: true; text: i18n("Show Delay (Hover)"); color: theme.text; font.bold: true }
+                        QQC2.Label { text: hoverSlider.value + "ms"; color: theme.textDim; font.bold: true }
                     }
                     QQC2.Slider {
                         id: hoverSlider; Layout.fillWidth: true; 
@@ -111,8 +111,8 @@ QQC2.ScrollView {
                 ColumnLayout {
                     Layout.fillWidth: true
                     RowLayout {
-                        QQC2.Label { Layout.fillWidth: true; text: i18n("Hide Delay (Exit)"); color: "#FFFDD0"; font.bold: true }
-                        QQC2.Label { text: hideSlider.value + "ms"; color: "#80FFFDD0"; font.bold: true }
+                        QQC2.Label { Layout.fillWidth: true; text: i18n("Hide Delay (Exit)"); color: theme.text; font.bold: true }
+                        QQC2.Label { text: hideSlider.value + "ms"; color: theme.textDim; font.bold: true }
                     }
                     QQC2.Slider {
                         id: hideSlider; Layout.fillWidth: true; 

@@ -34,7 +34,7 @@ QQC2.ScrollView {
             
             QQC2.Label { 
                 text: i18n("Master Control")
-                color: "#80FFFDD0" // 50% opacity Krema Accent
+                color: theme.textDim // 50% opacity Krema Accent
                 font.bold: true
                 font.letterSpacing: 1.1
                 font.pixelSize: 12
@@ -62,7 +62,7 @@ QQC2.ScrollView {
             
             QQC2.Label { 
                 text: i18n("Light Source Physics")
-                color: "#80FFFDD0"
+                color: theme.textDim
                 font.bold: true
                 font.letterSpacing: 1.1
                 font.pixelSize: 12
@@ -74,8 +74,8 @@ QQC2.ScrollView {
                 ColumnLayout {
                     Layout.fillWidth: true
                     RowLayout {
-                        QQC2.Label { Layout.fillWidth: true; text: i18n("Light X (Horizontal offset)"); color: "#FFFDD0"; font.bold: true }
-                        QQC2.Label { text: lightXSlider.value + "px"; color: "#80FFFDD0"; font.bold: true }
+                        QQC2.Label { Layout.fillWidth: true; text: i18n("Light X (Horizontal offset)"); color: theme.text; font.bold: true }
+                        QQC2.Label { text: lightXSlider.value + "px"; color: theme.textDim; font.bold: true }
                     }
                     QQC2.Slider {
                         id: lightXSlider; Layout.fillWidth: true; 
@@ -94,8 +94,8 @@ QQC2.ScrollView {
                 ColumnLayout {
                     Layout.fillWidth: true
                     RowLayout {
-                        QQC2.Label { Layout.fillWidth: true; text: i18n("Light Y (Vertical offset)"); color: "#FFFDD0"; font.bold: true }
-                        QQC2.Label { text: lightYSlider.value + "px"; color: "#80FFFDD0"; font.bold: true }
+                        QQC2.Label { Layout.fillWidth: true; text: i18n("Light Y (Vertical offset)"); color: theme.text; font.bold: true }
+                        QQC2.Label { text: lightYSlider.value + "px"; color: theme.textDim; font.bold: true }
                     }
                     QQC2.Slider {
                         id: lightYSlider; Layout.fillWidth: true; 
@@ -114,8 +114,8 @@ QQC2.ScrollView {
                 ColumnLayout {
                     Layout.fillWidth: true
                     RowLayout {
-                        QQC2.Label { Layout.fillWidth: true; text: i18n("Light Z (Distance from dock)"); color: "#FFFDD0"; font.bold: true }
-                        QQC2.Label { text: lightZSlider.value; color: "#80FFFDD0"; font.bold: true }
+                        QQC2.Label { Layout.fillWidth: true; text: i18n("Light Z (Distance from dock)"); color: theme.text; font.bold: true }
+                        QQC2.Label { text: lightZSlider.value; color: theme.textDim; font.bold: true }
                     }
                     QQC2.Slider {
                         id: lightZSlider; Layout.fillWidth: true; 
@@ -138,7 +138,7 @@ QQC2.ScrollView {
             
             QQC2.Label { 
                 text: i18n("Shadow Appearance")
-                color: "#80FFFDD0"
+                color: theme.textDim
                 font.bold: true
                 font.letterSpacing: 1.1
                 font.pixelSize: 12
@@ -150,8 +150,8 @@ QQC2.ScrollView {
                 ColumnLayout {
                     Layout.fillWidth: true
                     RowLayout {
-                        QQC2.Label { Layout.fillWidth: true; text: i18n("Elevation (Depth scale)"); color: "#FFFDD0"; font.bold: true }
-                        QQC2.Label { text: elevationSlider.value; color: "#80FFFDD0"; font.bold: true }
+                        QQC2.Label { Layout.fillWidth: true; text: i18n("Elevation (Depth scale)"); color: theme.text; font.bold: true }
+                        QQC2.Label { text: elevationSlider.value; color: theme.textDim; font.bold: true }
                     }
                     QQC2.Slider {
                         id: elevationSlider; Layout.fillWidth: true; 
@@ -170,8 +170,8 @@ QQC2.ScrollView {
                 ColumnLayout {
                     Layout.fillWidth: true
                     RowLayout {
-                        QQC2.Label { Layout.fillWidth: true; text: i18n("Blur Radius"); color: "#FFFDD0"; font.bold: true }
-                        QQC2.Label { text: lightRadiusSlider.value.toFixed(1) + "px"; color: "#80FFFDD0"; font.bold: true }
+                        QQC2.Label { Layout.fillWidth: true; text: i18n("Blur Radius"); color: theme.text; font.bold: true }
+                        QQC2.Label { text: lightRadiusSlider.value.toFixed(1) + "px"; color: theme.textDim; font.bold: true }
                     }
                     QQC2.Slider {
                         id: lightRadiusSlider; Layout.fillWidth: true; 
@@ -190,8 +190,8 @@ QQC2.ScrollView {
                 ColumnLayout {
                     Layout.fillWidth: true
                     RowLayout {
-                        QQC2.Label { Layout.fillWidth: true; text: i18n("Shadow Intensity"); color: "#FFFDD0"; font.bold: true }
-                        QQC2.Label { text: Math.round(intensitySlider.value * 100) + "%"; color: "#80FFFDD0"; font.bold: true }
+                        QQC2.Label { Layout.fillWidth: true; text: i18n("Shadow Intensity"); color: theme.text; font.bold: true }
+                        QQC2.Label { text: Math.round(intensitySlider.value * 100) + "%"; color: theme.textDim; font.bold: true }
                     }
                     QQC2.Slider {
                         id: intensitySlider; Layout.fillWidth: true; 
@@ -209,7 +209,7 @@ QQC2.ScrollView {
                 // SHADOW COLOR PICKER
                 RowLayout {
                     Layout.fillWidth: true
-                    QQC2.Label { Layout.fillWidth: true; text: i18n("Shadow Color Tint"); color: "#FFFDD0"; font.bold: true }
+                    QQC2.Label { Layout.fillWidth: true; text: i18n("Shadow Color Tint"); color: theme.text; font.bold: true }
                     Rectangle {
                         width: 48; height: 28; radius: 6
                         color: DockSettings.shadowColor

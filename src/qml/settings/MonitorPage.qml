@@ -25,7 +25,7 @@ QQC2.ScrollView {
            
            QQC2.Label { 
                text: i18n("Monitor Configuration")
-               color: "#80FFFDD0"
+               color: theme.textDim
                font.bold: true; font.letterSpacing: 1.1; font.pixelSize: 12
                Layout.leftMargin: 8
            }
@@ -35,10 +35,10 @@ QQC2.ScrollView {
                    Layout.fillWidth: true
                    ColumnLayout {
                        Layout.fillWidth: true; spacing: 2
-                       QQC2.Label { text: i18n("Display Mode"); color: "#FFFDD0"; font.bold: true }
+                       QQC2.Label { text: i18n("Display Mode"); color: theme.text; font.bold: true }
                        QQC2.Label { 
                            text: i18n("Choose which monitors should display the dock."); 
-                           color: "#80FFFDD0"; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true 
+                           color: theme.textDim; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true 
                        }
                    }
 
@@ -60,20 +60,20 @@ QQC2.ScrollView {
                                    spacing: 8
                                    Kirigami.Icon {
                                        source: modelData.icon
-                                       color: monBtn.isSelected ? "#FFFDD0" : "#80FFFDD0"
+                                       color: monBtn.isSelected ? theme.text : theme.textDim
                                        implicitWidth: 16; implicitHeight: 16
                                    }
                                    QQC2.Label {
                                        text: modelData.label
-                                       color: monBtn.isSelected ? "#FFFDD0" : "#80FFFDD0"
+                                       color: monBtn.isSelected ? theme.text : theme.textDim
                                        font.pointSize: 9; font.bold: monBtn.isSelected
                                    }
                                }
 
                                background: Rectangle {
                                    implicitHeight: 34; radius: 8
-                                   color: monBtn.isSelected ? "#26FFFDD0" : (monBtn.hovered ? "#13FFFDD0" : "transparent")
-                                   border.color: monBtn.isSelected ? "#4DFFFDD0" : "transparent"; border.width: 1
+                                   color: monBtn.isSelected ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.25) : (monBtn.hovered ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.12) : "transparent")
+                                   border.color: monBtn.isSelected ? theme.accent : "transparent"; border.width: 1
                                    Behavior on color { ColorAnimation { duration: 150 } }
                                }
                                onClicked: { DockSettings.monitorMode = modelData.value; DockSettings.save(); }

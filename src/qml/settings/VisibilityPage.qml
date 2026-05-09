@@ -28,7 +28,7 @@ QQC2.ScrollView {
            
            QQC2.Label { 
                text: i18n("Visibility Behavior")
-               color: "#80FFFDD0"
+               color: theme.textDim
                font.bold: true; font.letterSpacing: 1.1; font.pixelSize: 12
                Layout.leftMargin: 8
            }
@@ -38,10 +38,10 @@ QQC2.ScrollView {
                    Layout.fillWidth: true
                    ColumnLayout {
                        Layout.fillWidth: true; spacing: 2
-                       QQC2.Label { text: i18n("Visibility Mode"); color: "#FFFDD0"; font.bold: true }
+                       QQC2.Label { text: i18n("Visibility Mode"); color: theme.text; font.bold: true }
                        QQC2.Label { 
                            text: i18n("Choose how the dock interacts with other windows."); 
-                           color: "#80FFFDD0"; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true 
+                           color: theme.textDim; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true 
                        }
                    }
 
@@ -65,20 +65,20 @@ QQC2.ScrollView {
                                    spacing: 8
                                    Kirigami.Icon {
                                        source: modelData.icon
-                                       color: visBtn.isSelected ? "#FFFDD0" : "#80FFFDD0"
+                                       color: visBtn.isSelected ? theme.text : theme.textDim
                                        implicitWidth: 16; implicitHeight: 16
                                    }
                                    QQC2.Label {
                                        text: modelData.label
-                                       color: visBtn.isSelected ? "#FFFDD0" : "#80FFFDD0"
+                                       color: visBtn.isSelected ? theme.text : theme.textDim
                                        font.pointSize: 9; font.bold: visBtn.isSelected
                                    }
                                }
 
                                background: Rectangle {
                                    implicitHeight: 34; radius: 8
-                                   color: visBtn.isSelected ? "#26FFFDD0" : (visBtn.hovered ? "#13FFFDD0" : "transparent")
-                                   border.color: visBtn.isSelected ? "#4DFFFDD0" : "transparent"; border.width: 1
+                                   color: visBtn.isSelected ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.25) : (visBtn.hovered ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.12) : "transparent")
+                                   border.color: visBtn.isSelected ? theme.accent : "transparent"; border.width: 1
                                    Behavior on color { ColorAnimation { duration: 150 } }
                                }
 
@@ -120,7 +120,7 @@ QQC2.ScrollView {
            
            QQC2.Label { 
                text: i18n("Placement")
-               color: "#80FFFDD0"
+               color: theme.textDim
                font.bold: true; font.letterSpacing: 1.1; font.pixelSize: 12
                Layout.leftMargin: 8
            }
@@ -130,10 +130,10 @@ QQC2.ScrollView {
                    Layout.fillWidth: true
                    ColumnLayout {
                        Layout.fillWidth: true; spacing: 2
-                       QQC2.Label { text: i18n("Screen Edge"); color: "#FFFDD0"; font.bold: true }
+                       QQC2.Label { text: i18n("Screen Edge"); color: theme.text; font.bold: true }
                        QQC2.Label { 
                            text: i18n("Which side of the monitor the dock is attached to."); 
-                           color: "#80FFFDD0"; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true 
+                           color: theme.textDim; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true 
                        }
                    }
 
@@ -158,20 +158,20 @@ QQC2.ScrollView {
                                    spacing: 8
                                    Kirigami.Icon {
                                        source: modelData.icon
-                                       color: edgeBtn.isSelected ? "#FFFDD0" : "#80FFFDD0"
+                                       color: edgeBtn.isSelected ? theme.text : theme.textDim
                                        implicitWidth: 16; implicitHeight: 16
                                    }
                                    QQC2.Label {
                                        text: modelData.label
-                                       color: edgeBtn.isSelected ? "#FFFDD0" : "#80FFFDD0"
+                                       color: edgeBtn.isSelected ? theme.text : theme.textDim
                                        font.pointSize: 9; font.bold: edgeBtn.isSelected
                                    }
                                }
 
                                background: Rectangle {
                                    implicitHeight: 34; radius: 8
-                                   color: edgeBtn.isSelected ? "#26FFFDD0" : (edgeBtn.hovered ? "#13FFFDD0" : "transparent")
-                                   border.color: edgeBtn.isSelected ? "#4DFFFDD0" : "transparent"; border.width: 1
+                                   color: edgeBtn.isSelected ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.25) : (edgeBtn.hovered ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.12) : "transparent")
+                                   border.color: edgeBtn.isSelected ? theme.accent : "transparent"; border.width: 1
                                    Behavior on color { ColorAnimation { duration: 150 } }
                                }
 

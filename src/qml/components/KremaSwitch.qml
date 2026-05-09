@@ -14,9 +14,15 @@ Switch {
         y: parent.height / 2 - height / 2
         radius: 12
         
-        // Track Color: Krema Accent when ON, Dark Gray when OFF
-        color: control.checked ? "#FFFDD0" : "#2A282A"
-        border.color: control.checked ? "#FFFDD0" : "#333133"
+        // Track Color
+        color: {
+            if (typeof theme === "undefined") return control.checked ? "#FFFDD0" : "#2A282A"
+            return control.checked ? theme.accent : theme.border
+        }
+        border.color: {
+            if (typeof theme === "undefined") return control.checked ? "#FFFDD0" : "#333133"
+            return control.checked ? theme.accent : theme.border
+        }
         border.width: 1
 
         Behavior on color { ColorAnimation { duration: 250; easing.type: Easing.OutCubic } }
@@ -29,8 +35,11 @@ Switch {
             height: 20
             radius: 10
             
-            // Thumb Color: Deep Roast when ON, Soft Krema when OFF
-            color: control.checked ? "#1C1A1C" : "#80FFFDD0"
+            // Thumb Color
+            color: {
+                if (typeof theme === "undefined") return control.checked ? "#1C1A1C" : "#80FFFDD0"
+                return control.checked ? theme.card : theme.base
+            }
             
             // The satisfying "snap" animation (Fixed easing property)
             Behavior on x { NumberAnimation { duration: 250; easing.type: Easing.OutBack; easing.overshoot: 2.0 } }
@@ -42,7 +51,10 @@ Switch {
     contentItem: Text {
         text: control.text
         font: control.font
-        color: control.checked ? "#FFFDD0" : "#B3FFFDD0" // Brighter when active
+        color: {
+            if (typeof theme === "undefined") return control.checked ? "#FFFDD0" : "#B3FFFDD0"
+            return control.checked ? theme.text : theme.textDim
+        }
         verticalAlignment: Text.AlignVCenter
         leftPadding: control.indicator.width + control.spacing
         
