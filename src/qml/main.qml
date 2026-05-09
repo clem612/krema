@@ -927,18 +927,35 @@ Item {
 	   // For Vertical Docks: Width is Thickness (Slider), Height is Length (Instant Sync)
           width: {
               if (!DockView.isVertical) return _actualContentWidth;
-              // THE CEILING: Restored to Math.min so it doesn't grow infinitely!
-              return Math.min(DockSettings.panelHeight, dockRow.animatedContentWidth + 24);
+              // THE CEILING: Clamp strictly to the Icon Slot height
+              let w = Math.min(DockSettings.panelHeight, dockRow.animatedContentWidth);
+              if (Qt.application.arguments.indexOf("--debug-geom") !== -1) {
+                  console.log(`[GEOM-PANEL-W] Edge:${DockView.edge} | PanelW:${w} | ContentW:${dockRow.animatedContentWidth}`);
+              }
+              return w;
           }
 
           height: {
               if (DockView.isVertical) return _actualContentHeight;
-              // THE CEILING: Restored to Math.min so it doesn't grow infinitely!
-              return Math.min(DockSettings.panelHeight, dockRow.animatedContentHeight + 24);
+              // THE CEILING: Clamp strictly to the Icon Slot height
+              let h = Math.min(DockSettings.panelHeight, dockRow.animatedContentHeight);
+              if (Qt.application.arguments.indexOf("--debug-geom") !== -1) {
+                  console.log(`[GEOM-PANEL-H] Edge:${DockView.edge} | PanelH:${h} | ContentH:${dockRow.animatedContentHeight}`);
+              }
+              return h;
           }
            
-           // CORNERS
-           radius: DockSettings.cornerRadius
+           // CORNERS: Rule 6 - Prevent UI Blindness
+           // A corner radius cannot mathematically exceed half of the shortest side.
+           // This dynamically caps the visual radius to a perfect pill shape and
+           // prevents the 'eating itself' rendering glitch.
+           radius: {
+               let r = Math.min(DockSettings.cornerRadius, Math.min(width, height) / 2);
+               if (Qt.application.arguments.indexOf("--debug-geom") !== -1) {
+                   console.log(`[GEOM-RADIUS] FinalRadius:${Math.round(r)} | Target:${DockSettings.cornerRadius} | MaxBound:${Math.round(Math.min(width, height) / 2)}`);
+               }
+               return r;
+           }
 
 	   // BASE PANEL COLOR
             color: {
@@ -964,24 +981,25 @@ Item {
            x: DockView.isVertical ? _panelEdgePos : (parent.width - width) / 2
            y: DockView.isVertical ? (parent.height - height) / 2 : _panelEdgePos
 
+           // --- ARCHITECTURAL MANDATE: THE OUTSIDE WORLD ---
+           // Rule 1: The Unbreakable Anchor Chain (Screen Flooring)
+           readonly property real _screenFlooring: DockView.floatingPadding
+
            property real _panelEdgePos: {
-              let fp = DockView.floatingPadding
-              let sp = Kirigami.Units.largeSpacing
-              
-              // This is the new setting you created!
-              let peekSize = DockSettings.hidePeekSize 
-              
               if (typeof DockVisibility === "undefined") return 0;
+              
+              // The 'Floor' of the panel is the screen edge + flooring
+              let panelFloorBase = _screenFlooring
 
               switch (DockView.edge) {
               case 0: // Top
-                  return DockVisibility.dockVisible ? fp : -(height - peekSize)
+                  return DockVisibility.dockVisible ? panelFloorBase : -(height + 20)
               case 1: // Bottom
-                  return DockVisibility.dockVisible ? (parent.height - height - fp) : (parent.height + height)
+                  return DockVisibility.dockVisible ? (parent.height - height - panelFloorBase) : (parent.height + height)
               case 2: // Left
-                  return DockVisibility.dockVisible ? fp : -(width - peekSize)
+                  return DockVisibility.dockVisible ? panelFloorBase : -(width + 20)
               case 3: // Right
-                  return DockVisibility.dockVisible ? (parent.width - width - fp) : (parent.width - peekSize)
+                  return DockVisibility.dockVisible ? (parent.width - width - panelFloorBase) : (parent.width + width)
               }
               return 0
           }
@@ -1075,10 +1093,10 @@ Item {
            property bool mouseInside: dockMouseArea.containsMouse && !root._dragActive
 
 	// This calculates the size of ONLY the icons + padding
-	// Increased padding to give dashes/dots horizontal breathing room away from the rounded corners
-	property real _actualContentWidth: Math.max(dockRow.animatedContentWidth + Math.max(36, DockSettings.cornerRadius * 1.6), Kirigami.Units.gridUnit * 6)
-        property real _actualContentHeight: Math.max(dockRow.animatedContentHeight + Math.max(36, DockSettings.cornerRadius * 1.6), Kirigami.Units.gridUnit * 6)
-
+	// Rule 1 & 8: Use a fixed 'Corner Breathing Room' (32px) to ensure the 
+	// dock's length is independent of its visual roundness (radius).
+	property real _actualContentWidth: Math.max(dockRow.animatedContentWidth + 32, Kirigami.Units.gridUnit * 6)
+	property real _actualContentHeight: Math.max(dockRow.animatedContentHeight + 32, Kirigami.Units.gridUnit * 6)
 	    // This function calculates the "Ghost" area for the OS
 	    // This function calculates the "Ghost" area for the OS
 	    function updateWaylandInputRegion() {
@@ -1089,6 +1107,10 @@ Item {
             // THE FIX: Pass the absolute pixel-perfect overflow coordinate to Wayland.
             // If the panel completely swallows the icons, this safely sends 0.
             DockVisibility.setZoomOverflowHeight(dockPanel.currentVisualOverflow);
+
+            if (Qt.application.arguments.indexOf("--debug-geom") !== -1) {
+                console.log(`[GEOM-REGION] Surface Rect:(${Math.round(dockPanel.x)},${Math.round(dockPanel.y)}) ${dockPanel.width}x${dockPanel.height} | ZoomOverflowH:${Math.round(dockPanel.currentVisualOverflow)}`);
+            }
         }
 
 // Trigger the update AND our debug print whenever the panel moves
@@ -1098,6 +1120,9 @@ Item {
                 onHeightChanged: { updateWaylandInputRegion(); printGeometry(); }
 
         function printGeometry() {
+            if (Qt.application.arguments.indexOf("--debug-geom") !== -1) {
+                console.log(`[GEOM-PANEL] X:${Math.round(dockPanel.x)} Y:${Math.round(dockPanel.y)} W:${dockPanel.width} H:${dockPanel.height} | Edge:${DockView.edge} | IsVertical:${DockView.isVertical}`);
+            }
         }
 
 	    // Main icon layout (Flow switches between horizontal/vertical)
@@ -1115,6 +1140,15 @@ Item {
                 property real animatedContentWidth: implicitWidth
                 property real animatedContentHeight: implicitHeight
                 
+                onAnimatedContentWidthChanged: updateContentDimensions()
+                onAnimatedContentHeightChanged: updateContentDimensions()
+                
+                function updateContentDimensions() {
+                    if (DockVisibility) {
+                        DockVisibility.setContentDimensions(animatedContentWidth, animatedContentHeight);
+                    }
+                }
+                
                 Behavior on animatedContentWidth {
                     enabled: dockPanel.animationsReady && !DockView.isVertical
                     NumberAnimation {
@@ -1130,23 +1164,22 @@ Item {
                     }
                 }
                 
-		// DYNAMIC GROUNDING (Supports all 4 Edges)
+		// DYNAMIC GROUNDING (Rule 1: The Unbreakable Anchor Chain)
+                // The dockRow is anchored flush to the screen-facing edge of the panel.
+                // This ensures physical grounding while allowing the 'Top-Down Reveal'
+                // behavior when the panel height is adjusted.
                  x: {
                      if (DockView.isVertical) {
-                         // Increased gap from 6 to 10 for indicator breathing room
-                         if (DockView.edge === 2) return 10;
-                         if (DockView.edge === 3) return dockPanel.width - animatedContentWidth - 10;
+                         if (DockView.edge === 2) return 0; // Left: Flush left
+                         if (DockView.edge === 3) return dockPanel.width - animatedContentWidth; // Right: Flush right
                      }
-                     // If horizontal, center the row
                      return (dockPanel.width - animatedContentWidth) / 2;
                  }
                  y: {
                      if (!DockView.isVertical) {
-                         // Increased gap from 6 to 10 for indicator breathing room
-                         if (DockView.edge === 1) return dockPanel.height - animatedContentHeight - 10;
-                         if (DockView.edge === 0) return 10;
+                         if (DockView.edge === 0) return 0; // Top: Flush top
+                         if (DockView.edge === 1) return dockPanel.height - animatedContentHeight; // Bottom: Flush bottom
                      }
-                     // If vertical, center the row vertically
                      return (dockPanel.height - animatedContentHeight) / 2;
                  }
 

@@ -104,7 +104,11 @@ public:
     /// Set whether DodgeWindows mode only dodges the active window.
     void setDodgeActiveOnly(bool activeOnly);
     void setReserveSpace(bool reserve);
+    void setReserveMode(int mode);
     void setFloatingPadding(int padding);
+
+    /// Set unzoomed content dimensions (the icon envelope) for reserve space calculation.
+    Q_INVOKABLE void setContentDimensions(qreal width, qreal height);
 
 Q_SIGNALS:
     void dockVisibleChanged();
@@ -175,7 +179,12 @@ private:
     // DodgeWindows sub-option: true = dodge active window only, false = dodge all
     bool m_dodgeActiveOnly = false;
     bool m_reserveSpace = true;
+    int m_reserveMode = 1; // 0 = Panel, 1 = Icons
     int m_floatingPadding = 0;
+
+    // Unzoomed content dimensions (the icon envelope) for reserve space
+    int m_contentWidth = 0;
+    int m_contentHeight = 0;
 
     // Show timer: fires after mouse dwells in trigger area for showDelay ms
     QTimer m_showTimer;

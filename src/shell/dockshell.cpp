@@ -67,6 +67,7 @@ void DockShell::initialize(DockPlatform::Edge edge, DockPlatform::VisibilityMode
     m_view->visibilityController()->setHideDelay(m_settings->hideDelay());
     m_view->visibilityController()->setDodgeActiveOnly(m_settings->dodgeActiveOnly());
     m_view->visibilityController()->setReserveSpace(m_settings->reserveSpace());
+    m_view->visibilityController()->setReserveMode(m_settings->reserveMode());
     m_view->visibilityController()->setFloatingPadding(m_view->floatingPadding());
 
     // 7. Connect all signals
@@ -153,6 +154,10 @@ void DockShell::connectSettingsSignals()
 
     connect(s, &KremaSettings::reserveSpaceChanged, this, [this]() {
         m_view->visibilityController()->setReserveSpace(m_settings->reserveSpace());
+    });
+
+    connect(s, &KremaSettings::reserveModeChanged, this, [this]() {
+        m_view->visibilityController()->setReserveMode(m_settings->reserveMode());
     });
 
     // Icon normalization toggle

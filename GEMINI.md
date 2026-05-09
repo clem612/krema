@@ -57,4 +57,21 @@ Before answering any prompts, Gemini must:
 - **Verified Feature Integrity:** Working features (Steam icons, dash indicators) must be flagged in the "Proposal Phase" if their code path changes.
 
 ## 9. Documentation Standards
+- **Architectural Mandates:** ALL geometry, interaction, and UI slider logic MUST strictly adhere to the rules defined in `ARCHITECTURE Mandate.md`. This file is the absolute source of truth for dock symmetry and hit-test math.
 - **English-Only:** ALL documentation files (`.md`), including `GEMINI.md`, `ROADMAP.md`, `.claude/work-state.md`, and any session artifacts, MUST be written exclusively in English. If existing documentation is in another language, translate it to English before editing.
+
+## 10. Surgical Edit Mandate (Anti-Truncation Protocol)
+- **No Full-File Overwrites:** You are strictly forbidden from using `write_file` or attempting to replace the entirety of an existing file.
+- **Targeted Diffs Only:** All modifications to existing files MUST be made using surgical `replace` commands targeting specific, small blocks of lines (less than 50 lines per turn).
+- **Chunking Large Refactors:** If a refactor requires modifying more than 50 lines of code, you must break the task into multiple, isolated steps. State your plan and await user confirmation before proceeding to the next chunk.
+- **Preserve Baseline Integrity:** Never attempt to rewrite an entire geometry engine or logic block in one prompt. Modify one property, one function, or one visual block at a time to ensure the C++ compiler and QML engine remain stable between edits.
+
+## 11. Proactive Reporting Mandate
+- **Inform Before Fix:** If you discover a bug, binding loop, rendering glitch, or mathematical inconsistency via terminal logs, visual inspection, or research, you MUST report it to the user and explain the proposed fix BEFORE applying any changes.
+- **Zero Silent Fixes:** Never apply "silent fixes" even if they seem trivial, obvious, or internal. Every change to the codebase must be preceded by a report of the identified issue and an approved proposal.
+
+## 12. The Geometry Debugging Mandate
+- **Unified Diagnostic Flag:** All components that possess physical shape, form, or interactive boundaries MUST support the `--debug-geom` runtime flag.
+- **Comprehensive Logging:** When active, the component must log its critical geometry (`X`, `Y`, `Width`, `Height`) to the terminal whenever it changes. This applies to the Panel, Icons, Indicators, Separators, Mouse Areas, and Wayland Input Regions.
+- **Inter-Icon Gap Measurement:** The system must explicitly measure and expose any "Dead Zones" or "Inter-Icon Gaps" where the mouse is inside the dock container but not hovering a specific icon.
+- **Future Proofing:** Any new visual or interactive feature added to the dock must implement this logging protocol as part of its initial commit.

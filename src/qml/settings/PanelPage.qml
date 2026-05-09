@@ -21,8 +21,16 @@ QQC2.ScrollView {
     rightPadding: 16
 
     ColumnLayout {
+        id: panelLayout
         width: parent.width
         spacing: 32
+
+        // Rule 6 Helpers: Mathematical Constitution for the Panel Ceiling
+        readonly property real _floorPadding: 12
+        readonly property real _dotHeight: Math.max(2, Math.round(DockSettings.iconSize * 0.10))
+        readonly property real _indicatorGap: Math.max(2, Math.round(DockSettings.iconSize * 0.08) + Math.round(DockSettings.iconSize * 0.15 * (1.0 - DockSettings.indicatorOffset)))
+        readonly property real _totalFloorUnit: _floorPadding + _dotHeight + _indicatorGap
+        readonly property real _maxEnv: DockSettings.iconSize + _totalFloorUnit + _floorPadding
 
         // --- SECTION 1: PHYSICAL GEOMETRY ---
         ColumnLayout {
@@ -46,7 +54,8 @@ QQC2.ScrollView {
                     }
                     QQC2.Slider {
                         id: thicknessSlider; Layout.fillWidth: true; 
-                        from: 10; to: DockSettings.iconSize + 24; stepSize: 2; 
+                        // Rule 6: Math Always Wins. Max limit is IconSize + Floor Unit + Ceiling Padding.
+                        from: 10; to: Math.floor(panelLayout._maxEnv); stepSize: 2; 
                         value: DockSettings.panelHeight; 
                         onMoved: {
                             DockSettings.panelHeight = value
@@ -66,9 +75,14 @@ QQC2.ScrollView {
                     }
                     QQC2.Slider {
                         id: radiusSlider; Layout.fillWidth: true; 
-                        from: 0; to: 48; stepSize: 1; 
+                        // Rule 6: UI Blindness Prevention. Max radius is mathematically capped at 
+                        // half of the panel's thickness to prevent 'dead zones' and rendering glitches.
+                        from: 0; to: Math.floor(thicknessSlider.value / 2); stepSize: 1; 
                         value: DockSettings.cornerRadius; 
-                        onMoved: DockSettings.cornerRadius = value 
+                        onMoved: {
+                            DockSettings.cornerRadius = value
+                            DockSettings.save()
+                        }
                     }
                 }
 

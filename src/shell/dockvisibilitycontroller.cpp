@@ -186,10 +186,21 @@ void DockVisibilityController::evaluateVisibility()
         setVisible(true);
     }
     if (m_platform) {
-        if (m_mode == DockPlatform::VisibilityMode::AlwaysVisible && m_reserveSpace && m_panelHeight > 0) {
+        if (m_mode == DockPlatform::VisibilityMode::AlwaysVisible && m_reserveSpace) {
             int edgeIndex = static_cast<int>(m_platform->edge());
-            int thickness = (edgeIndex == 2 || edgeIndex == 3) ? m_panelWidth : m_panelHeight;
-            m_platform->setExclusiveZone(thickness + m_floatingPadding);
+            int thickness = 0;
+
+            if (m_reserveMode == 0) { // Panel Mode
+                thickness = (edgeIndex == 2 || edgeIndex == 3) ? m_panelWidth : m_panelHeight;
+            } else { // Icon Mode
+                thickness = (edgeIndex == 2 || edgeIndex == 3) ? m_contentWidth : m_contentHeight;
+            }
+
+            if (thickness > 0) {
+                m_platform->setExclusiveZone(thickness + m_floatingPadding);
+            } else {
+                m_platform->setExclusiveZone(0);
+            }
         } else {
             m_platform->setExclusiveZone(0);
         }
@@ -341,11 +352,32 @@ void DockVisibilityController::setReserveSpace(bool reserve)
         m_evaluateTimer.start();
 }
 
+void DockVisibilityController::setReserveMode(int mode)
+{
+    if (m_reserveMode == mode)
+        return;
+    m_reserveMode = mode;
+    if (m_mode == DockPlatform::VisibilityMode::AlwaysVisible)
+        m_evaluateTimer.start();
+}
+
 void DockVisibilityController::setFloatingPadding(int padding)
 {
     if (m_floatingPadding == padding)
         return;
     m_floatingPadding = padding;
+    if (m_mode == DockPlatform::VisibilityMode::AlwaysVisible)
+        m_evaluateTimer.start();
+}
+
+void DockVisibilityController::setContentDimensions(qreal width, qreal height)
+{
+    int w = static_cast<int>(width);
+    int h = static_cast<int>(height);
+    if (m_contentWidth == w && m_contentHeight == h)
+        return;
+    m_contentWidth = w;
+    m_contentHeight = h;
     if (m_mode == DockPlatform::VisibilityMode::AlwaysVisible)
         m_evaluateTimer.start();
 }

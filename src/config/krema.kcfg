@@ -46,6 +46,13 @@
       <max>1.0</max>
     </entry>
 
+    <entry name="IndicatorSize" type="Int">
+      <label>Size of the status indicator dots/dashes</label>
+      <default>4</default>
+      <min>2</min>
+      <max>12</max>
+    </entry>
+
     <entry name="CornerRadius" type="Int">
       <label>Panel corner radius</label>
       <default>12</default>
@@ -66,6 +73,13 @@
      <entry name="reserveSpace" type="Bool">
       <label>Reserve screen space for the dock</label>
       <default>true</default>
+    </entry>
+
+    <entry name="reserveMode" type="Int">
+      <label>Reserve mode (0=Panel, 1=Icons)</label>
+      <default>1</default>
+      <min>0</min>
+      <max>1</max>
     </entry>
 
     <entry name="DodgeActiveOnly" type="Bool">

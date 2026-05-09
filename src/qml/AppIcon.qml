@@ -365,34 +365,66 @@ Item {
         Qt.callLater(function() {
             if (dockItem._appId.length > 0)
                 console.log("[NOTIF-TRACE] DockIcon created: '" + dockItem.displayName + "' appId=" + dockItem._appId)
+            
+            if (_debugGeom) {
+                console.log(`[GEOM-ICON] '${dockItem.displayName}' | SLOT X:${Math.round(x)} Y:${Math.round(y)} W:${width} H:${height} | ICON X:${Math.round(iconImage.x)} Y:${Math.round(iconImage.y)} W:${iconImage.width} H:${iconImage.height} (Scaled:${Math.round(iconImage.width * currentScale)}x${Math.round(iconImage.height * currentScale)}) | TotalH:${_maxTheoreticalThickness} | Floor:${_dockFloorPadding} | Indic:${_dotHeight}+${_indicatorGap} | Ceil:${_dockCeilingPadding}`);
+            }
         })
     }
 
-    // Fixed space reserved for indicator dots (max dot size + spacing).
-    // Always reserve this space so icon position stays stable when dots appear/disappear.
-    readonly property int _indicatorSpace: 4 + Kirigami.Units.smallSpacing
+    // --- ARCHITECTURAL MANDATE: THE INSIDE WORLD ---
+    // Rule 1: The Fixed Floor (Grounded by Gravity)
+    readonly property real _dockFloorPadding: 12 // Panel Edge to Indicators
+    
+    // The indicator gap is strictly proportional to icon size to prevent large gaps on small icons.
+    // As the slider goes from 1.0 down to 0.5, the gap expands symmetrically up to a limit.
+    // Baseline is 12.5% of iconSize (6px for 48px icons), with expansion up to +15%.
+    readonly property real _indicatorGap: Math.max(2, Math.round(iconSize * 0.125) + Math.round(iconSize * 0.15 * (1.0 - DockSettings.indicatorOffset)))
 
-    // Size: base icon size + fixed indicator space (toward screen edge)
-        width: DockView.isVertical
-            ? (iconSize + _indicatorSpace)
-            : (iconSize * currentScale)
-        height: DockView.isVertical
-            ? (iconSize * currentScale)
-            : (iconSize + _indicatorSpace)
+    // Rule 6: UI Blindness Prevention (Dynamic Proportions)
+    // A standard indicator is ~10% of the icon size.
+    readonly property real _dotHeight: Math.max(2, Math.round(iconSize * 0.10))
+    // Active dash is roughly 35% of the icon width, but at least double the dot height.
+    readonly property real _activeDotWidth: Math.max(_dotHeight * 2, Math.round(iconSize * 0.35))
 
-    // Scaled transform: grow away from the dock edge
+    // The "Floor Unit" is the total space occupied by the grounding elements
+    readonly property real _totalFloorUnit: _dockFloorPadding + _dotHeight + _indicatorGap
+
+    // Rule 2: The Illusion of Symmetry (The Empty Gap Rule)
+    // Visual symmetry is achieved by ensuring the empty space above the icon
+    // is exactly equal to the empty space below the indicators, regardless of gaps.
+    readonly property real _dockCeilingPadding: _dockFloorPadding
+
+    // The "Inside World" Slot defines the unzoomed territory (Icon + Floor + Ceiling)
+    // The slot expands linearly as components are added, maintaining symmetric padding.
+    readonly property real _maxTheoreticalThickness: iconSize + _totalFloorUnit + _dockCeilingPadding
+
+    // Property for indicator positioning (used by main.qml for layout)
+    readonly property real _indicatorSpace: _totalFloorUnit
+
+    // Size: The delegate represents the unzoomed "Inside World" territory.
+    width: DockView.isVertical
+        ? _maxTheoreticalThickness
+        : (iconSize * currentScale)
+    height: DockView.isVertical
+        ? (iconSize * currentScale)
+        : _maxTheoreticalThickness
+
+    readonly property bool _debugGeom: Qt.application.arguments.indexOf("--debug-geom") !== -1
+
+    // Scaled transform: Rule 1 - Grow AWAY from the 'Fixed Floor' (active edge)
     transform: Scale {
         origin.x: {
             switch (DockView.edge) {
-            case 2: return 0           // Left: grow right
-            case 3: return width       // Right: grow left
+            case 2: return _totalFloorUnit // Left: grow right
+            case 3: return width - _totalFloorUnit // Right: grow left
             default: return width / 2
             }
         }
         origin.y: {
             switch (DockView.edge) {
-            case 0: return 0           // Top: grow down
-            case 1: return height      // Bottom: grow up
+            case 0: return _totalFloorUnit // Top: grow down
+            case 1: return height - _totalFloorUnit // Bottom: grow up
             default: return height / 2
             }
         }
@@ -415,10 +447,24 @@ Item {
     }
 
     // Application icon
+    // Rule 1: The Fixed Floor (Grounded by Gravity)
+    // The icon sits in the 'Inside World' above the indicators.
     Item {
             id: iconImage
             width: iconSize
             height: iconSize
+            
+            // Declarative Grounding in the 'Inside World'
+            x: {
+                if (!DockView.isVertical) return (parent.width - width) / 2;
+                if (DockView.edge === 2) return _totalFloorUnit; // Left: anchor after grounding unit
+                return parent.width - _totalFloorUnit - width; // Right: anchor before grounding unit
+            }
+            y: {
+                if (DockView.isVertical) return (parent.height - height) / 2;
+                if (DockView.edge === 0) return _totalFloorUnit; // Top: icon starts after grounding unit
+                return parent.height - _totalFloorUnit - height; // Bottom: icon ends before grounding unit
+            }
 
             // --- HOVER GLOW ---
             // A subtle radial glow that follows the icon shape
@@ -530,60 +576,6 @@ Item {
                 }
             }
 
-            states: [
-                State {
-                    name: "bottom"
-                    when: DockView.edge === 1
-                    AnchorChanges {
-                        target: iconImage
-                        anchors.top: parent.top
-                        anchors.bottom: undefined
-                        anchors.left: undefined
-                        anchors.right: undefined
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        anchors.verticalCenter: undefined
-                    }
-                },
-                State {
-                    name: "top"
-                    when: DockView.edge === 0
-                    AnchorChanges {
-                        target: iconImage
-                        anchors.top: undefined
-                        anchors.bottom: parent.bottom
-                        anchors.left: undefined
-                        anchors.right: undefined
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        anchors.verticalCenter: undefined
-                    }
-                },
-                State {
-                    name: "left"
-                    when: DockView.edge === 2
-                    AnchorChanges {
-                        target: iconImage
-                        anchors.top: undefined
-                        anchors.bottom: undefined
-                        anchors.left: undefined
-                        anchors.right: parent.right
-                        anchors.horizontalCenter: undefined
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-                },
-                State {
-                    name: "right"
-                    when: DockView.edge === 3
-                    AnchorChanges {
-                        target: iconImage
-                        anchors.top: undefined
-                        anchors.bottom: undefined
-                        anchors.left: parent.left
-                        anchors.right: undefined
-                        anchors.horizontalCenter: undefined
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-                }
-            ]
         }
 
     // Attention glow effect (type 4) — MultiEffect shadow pulse on iconImage
@@ -866,87 +858,26 @@ Item {
         }
     }
 
-    // Status indicator dots (toward screen edge)
-    // Uses States + AnchorChanges for clean runtime edge switching.
+    // Status indicator dots (Rule 1: Grounded by Gravity)
+    // The dots sit in the 'Inside World' Floor.
     Flow {
         id: indicatorRow
+        height: _dotHeight // Ensure fixed height for symmetry math
         flow: DockView.isVertical ? Flow.TopToBottom : Flow.LeftToRight
         spacing: Kirigami.Units.smallSpacing
         Accessible.ignored: true
-
-        // Margin compensation for icon padding from indicatorOffset
-        property real _iconPaddingCompensation: iconImage.height * (1.0 - DockSettings.indicatorOffset) / 2.0
-
-        states: [
-            State {
-                name: "bottom"
-                when: DockView.edge === 1
-                AnchorChanges {
-                    target: indicatorRow
-                    anchors.top: iconImage.bottom
-                    anchors.bottom: undefined
-                    anchors.left: undefined
-                    anchors.right: undefined
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.verticalCenter: undefined
-                }
-                PropertyChanges {
-                    target: indicatorRow
-                    anchors.topMargin: Kirigami.Units.smallSpacing - indicatorRow._iconPaddingCompensation
-                }
-            },
-            State {
-                name: "top"
-                when: DockView.edge === 0
-                AnchorChanges {
-                    target: indicatorRow
-                    anchors.top: undefined
-                    anchors.bottom: iconImage.top
-                    anchors.left: undefined
-                    anchors.right: undefined
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.verticalCenter: undefined
-                }
-                PropertyChanges {
-                    target: indicatorRow
-                    anchors.bottomMargin: Kirigami.Units.smallSpacing - indicatorRow._iconPaddingCompensation
-                }
-            },
-            State {
-                name: "left"
-                when: DockView.edge === 2
-                AnchorChanges {
-                    target: indicatorRow
-                    anchors.top: undefined
-                    anchors.bottom: undefined
-                    anchors.left: undefined
-                    anchors.right: iconImage.left
-                    anchors.horizontalCenter: undefined
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-                PropertyChanges {
-                    target: indicatorRow
-                    anchors.rightMargin: Kirigami.Units.smallSpacing
-                }
-            },
-            State {
-                name: "right"
-                when: DockView.edge === 3
-                AnchorChanges {
-                    target: indicatorRow
-                    anchors.top: undefined
-                    anchors.bottom: undefined
-                    anchors.left: iconImage.right
-                    anchors.right: undefined
-                    anchors.horizontalCenter: undefined
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-                PropertyChanges {
-                    target: indicatorRow
-                    anchors.leftMargin: Kirigami.Units.smallSpacing
-                }
-            }
-        ]
+        
+        // Grounded in the 'Inside World' Floor
+        x: {
+            if (!DockView.isVertical) return (parent.width - width) / 2;
+            if (DockView.edge === 2) return (_dockFloorPadding + (_dotHeight - width) / 2); // Left: Center in grounding zone
+            return parent.width - _dockFloorPadding - _dotHeight + (_dotHeight - width) / 2; // Right: Center in grounding zone
+        }
+        y: {
+            if (DockView.isVertical) return (parent.height - height) / 2;
+            if (DockView.edge === 0) return (_dockFloorPadding + (_dotHeight - height) / 2); // Top: Center in grounding zone
+            return parent.height - _dockFloorPadding - _dotHeight + (_dotHeight - height) / 2; // Bottom: Center in grounding zone
+        }
 
         Repeater {
             // Show dots based on window count (max 3)
@@ -958,14 +889,14 @@ Item {
 
             Rectangle {
 		    // --- THE ACTIVE DASH LOGIC ---
-                // If the dock is horizontal, stretch width to 16px when active. Otherwise, 4px.
-                width: DockView.isVertical ? 4 : (dockItem.model.IsActive ? 16 : 4)
+                // If the dock is horizontal, stretch width when active.
+                width: DockView.isVertical ? _dotHeight : (dockItem.model.IsActive ? Math.round(iconSize * 0.35) : _dotHeight)
                 
-                // If the dock is vertical, stretch height to 16px when active. Otherwise, 4px.
-                height: DockView.isVertical ? (dockItem.model.IsActive ? 16 : 4) : 4
+                // If the dock is vertical, stretch height when active.
+                height: DockView.isVertical ? (dockItem.model.IsActive ? Math.round(iconSize * 0.35) : _dotHeight) : _dotHeight
                 
                 // Keep the pill shape completely round at the ends
-                radius: 2
+                radius: _dotHeight / 2
                 
                 // Smoothly animate the stretching effect
                 Behavior on width {

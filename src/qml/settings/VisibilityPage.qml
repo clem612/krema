@@ -104,6 +104,44 @@ QQC2.ScrollView {
                    onToggled: { DockSettings.reserveSpace = checked; DockSettings.save(); }
                }
 
+               // RESERVE MODE SELECTION (Rule 6: UI Blindness Prevention)
+               ColumnLayout {
+                   Layout.fillWidth: true; Layout.leftMargin: 32; Layout.topMargin: -8
+                   visible: DockSettings.visibilityMode === 0 && DockSettings.reserveSpace
+                   spacing: 8
+
+                   RowLayout {
+                       spacing: 8
+                       Repeater {
+                           model: [
+                               { label: i18n("Panel Background"), value: 0, desc: i18n("Windows touch the dock pill. Icons can overlap.") },
+                               { label: i18n("Icon Extents"), value: 1, desc: i18n("Windows stop at the icons. No overlap.") }
+                           ]
+                           delegate: QQC2.Button {
+                               id: modeBtn
+                               text: modelData.label
+                               checkable: true
+                               checked: DockSettings.reserveMode === modelData.value
+                               onClicked: { DockSettings.reserveMode = modelData.value; DockSettings.save(); }
+                               
+                               leftPadding: 16; rightPadding: 16 // Added breathing room
+
+                               contentItem: QQC2.Label {
+                                   text: modeBtn.text; font.pixelSize: 11; font.bold: modeBtn.checked
+                                   color: modeBtn.checked ? theme.accent : theme.textDim
+                                   horizontalAlignment: Text.AlignHCenter
+                                   verticalAlignment: Text.AlignVCenter // Fix off-center look
+                               }
+                               background: Rectangle {
+                                   implicitHeight: 32; radius: 8 // Unified with rest of UI
+                                   color: modeBtn.checked ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.15) : "transparent"
+                                   border.color: modeBtn.checked ? theme.accent : "#3D3B3D"; border.width: 1
+                               }
+                           }
+                       }
+                   }
+               }
+
                KremaSwitch {
                    Layout.fillWidth: true
                    visible: DockSettings.visibilityMode === 2
