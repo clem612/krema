@@ -43,7 +43,8 @@ User-facing configuration controls (sliders, spinboxes) must never operate blind
 Icon size and panel thickness must support both independent and proportional scaling during a Visual Overflow state, governed by a strict synchronization toggle.
 - **Independent Mode (Absolute Thickness):** When desynchronized, resizing the icons alters the Max Height Envelope (Rule 5) but leaves the absolute pixel height of the dock panel unchanged. The visual overflow size changes dynamically, but the gravity floor remains mathematically fixed.
 - **Synchronized Mode (Proportional Lock):** When synchronized, the current ratio between the panel thickness and the Max Height Envelope is locked. Modifying the base icon size will automatically calculate and apply a new panel thickness to preserve the exact visual overflow ratio.
-- **Mathematical Subordination:** Sync calculations are strictly subordinate to Rule 5 and Rule 6. A synchronized scale operation can never force the panel thickness to exceed the Max Height Envelope.
+- **Permanent Radius Sync:** The corner radius is exempt from the synchronization toggle. It MUST always scale 1:1 proportionally with the base icon size to maintain a consistent visual "roundness" across all dock scales.
+- **Mathematical Subordination:** Sync calculations are strictly subordinate to Rule 5 and Rule 6. A synchronized scale operation can never force the panel thickness or radius to exceed the Max Height Envelope.
 
 ### 8. The Omnidirectional Axis & Floating Offset Mandate
 The dock's mathematical logic and geometric rules are strictly edge-agnostic. Furthermore, the internal geometry of the dock must remain strictly isolated from its global position on the screen.

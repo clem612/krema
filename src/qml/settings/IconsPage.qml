@@ -64,8 +64,12 @@ QQC2.ScrollView {
                         value: DockSettings.iconSize; 
 			onMoved: { 
                                  let newVal = value;
+                                 let oldIconSize = DockSettings.iconSize;
+                                 // Rule 7 Permanent Radius Sync: Capture current ratio before updating size
+                                 let radiusRatio = DockSettings.cornerRadius / oldIconSize;
+
                                  if (DockSettings.syncPanelThickness) {
-                                     let oldMaxEnv = iconsLayout.calculateMaxEnv(DockSettings.iconSize);
+                                     let oldMaxEnv = iconsLayout.calculateMaxEnv(oldIconSize);
                                      let ratio = DockSettings.panelHeight / oldMaxEnv;
                                      
                                      DockSettings.iconSize = newVal;
@@ -87,11 +91,15 @@ QQC2.ScrollView {
                                      }
                                  }
                                  
-                                 // Proactive Clamp: Corner radius cannot exceed half of new panel height
+                                 // Rule 7 Permanent Radius Sync: Apply the captured ratio to the new size
+                                 let newRadius = Math.round(radiusRatio * newVal);
+
+                                 // Proactive Clamp: Corner radius cannot exceed half of panel height (Rule 6)
                                  let maxRadius = Math.floor(DockSettings.panelHeight / 2);
-                                 if (DockSettings.cornerRadius > maxRadius) {
-                                     DockSettings.cornerRadius = maxRadius;
+                                 if (newRadius > maxRadius) {
+                                     newRadius = maxRadius;
                                  }
+                                 DockSettings.cornerRadius = newRadius;
                              }
                         onPressedChanged: if (!pressed) DockSettings.save()
                     }

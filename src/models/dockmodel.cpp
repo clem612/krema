@@ -371,8 +371,3 @@ bool DockModel::isOnCurrentDesktop(int index) const
 }
 
 } // namespace krema
-dx.data(TaskManager::AbstractTasksModel::VirtualDesktops).toList();
-return desktops.contains(currentDesktop);
-}
-
-} // namespace krema

@@ -375,8 +375,3 @@ void MultiDockManager::processTopologyUpdate()
 }
 
 } // namespace krema
-mode;
-applyMode();
-}
-
-} // namespace krema
