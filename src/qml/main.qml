@@ -23,6 +23,13 @@ Item {
 
     // C++ singletons: DockView, DockModel, DockActions, DockContextMenu, DockVisibility, DockSettings, PreviewController
 
+    // --- DEBUG PROTOCOL (Rule 12) ---
+    readonly property bool _debugAll: Qt.application.arguments.indexOf("--debug-all") !== -1
+    readonly property bool _debugGeom: _debugAll || Qt.application.arguments.indexOf("--debug-geom") !== -1
+    readonly property bool _debugHit: _debugAll || Qt.application.arguments.indexOf("--debug-hit") !== -1
+    readonly property bool _debugZoom: _debugAll || Qt.application.arguments.indexOf("--debug-zoom") !== -1
+    readonly property bool _debugNotif: _debugAll || Qt.application.arguments.indexOf("--debug-notif") !== -1
+
     // Hovered item tracking (for custom tooltip and click targeting)
     property int hoveredIndex: -1
     property string hoveredName: ""
@@ -329,9 +336,10 @@ Item {
         }
     }
 
-    // Detailed hit-test breakdown using Stable Virtual Origins to expose deadzones
-    function traceHitTest(mX, mY) {
-        let mPos = DockView.isVertical ? mY : mX;
+    // Detailed hit-test breakdown using Static Virtual Origins to expose deadzones
+    function traceHitTest(mX_abs, mY_abs) {
+        let cursor = root.mapToGlobal(mX_abs, mY_abs);
+        let mPos = DockView.isVertical ? cursor.y : cursor.x;
 
         let iconSize = DockSettings.iconSize;
         let spacing = DockSettings.iconSpacing;
@@ -351,12 +359,12 @@ Item {
             let slotEnd = unscaledCenter + (zoomedSize / 2);
             
             if (mPos >= slotStart && mPos <= slotEnd) {
-                let localPos = item.iconImage.mapFromItem(dockMouseArea, mX, mY);
+                let localPos = item.iconImage.mapFromGlobal(cursor.x, cursor.y);
                 let globalPos = item.iconImage.mapToGlobal(0, 0);
                 let currentW = Math.round(item.iconImage.width * item.currentScale);
                 let currentH = Math.round(item.iconImage.height * item.currentScale);
                 
-                trace = `ICON-${i}: Slot(${Math.round(slotStart)}-${Math.round(slotEnd)}) | Global(${Math.round(globalPos.x)},${Math.round(globalPos.y)} ${currentW}x${currentH}) | Local(${localPos.x.toFixed(1)},${localPos.y.toFixed(1)}) | Bounds(0-${item.iconSize})`;
+                trace = `ICON-${i}: Rect(${Math.round(globalPos.x)},${Math.round(globalPos.y)} ${currentW}x${currentH}) | Local(${localPos.x.toFixed(1)},${localPos.y.toFixed(1)}) | Bounds(0-${item.iconSize})`;
                 break;
             }
         }
@@ -382,6 +390,21 @@ Item {
             // Map global cursor directly to the visual icon pixels
             let localPos = item.iconImage.mapFromGlobal(cursor.x, cursor.y);
             
+            // THE GAP TRACKER: Rule 12 - Explicitly measure dead zones between icons
+            if (_debugHit && i > 0 && bestIndex === -1) {
+                let prevItem = dockRepeater.itemAt(i-1);
+                let currentGlobal = item.iconImage.mapToGlobal(0, 0);
+                let prevGlobal = prevItem.iconImage.mapToGlobal(0, 0);
+                
+                let mPos = DockView.isVertical ? cursor.y : cursor.x;
+                let gapStart = DockView.isVertical ? (prevGlobal.y + prevItem.iconSize) : (prevGlobal.x + prevItem.iconSize);
+                let gapEnd = DockView.isVertical ? currentGlobal.y : currentGlobal.x;
+
+                if (mPos > gapStart && mPos < gapEnd) {
+                    console.log(`\x1b[31m[GEOM-GAP]\x1b[0m Between ${i-1} and ${i} | Width:${Math.round(gapEnd - gapStart)}px | MousePos:${Math.round(mPos)}`);
+                }
+            }
+
             // THE IRONCLAD 2D CHECK:
             // Must be within both horizontal and vertical visual bounds of the image.
             if (localPos.x >= 0.0 && localPos.x <= item.iconSize &&
@@ -801,7 +824,7 @@ Item {
 	       id: ultimateDebugger
 	       interval: 100
 	       repeat: true
-	       running: Qt.application.arguments.indexOf("--debug-geom") !== -1
+	       running: _debugHit || _debugZoom
 
 	       property int lastHoveredIndex: -1
 	       property real lastLocalX: -1
@@ -814,8 +837,8 @@ Item {
 	           let mY_abs = Math.round(dockMouseArea.mouseY);
 	           let currentHovered = root.hoveredIndex;
 
-	           // 1. TRANSITION DETECTION (ENTER/LEAVE)
-	           if (currentHovered !== lastHoveredIndex) {
+	           // 1. TRANSITION DETECTION (ENTER/LEAVE) - linked to _debugHit
+	           if (_debugHit && currentHovered !== lastHoveredIndex) {
 	               if (lastHoveredIndex >= 0) {
 	                   // --- LEAVE EVENT ---
 	                   let edgeBuffer = 1.0;
@@ -837,7 +860,7 @@ Item {
 	               }
 	           }
 
-	           // 2. PERSISTENT COORDINATE TRACKING
+	           // 2. PERSISTENT COORDINATE TRACKING - linked to _debugHit and _debugZoom
 	           if (currentHovered >= 0) {
 	               let item = dockRepeater.itemAt(currentHovered);
 	               if (item) {
@@ -850,15 +873,21 @@ Item {
 	                   let iconW = Math.round(item.iconImage.width * item.currentScale);
 	                   let iconH = Math.round(item.iconImage.height * item.currentScale);
 	                   
-	                   console.log(`\x1b[36m[ZOOM]\x1b[0m I${currentHovered} | Local(${localPos.x.toFixed(1)},${localPos.y.toFixed(1)}) | Mouse_Abs(${mX_abs},${mY_abs}) | Icon_Rect(${Math.round(globalIconPos.x)},${Math.round(globalIconPos.y)} ${iconW}x${iconH}) | Scale:${zActual}x | Name: ${item.displayName}`);
+                           let logParts = [];
+                           if (_debugHit) logParts.push(`Local(${localPos.x.toFixed(1)},${localPos.y.toFixed(1)}) | Mouse_Abs(${mX_abs},${mY_abs}) | Icon_Rect(${Math.round(globalIconPos.x)},${Math.round(globalIconPos.y)} ${iconW}x${iconH})`);
+                           if (_debugZoom) logParts.push(`Scale:${zActual}x`);
+                           
+	                   console.log(`\x1b[36m[DEBUG]\x1b[0m I${currentHovered} | ${logParts.join(" | ")} | Name: ${item.displayName}`);
 	               }
 	           } else if (dockPanel.mouseX !== -1 && dockPanel.mouseY !== -1) {
-	               // Tracking mouse even when NO icon is hovered
-	               let ghostData = traceHitTest(mX_abs, mY_abs);
-	               console.log(`\x1b[31m[GHOST]\x1b[0m Mouse_Abs(${mX_abs},${mY_abs}) | ${ghostData}`);
+	               // Tracking mouse even when NO icon is hovered - linked to _debugHit
+	               if (_debugHit) {
+	                   let ghostData = traceHitTest(mX_abs, mY_abs);
+	                   console.log(`\x1b[31m[GHOST]\x1b[0m Mouse_Abs(${mX_abs},${mY_abs}) | ${ghostData}`);
+                       }
 	           } else {
 	               if (lastState !== "IDLE") {
-	                   console.log("\x1b[90m[DEBUG] Dock Idle (No Mouse)\x1b[0m");
+	                   if (_debugHit || _debugZoom) console.log("\x1b[90m[DEBUG] Dock Idle (No Mouse)\x1b[0m");
 	                   lastState = "IDLE";
 	               }
 	           }
@@ -889,7 +918,7 @@ Item {
               if (!DockView.isVertical) return _actualContentWidth;
               // THE CEILING: Clamp strictly to the Icon Slot height
               let w = Math.min(DockSettings.panelHeight, dockRow.animatedContentWidth);
-              if (Qt.application.arguments.indexOf("--debug-geom") !== -1) {
+              if (_debugGeom) {
                   console.log(`[GEOM-PANEL-W] Edge:${DockView.edge} | PanelW:${w} | ContentW:${dockRow.animatedContentWidth}`);
               }
               return w;
@@ -899,7 +928,7 @@ Item {
               if (DockView.isVertical) return _actualContentHeight;
               // THE CEILING: Clamp strictly to the Icon Slot height
               let h = Math.min(DockSettings.panelHeight, dockRow.animatedContentHeight);
-              if (Qt.application.arguments.indexOf("--debug-geom") !== -1) {
+              if (_debugGeom) {
                   console.log(`[GEOM-PANEL-H] Edge:${DockView.edge} | PanelH:${h} | ContentH:${dockRow.animatedContentHeight}`);
               }
               return h;
@@ -911,7 +940,7 @@ Item {
            // prevents the 'eating itself' rendering glitch.
            radius: {
                let r = Math.min(DockSettings.cornerRadius, Math.min(width, height) / 2);
-               if (Qt.application.arguments.indexOf("--debug-geom") !== -1) {
+               if (_debugGeom) {
                    console.log(`[GEOM-RADIUS] FinalRadius:${Math.round(r)} | Target:${DockSettings.cornerRadius} | MaxBound:${Math.round(Math.min(width, height) / 2)}`);
                }
                return r;
@@ -1068,7 +1097,7 @@ Item {
             // If the panel completely swallows the icons, this safely sends 0.
             DockVisibility.setZoomOverflowHeight(dockPanel.currentVisualOverflow);
 
-            if (Qt.application.arguments.indexOf("--debug-geom") !== -1) {
+            if (_debugGeom) {
                 console.log(`[GEOM-REGION] Surface Rect:(${Math.round(dockPanel.x)},${Math.round(dockPanel.y)}) ${dockPanel.width}x${dockPanel.height} | ZoomOverflowH:${Math.round(dockPanel.currentVisualOverflow)}`);
             }
         }
@@ -1080,7 +1109,7 @@ Item {
                 onHeightChanged: { updateWaylandInputRegion(); printGeometry(); }
 
         function printGeometry() {
-            if (Qt.application.arguments.indexOf("--debug-geom") !== -1) {
+            if (_debugGeom) {
                 console.log(`[GEOM-PANEL] X:${Math.round(dockPanel.x)} Y:${Math.round(dockPanel.y)} W:${dockPanel.width} H:${dockPanel.height} | Edge:${DockView.edge} | IsVertical:${DockView.isVertical}`);
             }
         }

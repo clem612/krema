@@ -368,9 +368,9 @@ Item {
 
         // Debug: log appId for notification matching verification
         Qt.callLater(function() {
-            if (dockItem._appId.length > 0)
+            if (_debugNotif && dockItem._appId.length > 0)
                 console.log("[NOTIF-TRACE] DockIcon created: '" + dockItem.displayName + "' appId=" + dockItem._appId)
-            
+
             if (_debugGeom) {
                 console.log(`[GEOM-ICON] '${dockItem.displayName}' | SLOT X:${Math.round(x)} Y:${Math.round(y)} W:${width} H:${height} | ICON X:${Math.round(iconImage.x)} Y:${Math.round(iconImage.y)} W:${iconImage.width} H:${iconImage.height} (Scaled:${Math.round(iconImage.width * currentScale)}x${Math.round(iconImage.height * currentScale)}) | TotalH:${_maxTheoreticalThickness} | Floor:${_dockFloorPadding} | Indic:${_dotHeight}+${_indicatorGap} | Ceil:${_dockCeilingPadding}`);
             }
@@ -418,7 +418,12 @@ Item {
         : _maxTheoreticalThickness
 
 
-    readonly property bool _debugGeom: Qt.application.arguments.indexOf("--debug-geom") !== -1
+    // --- DEBUG PROTOCOL (Rule 12) ---
+    readonly property bool _debugAll: Qt.application.arguments.indexOf("--debug-all") !== -1
+    readonly property bool _debugGeom: _debugAll || Qt.application.arguments.indexOf("--debug-geom") !== -1
+    readonly property bool _debugHit: _debugAll || Qt.application.arguments.indexOf("--debug-hit") !== -1
+    readonly property bool _debugZoom: _debugAll || Qt.application.arguments.indexOf("--debug-zoom") !== -1
+    readonly property bool _debugNotif: _debugAll || Qt.application.arguments.indexOf("--debug-notif") !== -1
 
     // Scaled transform: Rule 1 - Grow AWAY from the 'Fixed Floor' (active edge)
     transform: Scale {
