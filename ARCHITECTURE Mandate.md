@@ -60,8 +60,37 @@ The dock's mathematical logic and geometric rules are strictly edge-agnostic. Fu
     - `ceiling_padding` is the internal distance between the unzoomed icon and the panel's free-facing inner boundary (The Ceiling).
     - The Symmetry Illusion (Rule 2) enforces that `ceiling_padding` MUST exactly equal `dock_floor_padding` along the Cross Axis to maintain the visual illusion, completely independent of any `floating_offset`.
 
-### 9. The Modular Black Box Contract
-The Dock Chassis is strictly a "Slot Manager," responsible only for defining the unzoomed territory (The Slot) and delivering the global mouse coordinates. Individual components (Icons, Widgets, Separators) are "Black Boxes" responsible for their own internal logic.
-- **Slot Territorialism:** The Chassis defines the unzoomed width/height of a slot based on the Gravity Protocol. The component inside is guaranteed this space but must not exceed it without visual overflow permission.
-- **Internal Sovereignty:** Each module is responsible for its own Gravity (Rule 1) implementation. The Chassis does not "reach inside" to position a module's image.
-- **Hitbox Reporting:** The Chassis performs a high-level "Slot Hit-Test," but the Module must provide the final "Pixel-Perfect" confirmation (Rule 3).
+### 10. The Surgical Edit Mandate
+To maintain system stability and prevent regression cascades, all modifications to the codebase must be targeted and minimal.
+- **Chunking:** Refactors exceeding 50 lines must be broken into isolated, verifiable steps.
+- **Baseline Integrity:** Never rewrite stable geometry or logic blocks in a single operation. Modify one property or visual block at a time.
+
+### 11. The Proactive Reporting Mandate
+The AI agent must identify and report any bugs, binding loops, or mathematical anomalies found in the logs BEFORE attempting a fix.
+- **Transparency:** All anomalies must be explained technically to the user.
+- **Empirical Reproduction:** For bug fixes, the failure state must be reproduced and logged before the fix is applied.
+
+### 12. Geometry Debugging Mandate
+All physical and interactive components must support a standardized diagnostic layer, enabled via the `--debug-geom` and `--debug-hit` flags.
+- **Standardized Logging:** Components must provide real-time reporting of their X, Y, Width, and Height to the terminal in the mandated functional formats.
+- **Visual Baseline:** Debug logs are the ultimate authority for verifying Mandates #1-#11. If a visual element looks correct but the log shows a mathematical error, the geometry is considered "broken."
+
+### 13. The Island Protocol
+Every logical group (App, Widget, Folder) shall be encapsulated as an 'Island'. Each Island maintains its own grounded origin and symmetry math.
+- **Recursive Containers:** Islands can contain other modules, inheriting the same Gravity and Symmetry constraints as leaf modules.
+
+### 14. The Coupling Lock Protocol
+To safeguard geometric integrity (Rule 1 & Rule 2), Island coupling and membership changes are protected by an explicit 'Lock' state. 
+- **Immutable State:** When locked, the dock's logical layout is immutable.
+- **Intentionality:** Modifications to the Island's structure or links between islands require an intentional unlock action (Edit Mode).
+
+### 15. The Dynamic Repulsion Protocol
+To prevent visual overlap and maintain individual "territory" during interaction, zoomed icons must physically displace their neighbors.
+- **Dynamic Slot Sizing:** The primary axis of an icon's layout slot (Width for horizontal, Height for vertical) must scale 1:1 with its visual zoom factor.
+- **Collision Avoidance:** The resulting layout repulsion ensures that no two icons can visually occupy the same coordinate space, preserving the Parabolic Wave's mathematical clarity.
+- **Hit-test Stability:** Repulsion-driven movement must be compensated for by 'Ironclad' coordinate mapping (Rule 3) to prevent hover-state flicker during icon displacement.
+
+### 16. The Proportional Gap Protocol
+To maintain consistent visual rhythm and prevent 'cramping' at high scales, the empty space (Gap) between icons must scale proportionally with the current zoom level.
+- **Linear Scaling:** The gap between Icon A and Icon B must scale based on the average zoom factor of both icons.
+- **Rhythmic Preservation:** This ensures that the ratio between 'Ink' and 'Air' remains constant, providing a premium, high-fidelity visual experience regardless of the dock's magnification state.

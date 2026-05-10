@@ -172,8 +172,8 @@ Item {
     // Hover state (driven from main.qml)
     property bool isHovered: false
 
-    // Configuration from DockView
-       property int iconSize: 48
+    // Configuration from DockView (passed as required properties)
+       required property int iconSize
        property real maxZoomFactor: 1.6
        property real panelMouseX: -1
        property bool panelMouseInside: false
@@ -408,13 +408,15 @@ Item {
     // Property for indicator positioning (used by main.qml for layout)
     readonly property real _indicatorSpace: _totalFloorUnit
 
-    // Size: The delegate represents the unzoomed "Inside World" territory (The Slot).
-    // Rule 8: The slot size is static to ensure a stable layout and hit-test floor.
+    // Size: The delegate represents the "Inside World" territory (The Slot).
+    // Rule 15: We use currentScale (animated) for the layout size so it smoothly 
+    // pushes neighbors away during the zoom wave, keeping the physical 
+    // territory in perfect sync with the visual pixels.
     width: DockView.isVertical
         ? _maxTheoreticalThickness
-        : iconSize
+        : (iconSize * currentScale)
     height: DockView.isVertical
-        ? iconSize
+        ? (iconSize * currentScale)
         : _maxTheoreticalThickness
 
 
@@ -425,79 +427,63 @@ Item {
     readonly property bool _debugZoom: _debugAll || Qt.application.arguments.indexOf("--debug-zoom") !== -1
     readonly property bool _debugNotif: _debugAll || Qt.application.arguments.indexOf("--debug-notif") !== -1
 
-    // Scaled transform: Rule 1 - Grow AWAY from the 'Fixed Floor' (active edge)
-    transform: Scale {
-        origin.x: {
-            switch (DockView.edge) {
-            case 2: return _totalFloorUnit // Left: grow right
-            case 3: return width - _totalFloorUnit // Right: grow left
-            default: return width / 2
-            }
+    // Reset attention properties when animation stops
+    on_ShowAttentionAnimChanged: {
+        console.log("[NOTIF-TRACE] '" + displayName + "' appId=" + _appId
+                    + " showAttentionAnim=" + _showAttentionAnim
+                    + " | isDemandingAttention=" + _isDemandingAttention
+                    + " | launching=" + launching
+                    + " | attentionSetting=" + DockSettings.attentionAnimation)
+        if (!_showAttentionAnim) {
+            attentionBounceT.x = 0
+            attentionBounceT.y = 0
+            attentionRotateT.angle = 0
+            attentionScaleT.xScale = 1.0
+            attentionGlow.shadowOpacity = 0
+            _blinkOpacity = 1.0
+            _dotBlinkOpacity = 1.0
         }
-        origin.y: {
-            switch (DockView.edge) {
-            case 0: return _totalFloorUnit // Top: grow down
-            case 1: return height - _totalFloorUnit // Bottom: grow up
-            default: return height / 2
-            }
-        }
-        xScale: currentScale
-        yScale: currentScale
-    }
-
-    // Keyboard focus ring
-    Rectangle {
-        id: focusRing
-        anchors.centerIn: iconImage
-        width: iconImage.width + Kirigami.Units.smallSpacing * 2
-        height: width
-        radius: width / 2
-        color: "transparent"
-        border.color: Kirigami.Theme.focusColor
-        border.width: 2
-        visible: dockItem.isKeyboardFocused
-        Accessible.ignored: true
     }
 
     // Application icon
     // Rule 1: The Fixed Floor (Grounded by Gravity)
     // The icon sits in the 'Inside World' above the indicators.
     Item {
-            id: iconImage
-            width: iconSize
-            height: iconSize
+        id: iconImage
+        width: iconSize
+        height: iconSize
+        
+        // --- PIXEL HUGGER (Rule 12 Debug Visual) ---
+        Rectangle {
+            z: -1 // Behind the icon
+            anchors.fill: parent
+            color: "magenta"
+            opacity: 0.4
+            visible: _debugGeom
+            border.color: "magenta"
+            border.width: 1
+            enabled: false
             
-            // --- PIXEL HUGGER (Rule 12 Debug Visual) ---
-            // A semi-transparent square that hugs the exact mathematical pixels.
-            Rectangle {
-                z: -1 // Behind the icon
-                anchors.fill: parent
-                color: "magenta"
-                opacity: 0.4 // 60% transparent
-                visible: _debugGeom
-                border.color: "magenta"
-                border.width: 1
-                enabled: false // Don't block mouse
-                
-                // Real-time dimension label
-                QQC2.Label {
-                    text: Math.round(parent.width) + "x" + Math.round(parent.height)
-                    font.pixelSize: 8; font.bold: true; color: "white"
-                    anchors.centerIn: parent; opacity: 0.8
-                }
+            QQC2.Label {
+                text: Math.round(parent.width) + "x" + Math.round(parent.height)
+                font.pixelSize: 8; font.bold: true; color: "white"
+                anchors.centerIn: parent; opacity: 0.8
             }
-            
-            // Declarative Grounding in the 'Inside World'
-            x: {
-                if (!DockView.isVertical) return (parent.width - width) / 2;
-                if (DockView.edge === 2) return _totalFloorUnit; // Left: anchor after grounding unit
-                return parent.width - _totalFloorUnit - width; // Right: anchor before grounding unit
-            }
-            y: {
-                if (DockView.isVertical) return (parent.height - height) / 2;
-                if (DockView.edge === 0) return _totalFloorUnit; // Top: icon starts after grounding unit
-                return parent.height - _totalFloorUnit - height; // Bottom: icon ends before grounding unit
-            }
+        }
+        
+        // Declarative Grounding in the 'Inside World'
+        x: {
+            if (!DockView.isVertical) return (parent.width - width) / 2;
+            if (DockView.edge === 2) return _totalFloorUnit; // Left: anchor after grounding unit
+            return parent.width - _totalFloorUnit - width; // Right: anchor before grounding unit
+        }
+        y: {
+            if (DockView.isVertical) return (parent.height - height) / 2;
+            if (DockView.edge === 0) return _totalFloorUnit; // Top: icon starts after grounding unit
+            return parent.height - _totalFloorUnit - height; // Bottom: icon ends before grounding unit
+        }
+
+        // (Scale transform merged into the main transform array below to prevent double-property syntax errors)
 
             // --- HOVER GLOW ---
             // A subtle radial glow that follows the icon shape
@@ -552,8 +538,26 @@ Item {
                 source: dockItem._appId ? ("image://taskicon/" + dockItem._appId) : ""
             }
 
-            // Transforms: launch bounce + attention animations
+            // Transforms: launch bounce + attention animations + Rule 1 Zoom
             transform: [
+                Scale {
+                    origin.x: {
+                        switch (DockView.edge) {
+                        case 2: return 0 // Left: grow right
+                        case 3: return iconImage.width // Right: grow left
+                        default: return iconImage.width / 2
+                        }
+                    }
+                    origin.y: {
+                        switch (DockView.edge) {
+                        case 0: return 0 // Top: grow down
+                        case 1: return iconImage.height // Bottom: grow up
+                        default: return iconImage.height / 2
+                        }
+                    }
+                    xScale: currentScale
+                    yScale: currentScale
+                },
                 Translate { id: bounceTranslate; x: 0; y: 0 },
                 Translate { id: attentionBounceT; x: 0; y: 0 },
                 Rotation {
@@ -870,24 +874,6 @@ Item {
         NumberAnimation {
             target: dockItem; property: "_blinkOpacity"
             to: 1.0; duration: 400; easing.type: Easing.InOutSine
-        }
-    }
-
-    // Reset attention properties when animation stops
-    on_ShowAttentionAnimChanged: {
-        console.log("[NOTIF-TRACE] '" + displayName + "' appId=" + _appId
-                    + " showAttentionAnim=" + _showAttentionAnim
-                    + " | isDemandingAttention=" + _isDemandingAttention
-                    + " | launching=" + launching
-                    + " | attentionSetting=" + DockSettings.attentionAnimation)
-        if (!_showAttentionAnim) {
-            attentionBounceT.x = 0
-            attentionBounceT.y = 0
-            attentionRotateT.angle = 0
-            attentionScaleT.xScale = 1.0
-            attentionGlow.shadowOpacity = 0
-            _blinkOpacity = 1.0
-            _dotBlinkOpacity = 1.0
         }
     }
 

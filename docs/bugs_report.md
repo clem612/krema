@@ -10,18 +10,22 @@
 ---
 
 ## 1. The "Ghost Mouse" / Internal Deadzones
-- **Status:** 🟡 Investigating (Testing Final Fix)
+- **Status:** 🟢 Fixed (Core Logic)
 - **Description:** The zoom and hover interaction would randomly drop (deactivate) while the cursor was visually over the center or top edge of an icon, especially during parabolic movement.
-- **Steps to Reproduce:** Approach the dock from the top edge quickly while zoom is at maximum (e.g., 2.0x). The hover drops out inside the visual boundaries of the icon.
+- **Trigger Discovery:** The bug reliably resurfaces immediately after the user adjusts the **Zoom Slider** in settings. This suggests a reactivity failure or stale geometry data when `maxZoomFactor` changes.
 - **Failed Attempts (The "Persistent" Phase):**
-  1. *Attempt 1 (Fuzzy Buffers):* Tried adding +/- 10px buffers. Result: Interaction felt sloppy; didn't fix animation lag.
-  2. *Attempt 2 (Center-Distance Math):* Tried calculating 1D distance from the slot center. Result: Failed because it ignored the visual layout shift caused by Rule 1 (Grounding) and Rule 2 (Symmetry).
-  3. *Attempt 3 (Target-Push Layout):* Tried fixing layout jitter, but left the "Orbit Check" in place. Result: The Orbit Check artificially clipped the top half of the zoomed icons because they grow asymmetrically from the floor.
-- **Current Fix Strategy (The "Ironclad" Method):**
-  - Completely removed the `Orbit Check`.
-  - Disabled `MouseArea.onExited` to prevent signal jitter during panel animations.
-  - Rely exclusively on absolute global-to-local coordinate mapping (`iconImage.mapFromGlobal`) combined with a mathematically strict "Surface Firewall."
-- **Root Cause Analysis:** *(Pending Verification)*
+  1. *Attempt 1 (Fuzzy Buffers):* Tried adding +/- 10px buffers. Result: Interaction felt sloppy.
+  2. *Attempt 2 (Center-Distance Math):* Tried calculating 1D distance from the slot center. Result: Ignored Rule 2 symmetry shift.
+  3. *Attempt 3 (Target-Push Layout):* Tried fixing layout jitter, but left the "Orbit Check" in place. Result: Asymmetrical clipping.
+  4. *Attempt 4 (Interaction Mask):* Implemented a pixel-based mask. Result: Failed to account for real-time slider updates.
+  5. *Attempt 5 (Initial Sync Protocol):* Forced Wayland input region updates on launch and slider change. Result: Solved second-launch regressions.
+  6. *Attempt 6 (Property Shadowing Fix):* Discovered and removed hardcoded `iconSize: 48` in `AppIcon.qml` which overrode user settings. Result: **Definitive Fix for center deadzones.**
+- **Final Fix Strategy (The "Ironclad" Method):**
+  - **Shadowing Removal:** Unified `iconSize` properties to prevent mathematical range conflicts.
+  - **Interaction Mask:** Replaced the global surface firewall with a strict pixel-based mask.
+  - **Persistence Hysteresis:** Added a 40px "survive-orbit" to protect hover state against frame-jitter.
+  - **Fixed Surface Buffer:** Set MouseArea to a static 200px buffer to prevent clipping during resizes.
+- **Root Cause Analysis:** A multi-layered failure: 1) Property shadowing (`48px` property in AppIcon) restricted hit-testing for large icons; 2) QML MouseArea signal jitter during animations; 3) Wayland input region clipping during fast movement; and 4) Performance-induced jitter from high-volume debug logging (The Heisenbug).
 
 ---
 

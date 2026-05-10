@@ -30,6 +30,16 @@ Item {
     readonly property bool _debugZoom: _debugAll || Qt.application.arguments.indexOf("--debug-zoom") !== -1
     readonly property bool _debugNotif: _debugAll || Qt.application.arguments.indexOf("--debug-notif") !== -1
 
+    // State Tracking: Monitor zoom slider changes for the '🔴 Persistent' bug investigation
+    Connections {
+        target: DockSettings
+        function onMaxZoomFactorChanged() {
+            if (_debugZoom || _debugHit) {
+                console.log(`\x1b[33m[DEBUG-SYNC]\x1b[0m Zoom Slider Changed: ${DockSettings.maxZoomFactor.toFixed(2)}x`);
+            }
+        }
+    }
+
     // Hovered item tracking (for custom tooltip and click targeting)
     property int hoveredIndex: -1
     property string hoveredName: ""
@@ -336,10 +346,9 @@ Item {
         }
     }
 
-    // Detailed hit-test breakdown using Static Virtual Origins to expose deadzones
+    // Detailed hit-test breakdown using local coordinates
     function traceHitTest(mX_abs, mY_abs) {
-        let cursor = root.mapToGlobal(mX_abs, mY_abs);
-        let mPos = DockView.isVertical ? cursor.y : cursor.x;
+        let mPos = DockView.isVertical ? mY_abs : mX_abs;
 
         let iconSize = DockSettings.iconSize;
         let spacing = DockSettings.iconSpacing;
@@ -359,12 +368,11 @@ Item {
             let slotEnd = unscaledCenter + (zoomedSize / 2);
             
             if (mPos >= slotStart && mPos <= slotEnd) {
-                let localPos = item.iconImage.mapFromGlobal(cursor.x, cursor.y);
-                let globalPos = item.iconImage.mapToGlobal(0, 0);
+                let localPos = item.iconImage.mapFromItem(dockMouseArea, mX_abs, mY_abs);
                 let currentW = Math.round(item.iconImage.width * item.currentScale);
                 let currentH = Math.round(item.iconImage.height * item.currentScale);
                 
-                trace = `ICON-${i}: Rect(${Math.round(globalPos.x)},${Math.round(globalPos.y)} ${currentW}x${currentH}) | Local(${localPos.x.toFixed(1)},${localPos.y.toFixed(1)}) | Bounds(0-${item.iconSize})`;
+                trace = `ICON-${i}: VisualSize(${currentW}x${currentH}) | Local(${localPos.x.toFixed(1)},${localPos.y.toFixed(1)}) | Bounds(0-${item.iconSize})`;
                 break;
             }
         }
@@ -377,38 +385,25 @@ Item {
             return;
         }
 
-        // PIXEL-PERFECT: Use global coordinates to bypass QML item-hierarchy lag.
-        // This ensures the hit-test is 100% synchronized with the physical cursor.
-        let cursor = root.mapToGlobal(mX, mY);
+        // PIXEL-PERFECT: Use strictly local mapping (mapFromItem).
+        // Wayland isolates windows from global coordinates, making mapToGlobal/mapFromGlobal
+        // highly unreliable and the source of previous deadzones.
         let bestIndex = -1;
 
-        // Pixel-perfect hit testing using Direct Global Mapping (Rule 3)
+        // Pixel-perfect hit testing using Direct Local Mapping (Rule 3)
         for (let i = 0; i < dockRepeater.count; i++) {
             let item = dockRepeater.itemAt(i);
             if (!item) continue;
 
-            // Map global cursor directly to the visual icon pixels
-            let localPos = item.iconImage.mapFromGlobal(cursor.x, cursor.y);
+            // Map mouse directly to the visual icon pixels
+            let localPos = item.iconImage.mapFromItem(dockMouseArea, mX, mY);
             
-            // THE GAP TRACKER: Rule 12 - Explicitly measure dead zones between icons
-            if (_debugHit && i > 0 && bestIndex === -1) {
-                let prevItem = dockRepeater.itemAt(i-1);
-                let currentGlobal = item.iconImage.mapToGlobal(0, 0);
-                let prevGlobal = prevItem.iconImage.mapToGlobal(0, 0);
-                
-                let mPos = DockView.isVertical ? cursor.y : cursor.x;
-                let gapStart = DockView.isVertical ? (prevGlobal.y + prevItem.iconSize) : (prevGlobal.x + prevItem.iconSize);
-                let gapEnd = DockView.isVertical ? currentGlobal.y : currentGlobal.x;
-
-                if (mPos > gapStart && mPos < gapEnd) {
-                    console.log(`\x1b[31m[GEOM-GAP]\x1b[0m Between ${i-1} and ${i} | Width:${Math.round(gapEnd - gapStart)}px | MousePos:${Math.round(mPos)}`);
-                }
-            }
-
-            // THE IRONCLAD 2D CHECK:
-            // Must be within both horizontal and vertical visual bounds of the image.
-            if (localPos.x >= 0.0 && localPos.x <= item.iconSize &&
-                localPos.y >= 0.0 && localPos.y <= item.iconSize) {
+            // THE IRONCLAD 2D CHECK & INVISIBLE WALL FIX:
+            // KDE SVGs have ~10% transparent padding. We shrink the hitbox by 10%
+            // so the hover only triggers when touching the actual visual 'ink'.
+            let pad = item.iconSize * 0.10;
+            if (localPos.x >= pad && localPos.x <= (item.iconSize - pad) &&
+                localPos.y >= pad && localPos.y <= (item.iconSize - pad)) {
                 bestIndex = i;
                 break;
             }
@@ -547,13 +542,33 @@ Item {
         }
 
         // Track mouse position for parabolic zoom + drag handling
-	onPositionChanged: function(mouse) {
-            // 1. ABSOLUTE SURFACE FIREWALL:
-            // We ignore MouseArea.onExited because it fires incorrectly when the panel resizes.
-            // Instead, we manually check if the cursor is within the dock's physical boundaries.
+        onPositionChanged: function(mouse) {
             let isVisible = DockVisibility.dockVisible
-            let isInside = isVisible; 
             let triggerDepth = 2
+
+            // PIXEL-PERFECT INSTANT MATH
+            let iconSize = DockSettings.iconSize
+            let spacing = DockSettings.iconSpacing
+            let slotSize = iconSize + spacing
+            let totalUnscaled = (dockRepeater.count * slotSize) - spacing
+            let centerPos = (DockView.isVertical ? root.height : root.width) / 2
+            let unscaledStart = centerPos - (totalUnscaled / 2)
+
+            // 1. DYNAMIC ORBIT (Hysteresis): Rule 3
+            // Calculate distance to the TRUE visual center of the icon row.
+            // This is our high-performance 'Interaction Stage' that never resizes.
+            let maxReach = (iconSize * DockSettings.maxZoomFactor) / 2 + 40;
+            let secondaryAxisDist = 0;
+            if (DockView.isVertical) {
+                let rowCenter = dockPanel.x + (dockPanel.width / 2); // Approximated for speed
+                secondaryAxisDist = Math.abs(mouse.x - rowCenter);
+            } else {
+                let rowCenter = dockPanel.y + (dockPanel.height / 2);
+                secondaryAxisDist = Math.abs(mouse.y - rowCenter);
+            }
+
+            let withinOrbit = (secondaryAxisDist <= maxReach);
+            let isInside = isVisible && withinOrbit;
 
             if (!isVisible) {
                 // TRIGGER ZONE: Check the screen edge based on dock placement
@@ -569,7 +584,7 @@ Item {
             DockVisibility.setHovered(isInside);
 
             // 2. COORDINATE-BASED KILL SWITCH
-            // If the cursor is physically outside the surface area, kill the hover state.
+            // If the cursor is physically outside the interaction orbit, kill the hover state.
             if (!isInside) {
                 if (!PreviewController.visible) {
                     dockPanel.mouseX = -1
@@ -581,33 +596,48 @@ Item {
                 return 
             }
 
-            // 3. Centralized Zoom Suppression (The Orbit Check)
-            let maxReach = (DockSettings.iconSize * DockSettings.maxZoomFactor) / 2 + 40;
-            let secondaryAxisDist = 0;
-            
-            if (DockView.isVertical) {
-                let rowCenter = dockPanel.x + dockRow.x + dockRow.width / 2;
-                secondaryAxisDist = Math.abs(mouse.x - rowCenter);
-            } else {
-                let rowCenter = dockPanel.y + dockRow.y + dockRow.height / 2;
-                secondaryAxisDist = Math.abs(mouse.y - rowCenter);
+            // 3. Update coordinates for parabolic zoom engine
+            dockPanel.mouseX = DockView.isVertical ? mouse.y : mouse.x
+            dockPanel.mouseY = DockView.isVertical ? mouse.x : mouse.y
+
+            // 4. TWO-STAGE HIT-TEST:
+            // First, find the closest candidate icon using static mathematical slots (Stage 1).
+            // Then, perform precision 2D mapping (Stage 2) ONLY on that candidate.
+            let hitIndex = -1;
+            let mPos = DockView.isVertical ? mouse.y : mouse.x;
+
+            for (let i = 0; i < dockRepeater.count; i++) {
+                let slotStart = unscaledStart + (i * slotSize);
+                let slotEnd = slotStart + iconSize;
+
+                // STAGE 1 (Firewall): Is the mouse roughly over this icon's territory?
+                if (mPos >= slotStart - 10 && mPos <= slotEnd + 10) {
+                    let item = dockRepeater.itemAt(i);
+                    if (item) {
+                        // STAGE 2 (Precision): Perform pixel-perfect check.
+                        let localPos = item.iconImage.mapFromItem(dockMouseArea, mouse.x, mouse.y);
+                        if (localPos.x >= 0.0 && localPos.x <= item.iconSize &&
+                            localPos.y >= 0.0 && localPos.y <= item.iconSize) {
+                            hitIndex = i;
+                            break;
+                        }
+                    }
+                }
             }
 
-            let withinOrbit = (secondaryAxisDist <= maxReach);
-
-            // 4. Update coordinates for parabolic zoom logic
-            if (withinOrbit) {
-                dockPanel.mouseX = DockView.isVertical ? mouse.y : mouse.x
-                dockPanel.mouseY = DockView.isVertical ? mouse.x : mouse.y
+            // 5. Update hovered state
+            if (hitIndex >= 0) {
+                if (root.hoveredIndex !== hitIndex) {
+                    root.hoveredIndex = hitIndex;
+                    root.hoveredName = dockRepeater.itemAt(hitIndex).displayName;
+                    tooltipTimer.restart();
+                }
             } else {
-                dockPanel.mouseX = -1
-                dockPanel.mouseY = -1
+                root.hoveredIndex = -1;
+                root.hoveredName = "";
             }
+                    // 7. Reset Keyboard Navigation if mouse moves
 
-            // 5. Update which specific icon the mouse is over
-            root.updateHoveredItem(mouse.x, mouse.y)
-
-            // 7. Reset Keyboard Navigation if mouse moves
             if (root.keyboardNavigating) {
                 root.keyboardNavigating = false
                 DockVisibility.setKeyboardActive(false)
@@ -636,6 +666,7 @@ Item {
             }
         }
     }
+
 
     // --- DEBUG HITBOX LAYER ---
     Rectangle {
@@ -687,11 +718,14 @@ Item {
 	    return Math.min(Math.max(physicalMargin, softnessMargin) + 10, 64)
         }
 
-        // Centered on panel, expanded by margin on each side
-        x: dockPanel.x - _margin
-        y: dockPanel.y - _margin
-        width: dockPanel.width + _margin * 2
-        height: dockPanel.height + _margin * 2
+        // Rule 3: The Interaction Surface.
+        // We use a fixed, generous buffer (200px) to ensure the MouseArea is 
+        // permanently large enough for any zoom scale, preventing clipping 
+        // during real-time slider adjustments.
+        x: dockPanel.x - 100
+        y: dockPanel.y - 100
+        width: dockPanel.width + 200
+        height: dockPanel.height + 200
 
         fragmentShader: "qrc:/qml/shaders/outer_shadow.frag.qsb"
     }
@@ -791,33 +825,26 @@ Item {
 
 	   // Constantly tracks EXACTLY how far the zoomed icons stick out of the panel boundary
     property real currentVisualOverflow: {
-        let maxExt = DockSettings.iconSize;
-        for (let i = 0; i < dockRepeater.count; i++) {
-            let item = dockRepeater.itemAt(i);
-            if (item && item.currentScale) {
-                let scaledSize = DockSettings.iconSize * item.currentScale;
-                if (scaledSize > maxExt) maxExt = scaledSize;
-            }
+        // THE WAYLAND STENCIL FIX:
+        // By using the theoretical maximum growth based on maxZoomFactor AND the baseline 
+        // overflow (if the panel is smaller than the row), we ensure the OS-level input 
+        // region always covers the full zoom arc instantly.
+        let maxGrowth = DockSettings.iconSize * (DockSettings.maxZoomFactor - 1.0);
+        let baselineOverflow = 0;
+        
+        if (DockView.isVertical) {
+            baselineOverflow = Math.max(0, dockRow.implicitWidth - width);
+        } else {
+            baselineOverflow = Math.max(0, dockRow.implicitHeight - height);
         }
         
-        let growth = maxExt - DockSettings.iconSize;
-        let overflow = 0;
-
-        if (DockView.isVertical) {
-            if (DockView.edge === 2) { // Left edge (sticks out right)
-                overflow = Math.max(0, (dockRow.x + DockSettings.iconSize + growth) - width);
-            } else { // Right edge (sticks out left)
-                overflow = Math.max(0, -(dockRow.x - growth));
-            }
-        } else {
-            if (DockView.edge === 1) { // Bottom edge (sticks out top)
-                overflow = Math.max(0, -(dockRow.y - growth));
-            } else { // Top edge (sticks out bottom)
-                overflow = Math.max(0, (dockRow.y + DockSettings.iconSize + growth) - height);
-            }
-        }
-        return overflow;
+        return Math.max(0, maxGrowth + baselineOverflow + 24); // Includes padding safety buffer
     }
+
+    // REACTIVITY FIX: Rule 11 - Proactive Sync.
+    // When the theoretical overflow changes (e.g. via Zoom Slider), we MUST 
+    // immediately tell the Wayland compositor to resize the interaction surface.
+    onCurrentVisualOverflowChanged: updateWaylandInputRegion()
 
 	   // --- THE SPAM-FREE ULTIMATE DEBUGGER ---
 	   Timer {
@@ -892,9 +919,23 @@ Item {
 	               }
 	           }
 
-	           if (currentHovered >= 0) lastState = "HOVER";
-	           lastHoveredIndex = currentHovered;
-	       }
+	   if (currentHovered >= 0) lastState = "HOVER";
+	   lastHoveredIndex = currentHovered;
+
+	   /* --- SUPER-VISION HIT-MAP (Rule 12 Diagnostics) ---
+	   // This map shows the hit-state of EVERY icon simultaneously.
+	   // ● = Hit, ○ = Miss.
+	   let logLine = `[MAP] M(${mX_abs},${mY_abs}) | `;
+	   for (let i = 0; i < dockRepeater.count; i++) {
+	   let item = dockRepeater.itemAt(i);
+	   if (!item) continue;
+	   let localPos = item.iconImage.mapFromItem(dockMouseArea, mX_abs, mY_abs);
+	   let isHit = (localPos.x >= 0.0 && localPos.x <= item.iconSize &&
+	                localPos.y >= 0.0 && localPos.y <= item.iconSize);
+	   logLine += `${isHit ? "\x1b[32m●\x1b[0m" : "\x1b[90m○\x1b[0m"} I${i}:${Math.round(localPos.x)},${Math.round(localPos.y)} `;
+	   }
+	   console.log(logLine);
+	   */
 	   }
 
 	   /* --- SUPER-VISION HIT-MAP (Commented out for future use) ---
@@ -909,6 +950,7 @@ Item {
 	   }
 	   console.log(logLine);
 	   */
+	   }
 
            // Create a local alias for Edit Mode that won't crash on startup
            property bool isEditMode: typeof DockVisibility !== "undefined" && DockVisibility.liveEditMode
@@ -917,9 +959,9 @@ Item {
           width: {
               if (!DockView.isVertical) return _actualContentWidth;
               // THE CEILING: Clamp strictly to the Icon Slot height
-              let w = Math.min(DockSettings.panelHeight, dockRow.animatedContentWidth);
+              let w = Math.min(DockSettings.panelHeight, dockRow.implicitWidth);
               if (_debugGeom) {
-                  console.log(`[GEOM-PANEL-W] Edge:${DockView.edge} | PanelW:${w} | ContentW:${dockRow.animatedContentWidth}`);
+                  console.log(`[GEOM-PANEL-W] Edge:${DockView.edge} | PanelW:${w} | ContentW:${dockRow.implicitWidth}`);
               }
               return w;
           }
@@ -927,9 +969,9 @@ Item {
           height: {
               if (DockView.isVertical) return _actualContentHeight;
               // THE CEILING: Clamp strictly to the Icon Slot height
-              let h = Math.min(DockSettings.panelHeight, dockRow.animatedContentHeight);
+              let h = Math.min(DockSettings.panelHeight, dockRow.implicitHeight);
               if (_debugGeom) {
-                  console.log(`[GEOM-PANEL-H] Edge:${DockView.edge} | PanelH:${h} | ContentH:${dockRow.animatedContentHeight}`);
+                  console.log(`[GEOM-PANEL-H] Edge:${DockView.edge} | PanelH:${h} | ContentH:${dockRow.implicitHeight}`);
               }
               return h;
           }
@@ -1030,9 +1072,23 @@ Item {
            fragmentShader: "qrc:/qml/shaders/acrylic_overlay.frag.qsb"
        }
 
-        // Delay enabling animations until after initial layout to avoid startup flicker
-        property bool animationsReady: false
-        Component.onCompleted: Qt.callLater(function() { animationsReady = true })
+        // Force absolute synchronization on startup
+        Component.onCompleted: Qt.callLater(function() {
+            animationsReady = true;
+            
+            // INITIAL SYNC: Rule 11 - Proactive Restoration.
+            // Force the Wayland compositor to accept our interaction boundaries
+            // immediately on launch, preventing 'Second-Launch' deadzones.
+            updateWaylandInputRegion();
+            
+            if (DockVisibility) {
+                DockVisibility.setContentDimensions(dockRow.implicitWidth, dockRow.implicitHeight);
+            }
+            
+            if (_debugGeom || _debugHit) {
+                console.log(`\x1b[32m[SYSTEM-INIT]\x1b[0m Standardized Interaction Mask Enforced.`);
+            }
+        })
 
         /*Behavior on width {
             enabled: dockPanel.animationsReady
@@ -1051,7 +1107,7 @@ Item {
         }*/
 
         Behavior on x {
-            enabled: dockPanel.animationsReady && DockView.isVertical
+            enabled: dockPanel.animationsReady && DockView.isVertical && !dockPanel.mouseInside
             NumberAnimation {
                 duration: Kirigami.Units.longDuration
                 easing.type: Easing.InOutQuad
@@ -1059,7 +1115,7 @@ Item {
         }
 
         Behavior on y {
-            enabled: dockPanel.animationsReady && !DockView.isVertical
+            enabled: dockPanel.animationsReady && !DockView.isVertical && !dockPanel.mouseInside
             NumberAnimation {
                 duration: Kirigami.Units.longDuration
                 easing.type: Easing.InOutQuad
@@ -1084,8 +1140,8 @@ Item {
 	// This calculates the size of ONLY the icons + padding
 	// Rule 1 & 8: Use a fixed 'Corner Breathing Room' (32px) to ensure the 
 	// dock's length is independent of its visual roundness (radius).
-	property real _actualContentWidth: Math.max(dockRow.animatedContentWidth + 32, Kirigami.Units.gridUnit * 6)
-	property real _actualContentHeight: Math.max(dockRow.animatedContentHeight + 32, Kirigami.Units.gridUnit * 6)
+	property real _actualContentWidth: Math.max(dockRow.implicitWidth + 32, Kirigami.Units.gridUnit * 6)
+	property real _actualContentHeight: Math.max(dockRow.implicitHeight + 32, Kirigami.Units.gridUnit * 6)
 	    // This function calculates the "Ghost" area for the OS
 	    // This function calculates the "Ghost" area for the OS
 	    function updateWaylandInputRegion() {
@@ -1118,74 +1174,60 @@ Item {
             // LeftToRight (Horizontal) flows based on DockView.isVertical. 
             // Anchors flush to the panel edge as per Rule 1, allowing the Top-Down 
             // Reveal mechanism to uncover icons during visual overflow.
-            Flow {
+            Item {
                 id: dockRow
 		z: 2
-                flow: DockView.isVertical ? Flow.TopToBottom : Flow.LeftToRight
 
-		spacing: DockSettings.iconSpacing
+                // THE PROPORTIONAL GAP PROTOCOL (Rule 16)
+                // The space between icons grows proportionally with their zoom factor.
+                // This ensures a consistent visual rhythm across all dock scales.
+                readonly property real baseSpacing: DockSettings.iconSpacing
 
-                // GRAVITY: Align items to the bottom/right edge of the Flow container
-                layoutDirection: Qt.LeftToRight
+                // DIRECT BINDING CHAIN: Rule 15 & 16
+                // We bypass all lazy layout engines and use direct property bindings.
+                // The content size is bound to the edge of the final icon.
+                implicitWidth: {
+                    if (DockView.isVertical) return _maxIconThickness;
+                    if (dockRepeater.count === 0) return 0;
+                    let last = dockRepeater.itemAt(dockRepeater.count - 1);
+                    return last ? (last.x + last.width) : 0;
+                }
+                implicitHeight: {
+                    if (!DockView.isVertical) return _maxIconThickness;
+                    if (dockRepeater.count === 0) return 0;
+                    let last = dockRepeater.itemAt(dockRepeater.count - 1);
+                    return last ? (last.y + last.height) : 0;
+                }
 
-                // Animate content extent to sync centering with panel size animation.
-                property real animatedContentWidth: implicitWidth
-                property real animatedContentHeight: implicitHeight
-                
-                onAnimatedContentWidthChanged: updateContentDimensions()
-                onAnimatedContentHeightChanged: updateContentDimensions()
+                readonly property real _maxIconThickness: {
+                    let max = 0;
+                    for (let i = 0; i < dockRepeater.count; i++) {
+                        let item = dockRepeater.itemAt(i);
+                        if (item) {
+                            let t = DockView.isVertical ? item.width : item.height;
+                            if (t > max) max = t;
+                        }
+                    }
+                    return max;
+                }
+
+                onImplicitWidthChanged: updateContentDimensions()
+                onImplicitHeightChanged: updateContentDimensions()
                 
                 function updateContentDimensions() {
                     if (DockVisibility) {
-                        DockVisibility.setContentDimensions(animatedContentWidth, animatedContentHeight);
-                    }
-                }
-                
-                Behavior on animatedContentWidth {
-                    enabled: dockPanel.animationsReady && !DockView.isVertical
-                    NumberAnimation {
-                        duration: Kirigami.Units.longDuration
-                        easing.type: Easing.InOutQuad
-                    }
-                }
-                Behavior on animatedContentHeight {
-                    enabled: dockPanel.animationsReady && DockView.isVertical
-                    NumberAnimation {
-                        duration: Kirigami.Units.longDuration
-                        easing.type: Easing.InOutQuad
+                        DockVisibility.setContentDimensions(implicitWidth, implicitHeight);
                     }
                 }
                 
 		// DYNAMIC GROUNDING (Rule 1: The Unbreakable Anchor Chain)
-                // The dockRow is anchored flush to the screen-facing edge of the panel.
-                // This ensures physical grounding while allowing the 'Top-Down Reveal'
-                // behavior when the panel height is adjusted.
-                 x: {
-                     if (DockView.isVertical) {
-                         if (DockView.edge === 2) return 0; // Left: Flush left
-                         if (DockView.edge === 3) return dockPanel.width - animatedContentWidth; // Right: Flush right
-                     }
-                     return (dockPanel.width - animatedContentWidth) / 2;
-                 }
-                 y: {
-                     if (!DockView.isVertical) {
-                         if (DockView.edge === 0) return 0; // Top: Flush top
-                         if (DockView.edge === 1) return dockPanel.height - animatedContentHeight; // Bottom: Flush bottom
-                     }
-                     return (dockPanel.height - animatedContentHeight) / 2;
-                 }
-
-            // Animate existing items displaced by add/remove within the Flow.
-            // Disabled during hover zoom (mouseInside) to avoid lagging sibling
-            // repositioning — zoom needs immediate response.
-            move: Transition {
-                enabled: dockPanel.animationsReady && !dockPanel.mouseInside
-                NumberAnimation {
-                    properties: "x,y"
-                    duration: Kirigami.Units.longDuration
-                    easing.type: Easing.InOutQuad
-                }
-            }
+                // centering is now instant as it binds to implicitWidth/Height
+                 x: DockView.isVertical
+                     ? ((DockView.edge === 2) ? 0 : (dockPanel.width - implicitWidth))
+                     : (dockPanel.width - implicitWidth) / 2
+                 y: !DockView.isVertical
+                     ? ((DockView.edge === 0) ? 0 : (dockPanel.height - implicitHeight))
+                     : (dockPanel.height - implicitHeight) / 2
 
             Repeater {
                 id: dockRepeater
@@ -1194,6 +1236,34 @@ Item {
                 AppIcon {
                     // index and model are injected by Repeater into
                     // AppIcon's own required properties
+
+                    // THE SHADOW GRID: Rule 3 & 15
+                    // To prevent binding loops, zoom must be calculated against
+                    // fixed 'Virtual Centers' that never move. 
+                    readonly property real virtualCenter: {
+                        let slot = iconSize + dockRow.baseSpacing;
+                        let totalUnscaled = (dockRepeater.count * slot) - dockRow.baseSpacing;
+                        let gridStart = (DockView.isVertical ? root.height : root.width) / 2 - (totalUnscaled / 2);
+                        return gridStart + (index * slot) + (iconSize / 2);
+                    }
+
+                    // POSITIONING BINDING CHAIN (Rule 15 & 16)
+                    x: {
+                        if (DockView.isVertical) return (parent.width - width) / 2;
+                        if (index === 0) return 0;
+                        let prev = dockRepeater.itemAt(index - 1);
+                        if (!prev) return 0;
+                        let avgScale = (currentScale + prev.currentScale) / 2;
+                        return prev.x + prev.width + (dockRow.baseSpacing * avgScale);
+                    }
+                    y: {
+                        if (!DockView.isVertical) return (parent.height - height) / 2;
+                        if (index === 0) return 0;
+                        let prev = dockRepeater.itemAt(index - 1);
+                        if (!prev) return 0;
+                        let avgScale = (currentScale + prev.currentScale) / 2;
+                        return prev.y + prev.height + (dockRow.baseSpacing * avgScale);
+                    }
 
                     z: (root.hoveredIndex === index) ? 1 : 0
                     isHovered: (root.hoveredIndex === index)
@@ -1204,15 +1274,7 @@ Item {
                          panelMouseX: dockPanel.mouseX
                          panelMouseInside: dockPanel.mouseInside
                          spacing: DockSettings.iconSpacing
-
-			 // THE GOLDEN JITTER FIX:
-                             itemCenterX: {
-                                 let slot = iconSize + spacing;
-                                 let totalUnscaled = (dockRepeater.count * slot) - spacing;
-                                 let center = DockView.isVertical ? root.height / 2 : root.width / 2;
-                                 let unscaledIconCenter = (index * slot) + (iconSize / 2) - (totalUnscaled / 2);
-                                 return center + unscaledIconCenter;
-                             }
+                         itemCenterX: virtualCenter
 
                     // Drag and drop visual feedback
                     isDragSource: root._dragActive && root._dragSourceIndex === index
@@ -1259,17 +1321,29 @@ Item {
           x: {
               if (!visible) return 0;
               let item = dockRepeater.itemAt(boundaryIndex);
-              if (!item) return 0;
+              let nextItem = dockRepeater.itemAt(boundaryIndex + 1);
+              if (!item || !nextItem) return 0;
+
+              // REPEL SYNC: Rule 16 - Separator sits centered in the dynamic gap.
+              let avgScale = (item.currentScale + nextItem.currentScale) / 2;
+              let gap = dockRow.baseSpacing * avgScale;
+              
               return Math.round(DockView.isVertical 
                   ? dockRow.x + (dockRow.width - width) / 2 
-                  : dockRow.x + item.x + item.width + (DockSettings.iconSpacing / 2) - (width / 2));
+                  : dockRow.x + item.x + item.width + (gap / 2) - (width / 2));
           }
           y: {
               if (!visible) return 0;
               let item = dockRepeater.itemAt(boundaryIndex);
-              if (!item) return 0;
+              let nextItem = dockRepeater.itemAt(boundaryIndex + 1);
+              if (!item || !nextItem) return 0;
+
+              // REPEL SYNC: Rule 16 - Separator sits centered in the dynamic gap.
+              let avgScale = (item.currentScale + nextItem.currentScale) / 2;
+              let gap = dockRow.baseSpacing * avgScale;
+              
               return Math.round(DockView.isVertical 
-                  ? dockRow.y + item.y + item.height + (DockSettings.iconSpacing / 2) - (height / 2)
+                  ? dockRow.y + item.y + item.height + (gap / 2) - (height / 2)
                   : dockRow.y + item.y + (item.height - height) / 2);
           }
 
@@ -1626,12 +1700,11 @@ Item {
                     DockVisibility.setSettingsRect(x, y, width, height);
                 }
             }
-
-            onLoaded: {
-                if (item && SettingsController) {
-                    item.open(SettingsController.module);
-                    updateSettingsHitbox();
-                }
+onLoaded: {
+    if (item && SettingsController) {
+        item.open(SettingsController.module);
+        updateSettingsHitbox();
+    }
             }
         }
 }
