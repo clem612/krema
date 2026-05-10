@@ -17,13 +17,18 @@
 
 ## Phase 2: Refinement & The "Everything is a Module" Pivot (Current)
 
-### Architectural Shift: Modular Root
-- [ ] **The Module Base:** Implement a shared base component that handles interaction, spacing, and geometry for ALL dock elements.
+### Architectural Shift: Mathematical Foundation
+- [x] **Mathematical Constitution:** Established the `ARCHITECTURE Mandate.md` as the absolute source of truth.
+- [x] **Geometric Gravity & Two Worlds:** Isolated Screen-to-Panel (Outside World) and Panel-to-Icon (Inside World) geometry.
+- [x] **Universal Symmetry:** Perfected the "Empty Gap Rule" (12px standard) for flawless visual balance.
+- [x] **Proactive Rule 6 Enforcement:** Real-time settings clamping to eliminate all UI "dead zones."
+- [x] **Dual Reserve Space Modes:** Added choice between "Panel Background" or "Icon Extents" for Wayland window avoidance.
+- [x] **Dynamic Indicator Proportions:** Implemented 10% golden ratio sizing and linear gap scaling.
+- [x] **Geometry Debugging Mandate:** Formalized Rule 12 with a unified terminal-based diagnostic framework.
+- [x] **The Feature Vault:** Established versioned history logs in `docs/features/` to prevent regressions.
 - [ ] **Recursive Container Logic:** Support nested modules (Apps inside Groups, Widgets inside Areas) using Single-Directional Flow math to prevent binding loops.
-- [x] **Variable Sanitization (KConfig Audit):**
-    - [x] Rename `iconScaling` → `indicatorOffset`.
-    - [ ] Identify and rename ambiguous variables in `DockSettings`.
-- [ ] **Fixed Width Mode:** Add support for constant panel width with center/left/right alignment options.
+- [ ] **Panel Fixed Width Mode:** Enable constant, minimum, or full-screen dock lengths (Rule 8) with support for Start/Center/End icon alignment within the extended panel.
+- [ ] **Icon Display Mode:** Support for "Icons Only" and "Icons + Names" modes to provide flexible task manager visual configurations.
 
 ### Design Language: "Milk & Deep Roast"
 - [ ] **Squircle-First Geometry:** Replace standard `Rectangle` rounding with Continuous Curvature (SDF Shaders) for the panel and cards.
@@ -31,7 +36,10 @@
 - [ ] **Surface Logic:** Implement internal shadows/inner glows for a "pressed" material look.
 - [ ] **Viscous Easing:** Implement `CubicBezier` curves for weighted, "liquid" motion in zooms and transitions.
 
-### The "Blueprint Ghost" Evolution
+### Variable Sanitization & Diagnostics
+- [x] **Variable Sanitization (KConfig Audit):**
+    - [x] Rename `iconScaling` → `indicatorOffset`.
+    - [x] Unified sizing limits (PanelHeight max 300).
 - [ ] **Real-time Geometry Awareness:** Refactor the blueprint layer to visualize dock boundaries and max-width constraints dynamically.
 - [ ] **Shader Integration:** Update the blueprint shader to support resizing animations smoothly.
 

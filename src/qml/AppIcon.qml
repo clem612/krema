@@ -455,6 +455,26 @@ Item {
             width: iconSize
             height: iconSize
             
+            // --- PIXEL HUGGER (Rule 12 Debug Visual) ---
+            // A semi-transparent square that hugs the exact mathematical pixels.
+            Rectangle {
+                z: -1 // Behind the icon
+                anchors.fill: parent
+                color: "magenta"
+                opacity: 0.4 // 60% transparent
+                visible: _debugGeom
+                border.color: "magenta"
+                border.width: 1
+                enabled: false // Don't block mouse
+                
+                // Real-time dimension label
+                QQC2.Label {
+                    text: Math.round(parent.width) + "x" + Math.round(parent.height)
+                    font.pixelSize: 8; font.bold: true; color: "white"
+                    anchors.centerIn: parent; opacity: 0.8
+                }
+            }
+            
             // Declarative Grounding in the 'Inside World'
             x: {
                 if (!DockView.isVertical) return (parent.width - width) / 2;
