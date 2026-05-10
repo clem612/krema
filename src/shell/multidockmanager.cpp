@@ -108,7 +108,10 @@ QList<DockShell *> MultiDockManager::shells() const
 
 void MultiDockManager::applyMode()
 {
-    // Stop follow-active tracking when switching modes
+    // THE HANDOFF PROTOCOL:
+    // When switching multi-monitor modes, we perform a clean tear-down of
+    // existing shells before re-populating the screen map. This ensures
+    // that no 'Ghost Docks' remain on monitors where they are no longer permitted.
     m_followActiveDebounce.stop();
     m_activeScreen = nullptr;
 
@@ -369,6 +372,11 @@ void MultiDockManager::processTopologyUpdate()
 {
     qCDebug(lcMultiDock) << "Processing topology update, mode:" << m_mode;
     applyMode();
+}
+
+} // namespace krema
+mode;
+applyMode();
 }
 
 } // namespace krema

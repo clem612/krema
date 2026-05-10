@@ -1125,7 +1125,10 @@ Item {
             }
         }
 
-	    // Main icon layout (Flow switches between horizontal/vertical)
+	    // The primary icon container. Switches between TopToBottom (Vertical) and 
+            // LeftToRight (Horizontal) flows based on DockView.isVertical. 
+            // Anchors flush to the panel edge as per Rule 1, allowing the Top-Down 
+            // Reveal mechanism to uncover icons during visual overflow.
             Flow {
                 id: dockRow
 		z: 2

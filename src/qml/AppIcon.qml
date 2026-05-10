@@ -38,9 +38,10 @@ Item {
         return parts.join(", ")
     }
 
-    // Keyboard focus state (set by main.qml during keyboard navigation)
+    // Tracks keyboard navigation focus set by main.qml; toggles visual visibility of the focusRing.
     property bool isKeyboardFocused: false
 
+    // Standard button accessibility interface; triggers activation via DockActions.activate(index).
     Accessible.role: Accessible.Button
     Accessible.name: displayName
     Accessible.description: accessibleDescription
@@ -48,7 +49,8 @@ Item {
     Accessible.focused: isKeyboardFocused
     Accessible.onPressAction: DockActions.activate(index)
 
-    // SmartLauncherItem for badge count / urgent status (created in Component.onCompleted)
+    // Backing object for the Unity Launcher API, initialized via DockModel.launcherUrl.
+    // Provides app-direct reporting for badge counts and urgency status.
     property QtObject _smartLauncherItem: null
 
     // Desktop entry name for notification lookup (e.g. "org.kde.dolphin", "slack")
@@ -58,9 +60,9 @@ Item {
     }
 
     // === Inbox (persistent badge) ===
-    // Sources: SmartLauncher.count (1st, app-managed), fd.o watcher unreadCount (2nd, dock-managed)
-    // Clear: focus → fd.o auto-clear, context menu → manual clear, SNI→Active → fd.o clear
-    // Unified badge count (priority: SmartLauncher > WatchedNotifications)
+    // Unified badge count calculation with a strict priority hierarchy.
+    // 1st: Unity API (Direct app reporting, e.g. unread count in mail apps).
+    // 2nd: WatchedNotifications (Passive fd.o watcher for generic notifications).
     readonly property int _badgeCount: {
         let _rev = NotificationTracker.revision  // reactive dependency
         // 1st: SmartLauncherItem (Unity API) — exact count from the app
@@ -75,8 +77,11 @@ Item {
     }
 
     // === Notification (transient attention) ===
-    // Sources: Window.IsDemandingAttention, SmartLauncher.urgent, SNI NeedsAttention, badgeCount increase
-    // → _triggerAttention() → auto-stops after attentionAnimationDuration. Suppressed by DND.
+    // Implementation of the KDE Plasma Attention Protocol. 
+    // Triggers visual animations when an app demands attention via:
+    // 1. Window metadata (IsDemandingAttention flag).
+    // 2. Unity Launcher API (Urgency flag).
+    // 3. Status Notifier Items (NeedsAttention state).
     //
     // API support matrix:
     //   fd.o RegisterWatcher: notification(badge↑→animation) + inbox(badge count) + clear(focus/menu/SNI)
@@ -270,10 +275,10 @@ Item {
         _prevChildCount = _childCount
     }
 
-    // --- Timers ---
-
-    // 500ms: fallback for the edge case where IsStartup never fires
-    // (e.g. single-instance app silently ignores D-Bus activation)
+    // Launch Safety Protocol:
+    // [0.5s] Fallback if the OS misses the startup signal.
+    // [2.0s] No-Op detection (e.g. middle-click didn't open a new window).
+    // [30.0s] Absolute ceiling to prevent eternal icon bouncing on crash.
     Timer {
         id: launchSafetyTimer
         interval: 500
@@ -282,8 +287,8 @@ Item {
         }
     }
 
-    // 2s: detects no-op for already-active apps. If no new window appeared
-    // within 2s after middle-click, override _isStartup to stop bounce.
+    // 2s No-Op Detection: Detects middle-click or 'New Instance' attempts on already active apps.
+    // If no new window appears within 2s, it stops the launch bounce.
     Timer {
         id: noOpDetectionTimer
         interval: 2000
@@ -294,8 +299,8 @@ Item {
         }
     }
 
-    // 30s: absolute safety net for _waitingForWindow mode
-    // (handles app crash/failure where window never appears)
+    // 30s Absolute Ceiling: Maximum allowed time for an icon to bounce during startup.
+    // Prevents eternal bouncing if an application crashes or fails to open a window.
     Timer {
         id: maxLaunchTimer
         interval: 30000

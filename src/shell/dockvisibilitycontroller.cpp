@@ -32,6 +32,10 @@ DockVisibilityController::DockVisibilityController(DockPlatform *platform,
     , m_activityInfo(activityInfo)
     , m_dockWindow(dockWindow)
 {
+    // Initialization of the Window Overlap Model.
+    // This model is the core engine for the 'Dodge Windows' feature. It performs
+    // real-time intersection tests between the dock surface and all active
+    // windows on the current virtual desktop and activity.
     m_overlapModel = new TaskManager::TasksModel(this);
     m_overlapModel->classBegin();
     m_overlapModel->setGroupMode(TaskManager::TasksModel::GroupDisabled);
@@ -138,6 +142,8 @@ void DockVisibilityController::applyInputRegion()
     if (!m_dockWindow)
         return;
 
+    // Translates visual pixels into a Wayland 'Input Stencil'.
+    // Clicks on gaps or transparent areas pass through to the wallpaper.
     InputRegionParams params;
     auto *view = qobject_cast<QQuickView *>(parent());
     params.surfaceWidth = view ? view->width() : m_dockWindow->width();
@@ -182,14 +188,22 @@ void DockVisibilityController::setLiveEditMode(bool edit)
 
 void DockVisibilityController::evaluateVisibility()
 {
+    // FORCE VISIBILITY: If the user is interacting with the dock or using keyboard
+    // navigation, we force the dock to stay visible regardless of the current mode.
     if (m_interactingCount > 0 || m_keyboardActive || m_hovered) {
         setVisible(true);
     }
     if (m_platform) {
+        // EXCLUSIVE ZONE (Window Reservation):
+        // Only active in 'Always Visible' mode. This informs the Wayland compositor
+        // how much screen real-estate to reserve for pushing maximized windows away.
         if (m_mode == DockPlatform::VisibilityMode::AlwaysVisible && m_reserveSpace) {
             int edgeIndex = static_cast<int>(m_platform->edge());
             int thickness = 0;
 
+            // Selects the 'Exclusive Zone' (maximized window stop point) based on user mode:
+            // - Mode 0 (Panel): Windows touch the dock background.
+            // - Mode 1 (Icons): Windows stop at the unzoomed icon envelope (The Ceiling).
             if (m_reserveMode == 0) { // Panel Mode
                 thickness = (edgeIndex == 2 || edgeIndex == 3) ? m_panelWidth : m_panelHeight;
             } else { // Icon Mode
@@ -205,6 +219,10 @@ void DockVisibilityController::evaluateVisibility()
             m_platform->setExclusiveZone(0);
         }
     }
+
+    // MODE TRANSITIONS:
+    // If we've reached this point, there is no active user interaction.
+    // We now apply the logic for the specific visibility mode.
     if (m_interactingCount > 0 || m_keyboardActive || m_hovered)
         return;
     switch (m_mode) {

@@ -62,6 +62,9 @@ QStringList iconCandidates(const QModelIndex &idx)
 {
     QStringList candidates;
 
+    // THE IDENTITY RESOLVER:
+    // Standardizes disparate app identifiers (appId, launcherUrl, display name)
+    // to map raw metadata to high-res system theme icons and prevent 'Ghost Icons'.
     const QString appId = idx.data(TaskManager::AbstractTasksModel::AppId).toString();
     const QString stripped = stripDesktopSuffix(appId);
     const QString segment = lastSegment(stripped);
@@ -88,8 +91,11 @@ QStringList iconCandidates(const QModelIndex &idx)
     addCandidate(launcherName);
     addCandidate(display);
 
-    // 2. THE IDENTITY BRIDGE: Hard-coded fixes for common KDE App ID mismatches.
-    // This ensures running windows merge with their pinned launchers correctly.
+    // THE IDENTITY BRIDGE: Functional Constraints
+    // These are hard-coded overrides for core KDE applications that use
+    // inconsistent desktop entry names (e.g. 'org.kde.dolphin' vs 'dolphin').
+    // While this logic looks specific, it is a mandatory architectural bridge
+    // to ensure a 'Latte-like' seamless experience for the desktop environment.
     if (stripped == QLatin1String("org.kde.dolphin") || stripped == QLatin1String("dolphin")) {
         addCandidate(QStringLiteral("org.kde.dolphin"));
         addCandidate(QStringLiteral("dolphin"));
@@ -120,17 +126,9 @@ DockModel::DockModel(QObject *parent)
     , m_virtualDesktopInfo(std::make_shared<TaskManager::VirtualDesktopInfo>(this))
     , m_activityInfo(std::make_shared<TaskManager::ActivityInfo>(this))
 {
-    // TasksModel implements QQmlParserStatus. When created from C++ (not QML),
-    // classBegin/componentComplete are not called by the QML engine.
-    // We must call them manually to trigger internal model initialization.
-    //
-    // CRITICAL: Mirror QML's initialization order:
-    //   1. classBegin()
-    //   2. All properties set (including virtualDesktop, activity, screenGeometry)
-    //   3. componentComplete() — activates internal source models
-    //
-    // Setting virtualDesktop/activity/screenGeometry AFTER componentComplete()
-    // causes the Wayland window backend to miss running windows.
+    // CRITICAL COMPONENT CONTRACT:
+    // Manual initialization of 'TasksModel' (requires classBegin before settings
+    // and componentComplete after to activate Wayland window source models).
     m_tasksModel->classBegin();
 
     // Configure for dock-style behavior:
@@ -370,6 +368,11 @@ bool DockModel::isOnCurrentDesktop(int index) const
     const QVariant currentDesktop = m_virtualDesktopInfo->currentDesktop();
     const QVariantList desktops = idx.data(TaskManager::AbstractTasksModel::VirtualDesktops).toList();
     return desktops.contains(currentDesktop);
+}
+
+} // namespace krema
+dx.data(TaskManager::AbstractTasksModel::VirtualDesktops).toList();
+return desktops.contains(currentDesktop);
 }
 
 } // namespace krema
