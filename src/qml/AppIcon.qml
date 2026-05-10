@@ -408,13 +408,15 @@ Item {
     // Property for indicator positioning (used by main.qml for layout)
     readonly property real _indicatorSpace: _totalFloorUnit
 
-    // Size: The delegate represents the unzoomed "Inside World" territory.
+    // Size: The delegate represents the unzoomed "Inside World" territory (The Slot).
+    // Rule 8: The slot size is static to ensure a stable layout and hit-test floor.
     width: DockView.isVertical
         ? _maxTheoreticalThickness
-        : (iconSize * currentScale)
+        : iconSize
     height: DockView.isVertical
-        ? (iconSize * currentScale)
+        ? iconSize
         : _maxTheoreticalThickness
+
 
     readonly property bool _debugGeom: Qt.application.arguments.indexOf("--debug-geom") !== -1
 
