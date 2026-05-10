@@ -26,9 +26,9 @@ QQC2.ScrollView {
         spacing: 32
 
         // Rule 6 Helpers: Mathematical Constitution for the Panel Ceiling
-        readonly property real _floorPadding: 12
+        readonly property real _floorPadding: Math.max(4, Math.round(DockSettings.iconSize * 0.25))
         readonly property real _dotHeight: Math.max(2, Math.round(DockSettings.iconSize * 0.10))
-        readonly property real _indicatorGap: Math.max(2, Math.round(DockSettings.iconSize * 0.08) + Math.round(DockSettings.iconSize * 0.15 * (1.0 - DockSettings.indicatorOffset)))
+        readonly property real _indicatorGap: Math.max(2, Math.round(DockSettings.iconSize * 0.125) + Math.round(DockSettings.iconSize * 0.15 * (1.0 - DockSettings.indicatorOffset)))
         readonly property real _totalFloorUnit: _floorPadding + _dotHeight + _indicatorGap
         readonly property real _maxEnv: DockSettings.iconSize + _totalFloorUnit + _floorPadding
 
@@ -57,11 +57,26 @@ QQC2.ScrollView {
                         // Rule 6: Math Always Wins. Max limit is IconSize + Floor Unit + Ceiling Padding.
                         from: 10; to: Math.floor(panelLayout._maxEnv); stepSize: 2; 
                         value: DockSettings.panelHeight; 
-                        onMoved: {
-                            DockSettings.panelHeight = value
-                            DockSettings.save()
-                        }
+                        onMoved: DockSettings.panelHeight = value
+                        onPressedChanged: if (!pressed) DockSettings.save()
                     }
+                }
+
+                Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A" }
+
+                // DIMENSIONAL SYNC (Rule 7)
+                KremaSwitch {
+                    Layout.fillWidth: true
+                    text: i18n("Proportional Scaling Lock")
+                    checked: DockSettings.syncPanelThickness
+                    onToggled: {
+                        DockSettings.syncPanelThickness = checked
+                        DockSettings.save()
+                    }
+                }
+                QQC2.Label { 
+                    text: i18n("Automatically adjusts panel thickness when resizing icons to preserve the visual overflow ratio."); 
+                    color: theme.textDim; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.topMargin: -8; Layout.leftMargin: 32
                 }
 
                 Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A" }
@@ -79,10 +94,8 @@ QQC2.ScrollView {
                         // half of the panel's thickness to prevent 'dead zones' and rendering glitches.
                         from: 0; to: Math.floor(thicknessSlider.value / 2); stepSize: 1; 
                         value: DockSettings.cornerRadius; 
-                        onMoved: {
-                            DockSettings.cornerRadius = value
-                            DockSettings.save()
-                        }
+                        onMoved: DockSettings.cornerRadius = value
+                        onPressedChanged: if (!pressed) DockSettings.save()
                     }
                 }
 

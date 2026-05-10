@@ -17,7 +17,7 @@
       <label>Height/Thickness of the dock panel</label>
       <default>60</default>
       <min>10</min>
-      <max>150</max>
+      <max>300</max>
     </entry>
 
     <entry name="IconSpacing" type="Int">
@@ -51,6 +51,11 @@
       <default>4</default>
       <min>2</min>
       <max>12</max>
+    </entry>
+
+    <entry name="SyncPanelThickness" type="Bool">
+      <label>Scale panel thickness proportionally with icon size</label>
+      <default>true</default>
     </entry>
 
     <entry name="CornerRadius" type="Int">

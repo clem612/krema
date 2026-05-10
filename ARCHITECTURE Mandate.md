@@ -11,7 +11,7 @@ The dock operates in two strictly isolated coordinate systems.
 Visual symmetry is achieved not by centering the icon unit, but by matching the empty gaps on both sides of the unzoomed icon.
 - **The Floor Unit:** The total space occupied below the icon (Padding + Indicators + Gap).
 - **The Empty Gap Rule:** Symmetry is perfectly realized when the empty space above the icon (`ceiling_padding`) is exactly equal to the empty space below the indicators (`dock_floor_padding`).
-- **Universal Application:** This rule must be maintained regardless of panel thickness, icon size, or dynamic indicator scaling.
+- **Universal Application:** This rule must be maintained mathematically regardless of panel thickness, icon size, or dynamic indicator scaling. The "air" on both sides must remain identical even during a visual overflow state.
 - **The Max Height Envelope:** The maximum mathematical thickness of a slot is: `iconSize + Floor Unit + ceiling_padding`.
 - **Subordination:** Symmetry is a visual illusion subordinate to Gravity. We do not use "Center anchoring" (e.g., `anchors.centerIn`). We use edge grounding and mathematically enforce the symmetric boundary.
 

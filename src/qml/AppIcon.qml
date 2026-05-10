@@ -374,7 +374,8 @@ Item {
 
     // --- ARCHITECTURAL MANDATE: THE INSIDE WORLD ---
     // Rule 1: The Fixed Floor (Grounded by Gravity)
-    readonly property real _dockFloorPadding: 12 // Panel Edge to Indicators
+    // Floor padding scales proportionally with icon size (25% ratio, min 4px).
+    readonly property real _dockFloorPadding: Math.max(4, Math.round(iconSize * 0.25)) // Panel Edge to Indicators
     
     // The indicator gap is strictly proportional to icon size to prevent large gaps on small icons.
     // As the slider goes from 1.0 down to 0.5, the gap expands symmetrically up to a limit.

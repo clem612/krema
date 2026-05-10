@@ -22,10 +22,20 @@ QQC2.ScrollView {
     rightPadding: 16
 
     ColumnLayout {
+        id: iconsLayout
         // ONLY fill the width, let the height stretch natively
         width: parent.width
         spacing: 32
 
+        // RULE 7 HELPERS: Mathematical Constitution for the Slot Envelope
+        // This must match the math in AppIcon.qml and PanelPage.qml exactly.
+        function calculateMaxEnv(size) {
+            let floorPad = Math.max(4, Math.round(size * 0.25))
+            let dot = Math.max(2, Math.round(size * 0.10))
+            // Pure Proportional Gap: 0.125 base ratio (match v2.1 baseline)
+            let gap = Math.max(2, Math.round(size * 0.125) + Math.round(size * 0.15 * (1.0 - DockSettings.indicatorOffset)))
+            return size + floorPad + dot + gap + floorPad // floor + dot + gap + ceiling
+        }
         // --- SECTION 1: SIZING & GEOMETRY ---
         ColumnLayout {
             Layout.fillWidth: true
@@ -53,9 +63,37 @@ QQC2.ScrollView {
                         from: 24; to: 96; stepSize: 4; 
                         value: DockSettings.iconSize; 
 			onMoved: { 
-                                 DockSettings.iconSize = value;
-                                 DockSettings.save();
+                                 let newVal = value;
+                                 if (DockSettings.syncPanelThickness) {
+                                     let oldMaxEnv = iconsLayout.calculateMaxEnv(DockSettings.iconSize);
+                                     let ratio = DockSettings.panelHeight / oldMaxEnv;
+                                     
+                                     DockSettings.iconSize = newVal;
+                                     
+                                     let newMaxEnv = iconsLayout.calculateMaxEnv(newVal);
+                                     let newThickness = Math.min(newMaxEnv, Math.round(ratio * newMaxEnv));
+                                     
+                                     if (Qt.application.arguments.indexOf("--debug-geom") !== -1) {
+                                         console.log(`[SYNC-DEBUG] IconSize: ${newVal} | Ratio: ${ratio.toFixed(2)} | PanelH -> ${newThickness}`);
+                                     }
+                                     
+                                     DockSettings.panelHeight = newThickness;
+                                 } else {
+                                     DockSettings.iconSize = newVal;
+                                     // Proactive Clamp: If icon shrinks, the max envelope might shrink below current panelHeight
+                                     let currentMax = iconsLayout.calculateMaxEnv(newVal);
+                                     if (DockSettings.panelHeight > currentMax) {
+                                         DockSettings.panelHeight = currentMax;
+                                     }
+                                 }
+                                 
+                                 // Proactive Clamp: Corner radius cannot exceed half of new panel height
+                                 let maxRadius = Math.floor(DockSettings.panelHeight / 2);
+                                 if (DockSettings.cornerRadius > maxRadius) {
+                                     DockSettings.cornerRadius = maxRadius;
+                                 }
                              }
+                        onPressedChanged: if (!pressed) DockSettings.save()
                     }
                 }
 
@@ -114,8 +152,20 @@ QQC2.ScrollView {
                         value: DockSettings.indicatorOffset; 
 			onMoved: { 
                                  DockSettings.indicatorOffset = value;
-                                 DockSettings.save();
+                                 
+                                 // Proactive Clamp: Changing gap changes the max envelope
+                                 let currentMax = iconsLayout.calculateMaxEnv(DockSettings.iconSize);
+                                 if (DockSettings.panelHeight > currentMax) {
+                                     DockSettings.panelHeight = currentMax;
+                                 }
+                                 
+                                 // Proactive Clamp: Recalculate radius bound based on new potential height
+                                 let maxRadius = Math.floor(DockSettings.panelHeight / 2);
+                                 if (DockSettings.cornerRadius > maxRadius) {
+                                     DockSettings.cornerRadius = maxRadius;
+                                 }
                              }
+                        onPressedChanged: if (!pressed) DockSettings.save()
                     }
                 }
 
