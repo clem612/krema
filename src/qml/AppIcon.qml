@@ -127,20 +127,24 @@ Item {
 
     // --- Notification → animation debug logging ---
     on_BadgeCountChanged: {
+        /* [ISOLATION: SILENCED]
         console.log("[NOTIF-TRACE] '" + displayName + "' appId=" + _appId
                     + " badgeCount=" + _badgeCount)
+        */
         if (_badgeCount > _prevBadgeCount) {
             _triggerAttention()
         }
         _prevBadgeCount = _badgeCount
     }
     on_IsDemandingAttentionChanged: {
+        /* [ISOLATION: SILENCED]
         console.log("[NOTIF-TRACE] '" + displayName + "' appId=" + _appId
                     + " isDemandingAttention=" + _isDemandingAttention
                     + " | model.IsDemandingAttention=" + (model.IsDemandingAttention ?? false)
                     + " | smartLauncher.urgent=" + (_smartLauncherItem !== null && _smartLauncherItem.urgent)
                     + " | sniNeedsAttention=" + (_appId.length > 0 ? NotificationTracker.sniNeedsAttention(_appId) : false)
                     + " | badgeCount=" + _badgeCount)
+        */
         if (_isDemandingAttention) {
             _triggerAttention()
         }
@@ -149,10 +153,12 @@ Item {
     // Blink opacity multiplier (animated by type 6)
     property real _blinkOpacity: 1.0
     on_BlinkOpacityChanged: {
+        /* [ISOLATION: SILENCED]
         if (_blinkOpacity !== 1.0)
             console.log("[ANIM-TRACE] _blinkOpacity=" + _blinkOpacity.toFixed(3)
                 + " → iconOpacity=" + iconImage.opacity.toFixed(3)
                 + " for '" + displayName + "'")
+        */
     }
 
     // Dot blink opacity (animated by type 5)
@@ -188,7 +194,7 @@ Item {
 
        // Computed zoom factor for this item
        readonly property real zoomFactor: {
-           if (!panelMouseInside || panelMouseX < 0) {
+           if (!panelMouseInside || panelMouseX < 0 || maxZoomFactor <= 1.0) {
                return 1.0
            }
 
@@ -328,6 +334,13 @@ Item {
 
     // Animated scale
     property real currentScale: 1.0
+    Behavior on currentScale {
+        enabled: _zoomAnimReady
+        NumberAnimation {
+            duration: Kirigami.Units.shortDuration
+            easing.type: Easing.OutCubic
+        }
+    }
     property bool _zoomAnimReady: false
 
     // Update currentScale when zoomFactor changes
@@ -368,45 +381,46 @@ Item {
 
         // Debug: log appId for notification matching verification
         Qt.callLater(function() {
+            /* [ISOLATION: SILENCED]
             if (_debugNotif && dockItem._appId.length > 0)
                 console.log("[NOTIF-TRACE] DockIcon created: '" + dockItem.displayName + "' appId=" + dockItem._appId)
+            */
 
+            /* [ISOLATION: SILENCED]
             if (_debugGeom) {
-                console.log(`[GEOM-ICON] '${dockItem.displayName}' | SLOT X:${Math.round(x)} Y:${Math.round(y)} W:${width} H:${height} | ICON X:${Math.round(iconImage.x)} Y:${Math.round(iconImage.y)} W:${iconImage.width} H:${iconImage.height} (Scaled:${Math.round(iconImage.width * currentScale)}x${Math.round(iconImage.height * currentScale)}) | TotalH:${_maxTheoreticalThickness} | Floor:${_dockFloorPadding} | Indic:${_dotHeight}+${_indicatorGap} | Ceil:${_dockCeilingPadding}`);
+                console.log(`[GEOM-ICON] '${dockItem.displayName}' | SLOT X:${Math.round(x)} Y:${Math.round(y)} W:${width} H:${height} | ICON X:${Math.round(iconImage.x)} Y:${Math.round(iconImage.y)} W:${iconImage.width} H:${iconImage.height} (Scaled:${Math.round(iconImage.width * currentScale)}x${Math.round(iconImage.height * currentScale)}) | TotalH:${_maxTheoreticalThickness} | Floor:${_unitPanelFloor} | Indic:${_unitIndicator}+${_unitInterGap} | Ceil:${_unitCeiling}`);
             }
+            */
         })
     }
 
-    // --- ARCHITECTURAL MANDATE: THE INSIDE WORLD ---
+    // --- THE INTERACTION FLOORING CONSTITUTION ---
     // Rule 1: The Fixed Floor (Grounded by Gravity)
-    // Floor padding scales proportionally with icon size (25% ratio, min 4px).
-    readonly property real _dockFloorPadding: Math.max(4, Math.round(iconSize * 0.25)) // Panel Edge to Indicators
+    // Panel Edge to Indicators
+    readonly property real _unitPanelFloor: Math.max(4, Math.round(iconSize * 0.25))
     
-    // The indicator gap is strictly proportional to icon size to prevent large gaps on small icons.
-    // As the slider goes from 1.0 down to 0.5, the gap expands symmetrically up to a limit.
-    // Baseline is 12.5% of iconSize (6px for 48px icons), with expansion up to +15%.
-    readonly property real _indicatorGap: Math.max(2, Math.round(iconSize * 0.125) + Math.round(iconSize * 0.15 * (1.0 - DockSettings.indicatorOffset)))
+    // The Indicator dot/dash height
+    readonly property real _unitIndicator: Math.max(2, Math.round(iconSize * 0.10))
 
-    // Rule 6: UI Blindness Prevention (Dynamic Proportions)
-    // A standard indicator is ~10% of the icon size.
-    readonly property real _dotHeight: Math.max(2, Math.round(iconSize * 0.10))
-    // Active dash is roughly 35% of the icon width, but at least double the dot height.
-    readonly property real _activeDotWidth: Math.max(_dotHeight * 2, Math.round(iconSize * 0.35))
+    // The gap between indicators and the icon image. 
+    // This scales with the indicatorOffset slider.
+    readonly property real _unitInterGap: Math.max(2, Math.round(iconSize * 0.125) + Math.round(iconSize * 0.15 * (1.0 - DockSettings.indicatorOffset)))
 
-    // The "Floor Unit" is the total space occupied by the grounding elements
-    readonly property real _totalFloorUnit: _dockFloorPadding + _dotHeight + _indicatorGap
+    // The actual visual icon pixels, synchronized with the zoom wave.
+    readonly property real _unitIcon: iconSize * currentScale
 
     // Rule 2: The Illusion of Symmetry (The Empty Gap Rule)
-    // Visual symmetry is achieved by ensuring the empty space above the icon
-    // is exactly equal to the empty space below the indicators, regardless of gaps.
-    readonly property real _dockCeilingPadding: _dockFloorPadding
+    // Ceiling padding above the icon is exactly equal to the floor padding.
+    readonly property real _unitCeiling: _unitPanelFloor
 
-    // The "Inside World" Slot defines the unzoomed territory (Icon + Floor + Ceiling)
-    // The slot expands linearly as components are added, maintaining symmetric padding.
-    readonly property real _maxTheoreticalThickness: iconSize + _totalFloorUnit + _dockCeilingPadding
+    // The "Inside World" Territory defines the total unzoomed slot
+    readonly property real _maxTheoreticalThickness: iconSize + _unitPanelFloor + _unitIndicator + _unitInterGap + _unitCeiling
+    
+    // The current dynamic visual thickness (used for orbit and layout sync)
+    readonly property real _currentVisualThickness: _unitIcon + _unitPanelFloor + _unitIndicator + _unitInterGap + _unitCeiling
 
     // Property for indicator positioning (used by main.qml for layout)
-    readonly property real _indicatorSpace: _totalFloorUnit
+    readonly property real _indicatorSpace: _unitPanelFloor + _unitIndicator + _unitInterGap
 
     // Size: The delegate represents the "Inside World" territory (The Slot).
     // Rule 15: We use currentScale (animated) for the layout size so it smoothly 
@@ -429,11 +443,13 @@ Item {
 
     // Reset attention properties when animation stops
     on_ShowAttentionAnimChanged: {
+        /* [ISOLATION: SILENCED]
         console.log("[NOTIF-TRACE] '" + displayName + "' appId=" + _appId
                     + " showAttentionAnim=" + _showAttentionAnim
                     + " | isDemandingAttention=" + _isDemandingAttention
                     + " | launching=" + launching
                     + " | attentionSetting=" + DockSettings.attentionAnimation)
+        */
         if (!_showAttentionAnim) {
             attentionBounceT.x = 0
             attentionBounceT.y = 0
@@ -459,28 +475,29 @@ Item {
             anchors.fill: parent
             color: "magenta"
             opacity: 0.4
-            visible: _debugGeom
+            visible: false // [ISOLATION: SILENCED] _debugGeom
             border.color: "magenta"
             border.width: 1
             enabled: false
             
             QQC2.Label {
-                text: Math.round(parent.width) + "x" + Math.round(parent.height)
+                text: "" // [ISOLATION: SILENCED] Math.round(parent.width) + "x" + Math.round(parent.height)
                 font.pixelSize: 8; font.bold: true; color: "white"
                 anchors.centerIn: parent; opacity: 0.8
+                visible: false // [ISOLATION: SILENCED]
             }
         }
         
         // Declarative Grounding in the 'Inside World'
         x: {
             if (!DockView.isVertical) return (parent.width - width) / 2;
-            if (DockView.edge === 2) return _totalFloorUnit; // Left: anchor after grounding unit
-            return parent.width - _totalFloorUnit - width; // Right: anchor before grounding unit
+            if (DockView.edge === 2) return _unitPanelFloor + _unitIndicator + _unitInterGap; // Left: anchor after flooring stack
+            return parent.width - (_unitPanelFloor + _unitIndicator + _unitInterGap) - width; // Right: anchor before flooring stack
         }
         y: {
             if (DockView.isVertical) return (parent.height - height) / 2;
-            if (DockView.edge === 0) return _totalFloorUnit; // Top: icon starts after grounding unit
-            return parent.height - _totalFloorUnit - height; // Bottom: icon ends before grounding unit
+            if (DockView.edge === 0) return _unitPanelFloor + _unitIndicator + _unitInterGap; // Top: icon starts after flooring stack
+            return parent.height - (_unitPanelFloor + _unitIndicator + _unitInterGap) - height; // Bottom: icon ends before flooring stack
         }
 
         // (Scale transform merged into the main transform array below to prevent double-property syntax errors)
@@ -797,9 +814,11 @@ Item {
     // Type 1: Bounce
     SequentialAnimation {
         running: dockItem._showAttentionAnim && dockItem._attentionType === 1
+        /* [ISOLATION: SILENCED]
         onRunningChanged: console.log("[ANIM-TRACE] bounceAttentionAnim.running=" + running
             + " for '" + dockItem.displayName + "'"
             + " | _attentionType=" + dockItem._attentionType)
+        */
         loops: Animation.Infinite
         NumberAnimation {
             target: attentionBounceT; property: dockItem._bounceProp
@@ -862,11 +881,13 @@ Item {
         id: blinkAnim
         running: dockItem._showAttentionAnim && dockItem._attentionType === 6
         loops: Animation.Infinite
+        /* [ISOLATION: SILENCED]
         onRunningChanged: console.log("[ANIM-TRACE] blinkAnim.running=" + running
             + " for '" + dockItem.displayName + "'"
             + " | _showAttentionAnim=" + dockItem._showAttentionAnim
             + " | _attentionType=" + dockItem._attentionType
             + " (type: " + typeof dockItem._attentionType + ")")
+        */
         NumberAnimation {
             target: dockItem; property: "_blinkOpacity"
             to: 0.2; duration: 400; easing.type: Easing.InOutSine
@@ -881,22 +902,26 @@ Item {
     // The dots sit in the 'Inside World' Floor.
     Flow {
         id: indicatorRow
-        height: _dotHeight // Ensure fixed height for symmetry math
+        height: _unitIndicator // Ensure fixed height for symmetry math
         flow: DockView.isVertical ? Flow.TopToBottom : Flow.LeftToRight
         spacing: Kirigami.Units.smallSpacing
         Accessible.ignored: true
         
-        // Grounded in the 'Inside World' Floor
-        x: {
-            if (!DockView.isVertical) return (parent.width - width) / 2;
-            if (DockView.edge === 2) return (_dockFloorPadding + (_dotHeight - width) / 2); // Left: Center in grounding zone
-            return parent.width - _dockFloorPadding - _dotHeight + (_dotHeight - width) / 2; // Right: Center in grounding zone
-        }
-        y: {
-            if (DockView.isVertical) return (parent.height - height) / 2;
-            if (DockView.edge === 0) return (_dockFloorPadding + (_dotHeight - height) / 2); // Top: Center in grounding zone
-            return parent.height - _dockFloorPadding - _dotHeight + (_dotHeight - height) / 2; // Bottom: Center in grounding zone
-        }
+        // --- ABSOLUTE GROUNDING (Rule 1 Sync) ---
+        // We anchor the indicators directly to the panel edge of the delegate.
+        // This ensures they NEVER move vertically during the zoom wave.
+        anchors.horizontalCenter: !DockView.isVertical ? parent.horizontalCenter : undefined
+        anchors.verticalCenter: DockView.isVertical ? parent.verticalCenter : undefined
+        
+        anchors.top: DockView.edge === 0 ? parent.top : undefined
+        anchors.bottom: DockView.edge === 1 ? parent.bottom : undefined
+        anchors.left: DockView.edge === 2 ? parent.left : undefined
+        anchors.right: DockView.edge === 3 ? parent.right : undefined
+
+        anchors.topMargin: DockView.edge === 0 ? _unitPanelFloor : 0
+        anchors.bottomMargin: DockView.edge === 1 ? _unitPanelFloor : 0
+        anchors.leftMargin: DockView.edge === 2 ? _unitPanelFloor : 0
+        anchors.rightMargin: DockView.edge === 3 ? _unitPanelFloor : 0
 
         Repeater {
             // Show dots based on window count (max 3)
@@ -907,16 +932,15 @@ Item {
             }
 
             Rectangle {
-		    // --- THE ACTIVE DASH LOGIC ---
+                    // --- THE ACTIVE DASH LOGIC ---
                 // If the dock is horizontal, stretch width when active.
-                width: DockView.isVertical ? _dotHeight : (dockItem.model.IsActive ? Math.round(iconSize * 0.35) : _dotHeight)
-                
+                width: DockView.isVertical ? _unitIndicator : (dockItem.model.IsActive ? Math.round(iconSize * 0.35) : _unitIndicator)
+
                 // If the dock is vertical, stretch height when active.
-                height: DockView.isVertical ? (dockItem.model.IsActive ? Math.round(iconSize * 0.35) : _dotHeight) : _dotHeight
-                
+                height: DockView.isVertical ? (dockItem.model.IsActive ? Math.round(iconSize * 0.35) : _unitIndicator) : _unitIndicator
+
                 // Keep the pill shape completely round at the ends
-                radius: _dotHeight / 2
-                
+                radius: _unitIndicator / 2
                 // Smoothly animate the stretching effect
                 Behavior on width {
                     NumberAnimation { duration: 250; easing.type: Easing.OutBack }

@@ -58,6 +58,15 @@ void DockShell::initialize(DockPlatform::Edge edge, DockPlatform::VisibilityMode
     // 4. Initialize dock view
     m_view->initialize(m_model->tasksModel(), m_model->virtualDesktopInfo(), m_model->activityInfo(), edge, visibilityMode);
 
+    // [SYNC KICK]: Force the dock to re-read disk when settings are saved in the UI
+    connect(m_settingsWindow.get(), &SettingsWindow::requestSync, this, [this]() {
+        /* [ISOLATION: SILENCED]
+        qCDebug(lcShell) << "Sync requested: Reloading configuration from disk...";
+        */
+        m_settings->load();
+        m_view->updateSize();
+    });
+
     // 5. Configure and initialize preview surface
     m_previewController->setHideDelay(m_settings->previewHideDelay());
     m_previewController->initialize();
@@ -116,9 +125,20 @@ void DockShell::connectSettingsSignals()
     auto *s = m_settings;
     auto *ss = m_screenSettings;
 
-    // Per-screen overrideable: iconSize, maxZoomFactor, floating → use ScreenSettings signals
-    connect(ss, &ScreenSettings::iconSizeChanged, m_view.get(), &DockView::updateSize);
-    connect(ss, &ScreenSettings::maxZoomFactorChanged, m_view.get(), &DockView::updateSize);
+    // Global & Per-screen reactivity: ensure surface resizes instantly when either changes.
+    // This fixes the 'Wiggle' bug where surface size would stay stale until a mouse event.
+    auto updateThrottled = [this]() {
+        /* [ISOLATION: SILENCED]
+        qCDebug(lcShell) << "Settings changed, updating surface size...";
+        */
+        m_view->updateSize();
+    };
+
+    connect(s, &KremaSettings::IconSizeChanged, m_view.get(), updateThrottled);
+    connect(s, &KremaSettings::MaxZoomFactorChanged, m_view.get(), updateThrottled);
+    connect(ss, &ScreenSettings::iconSizeChanged, m_view.get(), updateThrottled);
+    connect(ss, &ScreenSettings::maxZoomFactorChanged, m_view.get(), updateThrottled);
+
     connect(ss, &ScreenSettings::floatingChanged, m_view.get(), [this]() {
         m_view->updateSize();
         m_view->visibilityController()->setFloatingPadding(m_view->floatingPadding());

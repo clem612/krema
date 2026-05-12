@@ -35,10 +35,12 @@ public:
 
     Q_INVOKABLE void show();
     Q_INVOKABLE void show(const QString &module);
+    Q_INVOKABLE void sync();
 
 Q_SIGNALS:
     void visibleChanged(bool visible);
     void moduleChanged(const QString &module);
+    void requestSync();
 
 private:
     bool m_visible = false;

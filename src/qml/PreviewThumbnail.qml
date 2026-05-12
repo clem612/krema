@@ -49,8 +49,10 @@ Item {
         id: screencastRequest
         uuid: root.winId ?? ""
         onNodeIdChanged: function() {
+            /* [ISOLATION: SILENCED]
             console.log("[krema.preview] nodeId:", screencastRequest.nodeId,
                 "for uuid:", screencastRequest.uuid)
+            */
         }
     }
 
@@ -108,8 +110,10 @@ Item {
             Accessible.ignored: true
 
             onStateChanged: function() {
+                /* [ISOLATION: SILENCED]
                 console.log("[krema.preview] PipeWire state:", pipeWireItem.state,
                     "ready:", pipeWireItem.ready, "nodeId:", pipeWireItem.nodeId)
+                */
             }
         }
 

@@ -62,9 +62,18 @@ QQC2.ScrollView {
                         id: iconSizeSlider; Layout.fillWidth: true; 
                         from: 24; to: 96; stepSize: 4; 
                         value: DockSettings.iconSize; 
-			onMoved: { 
-                                 let newVal = value;
+                        onMoved: updateIconSize(value)
+                        onPressedChanged: {
+                            if (!pressed) {
+                                updateIconSize(value)
+                                DockSettings.save()
+                            }
+                        }
+
+                        function updateIconSize(newVal) {
                                  let oldIconSize = DockSettings.iconSize;
+                                 if (newVal === oldIconSize) return;
+
                                  // Rule 7 Permanent Radius Sync: Capture current ratio before updating size
                                  let radiusRatio = DockSettings.cornerRadius / oldIconSize;
 
@@ -76,10 +85,6 @@ QQC2.ScrollView {
                                      
                                      let newMaxEnv = iconsLayout.calculateMaxEnv(newVal);
                                      let newThickness = Math.min(newMaxEnv, Math.round(ratio * newMaxEnv));
-                                     
-                                     if (Qt.application.arguments.indexOf("--debug-geom") !== -1) {
-                                         console.log(`[SYNC-DEBUG] IconSize: ${newVal} | Ratio: ${ratio.toFixed(2)} | PanelH -> ${newThickness}`);
-                                     }
                                      
                                      DockSettings.panelHeight = newThickness;
                                  } else {
@@ -100,8 +105,7 @@ QQC2.ScrollView {
                                      newRadius = maxRadius;
                                  }
                                  DockSettings.cornerRadius = newRadius;
-                             }
-                        onPressedChanged: if (!pressed) DockSettings.save()
+                        }
                     }
                 }
 
@@ -118,10 +122,13 @@ QQC2.ScrollView {
                         id: iconSpacingSlider; Layout.fillWidth: true; 
                         from: 0; to: 16; stepSize: 1; 
                         value: DockSettings.iconSpacing; 
-			onMoved: { 
-                                 DockSettings.iconSpacing = value;
-                                 DockSettings.save();
-                             }
+                        onMoved: DockSettings.iconSpacing = value
+                        onPressedChanged: {
+                            if (!pressed) {
+                                DockSettings.save();
+                                if (SettingsController) SettingsController.sync();
+                            }
+                        }
                     }
                 }
 
@@ -138,13 +145,18 @@ QQC2.ScrollView {
                         id: zoomFactorSlider; Layout.fillWidth: true; 
                         from: 1.0; to: 2.0; stepSize: 0.1; 
                         value: DockSettings.maxZoomFactor; 
-			onMoved: { 
-                                 DockSettings.maxZoomFactor = value;
-                                 DockSettings.save();
-                             }
+                        onMoved: {
+                            DockSettings.maxZoomFactor = value;
+                        }
+                        onPressedChanged: {
+                            if (!pressed) {
+                                DockSettings.maxZoomFactor = value;
+                                DockSettings.save();
+                                if (SettingsController) SettingsController.sync();
+                            }
+                        }
                     }
                 }
-
                 Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A" }
 
                 // INDICATOR OFFSET (Global internal scale/padding)

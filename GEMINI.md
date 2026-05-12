@@ -8,10 +8,17 @@ Krema is a dedicated dock for **KDE Plasma 6 (Wayland)**. It is the "spiritual s
 
 ## 2. Session Protocol (Mandatory)
 Before answering any prompts, Gemini must:
-1. **Check Work State:** Read `.claude/work-state.md` to identify current tasks and known issues.
-2. **Verify Progress:** Check `ROADMAP.md` for the current milestone (marked with ⬅️).
-3. **On Session Close:** Update `work-state.md` and `ROADMAP.md` with progress.
-4. **Transparency & Proposal Phase:** Before any file edit, Gemini must provide a "Refactor Proposal":
+1. **The Master Mind Review:** Read `.claude/work-state.md` to identify current tasks and the knowledge index.
+2. **Technical Memory Refresh:** Follow links in `work-state.md` to read `docs/bugs_report.md` and relevant research logs in `docs/research/`.
+3. **Verify Progress & Vision:** 
+   - Find the current milestone in `ROADMAP.md` (marked with ⬅️).
+   - Cross-reference the task with `ARCHITECTURE Mandate.md` to ensure the proposed logic obeys the mathematical laws.
+4. **On Session Close:** Synchronize ALL tracking files:
+   - Update `work-state.md` (Status & History).
+   - Update `ROADMAP.md` (Milestone progress).
+   - Update `docs/bugs_report.md` (New trials, failures, or fixes).
+   - Update/Create logs in `docs/research/` (New architectural discoveries or KDE research).
+5. **Transparency & Proposal Phase:** Before any file edit, Gemini must provide a "Refactor Proposal":
    - **Identified Logic:** What specific lines look "optimizable"?
    - **Functional Assessment:** What does this logic currently achieve (e.g., handles separators, fixes Electron icons)?
    - **Optimization Strategy:** How will the new code preserve this EXACT behavior while being more efficient?
@@ -75,3 +82,9 @@ Before answering any prompts, Gemini must:
 - **Comprehensive Logging:** When active, the component must log its critical geometry (`X`, `Y`, `Width`, `Height`) to the terminal whenever it changes. This applies to the Panel, Icons, Indicators, Separators, Mouse Areas, and Wayland Input Regions.
 - **Inter-Icon Gap Measurement:** The system must explicitly measure and expose any "Dead Zones" or "Inter-Icon Gaps" where the mouse is inside the dock container but not hovering a specific icon.
 - **Future Proofing:** Any new visual or interactive feature added to the dock must implement this logging protocol as part of its initial commit.
+
+## 13. The History & Organization Mandate
+- **Immutable History Log for Research & Bugs:** ALL `Research` and `Bug Reports` documentation files (`docs/research/*.md`, `docs/bugs_report.md`) MUST be organized chronologically from **Old to New** (Top to Bottom).
+- **Non-Subtractive Updates:** Never delete or overwrite previous research or bug findings in these files. New information must be appended to the bottom of the file. Specify and organize the info so it is clear which info is outdated and which is new (e.g., mark old sections as `[OUTDATED]` and new as `[CURRENT]`). This ensures we never go backwards in current or future sessions.
+- **Mandates are Absolute Truths:** The Old-to-New history rule does **NOT** apply to Mandate files (like `ARCHITECTURE Mandate.md` or `GEMINI.md`). Mandates are absolute, uncluttered truths and must not be cluttered with history.
+- **Explicit Promotion Required:** NEVER promote any math, logic, or code structure to `ARCHITECTURE Mandate.md` without explicit, direct approval from the user. You may *suggest* a promotion once a feature is proven 100% working and accurate, but you must wait for the "Go".

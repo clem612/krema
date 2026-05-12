@@ -1,6 +1,8 @@
 # Krema Development Roadmap
 
 > A lightweight, modular dock for KDE Plasma 6. 
+> **Source of Truth:** [ARCHITECTURE Mandate.md](ARCHITECTURE%20Mandate.md)
+>
 > The spiritual successor to Latte Dock, defined by performance, continuous curvature, and "Everything is a Module" architecture. Krema honors the legacy of Latte while establishing a unique identity focused on modularity and premium visual standards.
 
 ---
@@ -17,18 +19,24 @@
 
 ## Phase 2: Refinement & The "Everything is a Module" Pivot (Current)
 
+### Stabilization Phase (Foundation Integrity)
+- [x] **Fix "Heisenbug" (Rule 12):** Identified and resolved debug-induced hit-test latency (fixed via Absolute Sync).
+- [x] **Center Deadzone Isolation:** Resolved via Distance-Based Visual Center hit-testing.
+- [ ] **Dolphin Identity Bridge:** Finalize AppID mapping logic.
+
 ### Architectural Shift: Mathematical Foundation
 - [x] **Mathematical Constitution:** Established the `ARCHITECTURE Mandate.md` as the absolute source of truth.
-- [x] **Geometric Gravity & Two Worlds:** Isolated Screen-to-Panel (Outside World) and Panel-to-Icon (Inside World) geometry.
-- [x] **Universal Symmetry:** Perfected the "Empty Gap Rule" (12px standard) for flawless visual balance.
+- [x] **Geometric Gravity (Rule 1):** Isolated Screen-to-Panel and Panel-to-Icon geometry.
+- [x] **Universal Symmetry (Rule 2):** Perfected the "Empty Gap Rule" for flawless visual balance.
 - [x] **Proactive Rule 6 Enforcement:** Real-time settings clamping to eliminate all UI "dead zones."
-- [x] **Dual Reserve Space Modes:** Added choice between "Panel Background" or "Icon Extents" for Wayland window avoidance.
-- [x] **Dynamic Indicator Proportions:** Implemented 10% golden ratio sizing and linear gap scaling.
-- [x] **Geometry Debugging Mandate:** Formalized Rule 12 with a unified terminal-based diagnostic framework.
-- [x] **The Feature Vault:** Established versioned history logs in `docs/features/` to prevent regressions.
-- [ ] **Recursive Container Logic:** Support nested modules (Apps inside Groups, Widgets inside Areas) using Single-Directional Flow math to prevent binding loops.
-- [ ] **Panel Fixed Width Mode:** Enable constant, minimum, or full-screen dock lengths (Rule 8) with support for Start/Center/End icon alignment within the extended panel.
-- [ ] **Icon Display Mode:** Support for "Icons Only" and "Icons + Names" modes to provide flexible task manager visual configurations.
+- [x] **Dual Reserve Space Modes (Rule 1):** Choice between "Panel Background" or "Icon Extents".
+- [x] **Dynamic Indicator Proportions (Rule 2):** 10% golden ratio sizing.
+- [x] **Geometry Debugging Mandate (Rule 12):** Unified terminal-based diagnostic framework.
+- [x] **The Feature Vault:** Versioned history logs in `docs/features/`.
+- [ ] **Island Protocol & Recursive Containers (Rule 13):** Support nested modules (Widgets inside Areas).
+- [ ] **Fixed Width Mode (Rule 8):** Start/Center/End icon alignment within extended panels.
+- [ ] **Coupling Lock Protocol (Rule 14):** Explicit 'Lock' state for geometric integrity.
+- [ ] **Dynamic Repulsion & Proportional Gaps (Rules 15 & 16):** Perfecting the Parabolic Wave physics.
 
 ### Design Language: "Milk & Deep Roast"
 - [ ] **Squircle-First Geometry:** Replace standard `Rectangle` rounding with Continuous Curvature (SDF Shaders) for the panel and cards.
@@ -45,14 +53,24 @@
 
 ---
 
-## Phase 3: Extension & Custom Shell
-- [ ] **Module System Expansion:** 
-    - [ ] App Module: Pinned/Non-pinned/Custom Categories.
-    - [ ] Widget Module: System Stats, Media, Toggles.
-- [ ] **Breaking QML Limits:**
-    - [ ] Custom Shell: Bypass Kirigami window limits for the Settings UI to allow "Liquid Expansion" effects.
-    - [ ] Consolidated Rendering: Single `MultiEffect` pass for blur/shadow/tint optimization.
-- [ ] **System Tray Integration:** StatusNotifierItem protocol support.
+## Phase 3: Modular Architecture & System Integration
+### Milestone 9: The Modular System (Current Priority) ⬅️
+- [ ] **Island Protocol (Rule 13):** Implement recursive container logic for Widgets and Areas.
+- [ ] **System Tray Integration:** Full StatusNotifierItem (SNI) protocol support.
+- [ ] **Widget Module Ecosystem:** Initial support for System Stats, Media, and Toggles.
+- [ ] **Unified DockShell:** Consolidate DockView and MultiDockManager into a robust modular shell.
+
+### Milestone 10: Workspace Awareness & Profile Management
+- [ ] **Virtual Desktop & Activity Awareness:** Implement "Filter vs. Global" modes for apps.
+- [ ] **Profile-Based Visibility:** Toggle buttons to separate apps by Activity or Virtual Desktop.
+- [ ] **Custom Layout Profiles:** Ability to save, export, and load custom dock configurations.
+- [ ] **Activity-Specific Docks:** Automatic profile switching based on the current KDE Activity.
+- [ ] **Global Default Config:** A "Reset to Factory" and "Default Template" system for new panels.
+
+### Milestone 11: Multi-Panel Architecture
+- [ ] **Parallel Panel support:** Allow multiple independent dock panels on the same display/screen.
+- [ ] **Multi-Panel Logic:** Independent z-index, visibility, and filtering rules for each panel instance.
+- [ ] **Panel Synchronization:** Shared drag-and-drop between multiple panels on the same display.
 
 ---
 

@@ -45,4 +45,9 @@ void SettingsWindow::show(const QString &defaultModule)
     setVisible(true);
 }
 
+void SettingsWindow::sync()
+{
+    Q_EMIT requestSync();
+}
+
 } // namespace krema

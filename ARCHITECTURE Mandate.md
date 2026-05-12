@@ -33,6 +33,7 @@ The dock panel's thickness (height) is decoupled from the size of the icons, uti
 - **The Moving Ceiling:** The panel's inner (free-facing) edge is the only part of the background that moves when height is adjusted. Resizing the panel is a "Top-Down Reveal" mechanism.
 - **Uncovering the Icon (Visual Overflow):** When the panel thickness is reduced, the "Ceiling" moves toward the "Floor". Because the icon is locked by Gravity (Rule 1) to the Fixed Floor, the shrinking ceiling simply *uncovers* the icon from the top, allowing it to visually overflow strictly toward the screen center.
 - **Illusion of Symmetry:** Symmetry is achieved only at the Max Height Envelope. During overflow, symmetry is sacrificed to maintain the Unbreakable Anchor Chain.
+- **Absolute Zoom Independence:** The Zoom Scale variable (`maxZoomFactor`) and visual projection are strictly decoupled from physical Panel Thickness. The dock panel MUST NOT increase or decrease its thickness in response to zoom magnification. Icons zoom freely as visual projections and are permitted to overflow the panel boundary indefinitely without triggering a panel resize.
 
 ### 6. The Dynamic UI Blindness Prevention (Slider Rule)
 User-facing configuration controls (sliders, spinboxes) must never operate blindly. They must dynamically bind to the mathematical limits of the dock's current state.
@@ -94,3 +95,16 @@ To prevent visual overlap and maintain individual "territory" during interaction
 To maintain consistent visual rhythm and prevent 'cramping' at high scales, the empty space (Gap) between icons must scale proportionally with the current zoom level.
 - **Linear Scaling:** The gap between Icon A and Icon B must scale based on the average zoom factor of both icons.
 - **Rhythmic Preservation:** This ensures that the ratio between 'Ink' and 'Air' remains constant, providing a premium, high-fidelity visual experience regardless of the dock's magnification state.
+
+### 17. The Interaction Flooring Constitution (The Unit Mandate)
+To ensure absolute mathematical consistency between visual rendering and interaction logic, the dock's vertical (or cross-axis) stack is governed by a strict variable-based constitution.
+
+- **The 5-Unit Stack:** Every interactive slot is composed of five fundamental units:
+    1.  `Floor Padding` (Internal space between the panel's anchored edge and the indicators)
+    2.  `Indicator` (Visual dot/dash height)
+    3.  `Gap` (Space between indicator and icon image)
+    4.  `Icon` (The visual icon pixels, subject to zoom)
+    5.  `Ceiling Padding` (Internal space above the icon, mirroring Unit #1 per Rule 2)
+- **Dedicated Unit Variables:** Every gap, padding, indicator size, and physical layout element MUST be defined as its own explicit, mathematically calculated unit variable (e.g., `_unitPanelFloor`, `_unitIndicator`, `_unitInterGap`).
+- **The Ban on Implicit Math (Magic Numbers):** Hardcoded pixel values (e.g., `+ 5`, `- 12`) and implicit math within layout constraints or hit-testing (orbit) formulas are strictly forbidden. All geometric logic must be derived by summing these explicit unit variables.
+- **Constitutional Sync:** Hit-testing (Rule 3) and Wayland Input Regions must utilize the same unit variables as the visual delegates to ensure the "Interaction Orbit" is perfectly synchronized with the visual pixels at all times.
