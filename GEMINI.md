@@ -112,4 +112,5 @@ Before answering any prompts, Gemini must:
   2. `docs/bugs_report.md` (Update status and trial outcomes).
   3. `docs/research/*.md` (Document new architectural discoveries).
   4. `ROADMAP.md` (Update milestone progress).
+  5. `CHANGELOG.md` (Document user-facing feature changes and fixes).
 - **Synchronization Check:** The final turn before a commit MUST involve a review of these files to ensure they accurately describe the "Why" and "What" of the changes being committed.
