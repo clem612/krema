@@ -115,10 +115,10 @@
     </entry>
 
     <entry name="BackgroundStyle" type="Int">
-      <label>Background style (0=PanelInherit, 1=Transparent, 2=Tinted, 3=Acrylic)</label>
+      <label>Background style (0=Adaptive, 1=Transparent, 2=Solid, 3=Acrylic, 4=Mica)</label>
       <default>0</default>
       <min>0</min>
-      <max>3</max>
+      <max>4</max>
     </entry>
 
     <entry name="UseAccentColor" type="Bool">

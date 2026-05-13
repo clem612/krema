@@ -19,6 +19,12 @@
 
 ## Phase 2: Refinement & The "Everything is a Module" Pivot (Current)
 
+### Milestone 9: Visual Engine & Foundation Polish (Current Priority) ⬅️
+- [x] **Advanced Surface Shaders:** Implementation of hardware-accelerated Acrylic and Mica background materials.
+- [x] **Volumetric Shadow Engine:** Precise outer shadow rendering clamped strictly to the visual panel bounds.
+- [x] **Preview Geometry Sync:** Absolute coordinate synchronization for window preview thumbnails and vertical offsets.
+- [x] **Kinetic Zoom Physics (UX):** Implementation of smoothed Bezier curves and easing functions for entry/exit zoom orbits (the "Kremy" feel).
+
 ### Stabilization Phase (Foundation Integrity)
 - [x] **Fix "Heisenbug" (Rule 12):** Identified and resolved debug-induced hit-test latency (fixed via Absolute Sync).
 - [x] **Center Deadzone Isolation:** Resolved via Distance-Based Visual Center hit-testing.
@@ -38,36 +44,24 @@
 - [ ] **Coupling Lock Protocol (Rule 14):** Explicit 'Lock' state for geometric integrity.
 - [ ] **Dynamic Repulsion & Proportional Gaps (Rules 15 & 16):** Perfecting the Parabolic Wave physics.
 
-### Design Language: "Milk & Deep Roast"
-- [ ] **Squircle-First Geometry:** Replace standard `Rectangle` rounding with Continuous Curvature (SDF Shaders) for the panel and cards.
-- [ ] **Palette Implementation:** Primary `#1C1A1C` (Soft Obsidian), Accent `#FFFDD0` (Clotted Cream).
-- [ ] **Surface Logic:** Implement internal shadows/inner glows for a "pressed" material look.
-- [ ] **Viscous Easing:** Implement `CubicBezier` curves for weighted, "liquid" motion in zooms and transitions.
-
-### Variable Sanitization & Diagnostics
-- [x] **Variable Sanitization (KConfig Audit):**
-    - [x] Rename `iconScaling` → `indicatorOffset`.
-    - [x] Unified sizing limits (PanelHeight max 300).
-- [ ] **Real-time Geometry Awareness:** Refactor the blueprint layer to visualize dock boundaries and max-width constraints dynamically.
-- [ ] **Shader Integration:** Update the blueprint shader to support resizing animations smoothly.
-
 ---
 
 ## Phase 3: Modular Architecture & System Integration
-### Milestone 9: The Modular System (Current Priority) ⬅️
+
+### Milestone 10: The Modular System
 - [ ] **Island Protocol (Rule 13):** Implement recursive container logic for Widgets and Areas.
 - [ ] **System Tray Integration:** Full StatusNotifierItem (SNI) protocol support.
 - [ ] **Widget Module Ecosystem:** Initial support for System Stats, Media, and Toggles.
 - [ ] **Unified DockShell:** Consolidate DockView and MultiDockManager into a robust modular shell.
 
-### Milestone 10: Workspace Awareness & Profile Management
+### Milestone 11: Workspace Awareness & Profile Management
 - [ ] **Virtual Desktop & Activity Awareness:** Implement "Filter vs. Global" modes for apps.
 - [ ] **Profile-Based Visibility:** Toggle buttons to separate apps by Activity or Virtual Desktop.
 - [ ] **Custom Layout Profiles:** Ability to save, export, and load custom dock configurations.
 - [ ] **Activity-Specific Docks:** Automatic profile switching based on the current KDE Activity.
 - [ ] **Global Default Config:** A "Reset to Factory" and "Default Template" system for new panels.
 
-### Milestone 11: Multi-Panel Architecture
+### Milestone 12: Multi-Panel Architecture
 - [ ] **Parallel Panel support:** Allow multiple independent dock panels on the same display/screen.
 - [ ] **Multi-Panel Logic:** Independent z-index, visibility, and filtering rules for each panel instance.
 - [ ] **Panel Synchronization:** Shared drag-and-drop between multiple panels on the same display.

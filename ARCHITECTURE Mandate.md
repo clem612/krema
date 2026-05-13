@@ -108,3 +108,19 @@ To ensure absolute mathematical consistency between visual rendering and interac
 - **Dedicated Unit Variables:** Every gap, padding, indicator size, and physical layout element MUST be defined as its own explicit, mathematically calculated unit variable (e.g., `_unitPanelFloor`, `_unitIndicator`, `_unitInterGap`).
 - **The Ban on Implicit Math (Magic Numbers):** Hardcoded pixel values (e.g., `+ 5`, `- 12`) and implicit math within layout constraints or hit-testing (orbit) formulas are strictly forbidden. All geometric logic must be derived by summing these explicit unit variables.
 - **Constitutional Sync:** Hit-testing (Rule 3) and Wayland Input Regions must utilize the same unit variables as the visual delegates to ensure the "Interaction Orbit" is perfectly synchronized with the visual pixels at all times.
+
+### 18. The Decoupled Catch Zone (Rule of Geometry Sovereignty)
+To ensure absolute interaction reliability regardless of the dock's aesthetic configuration, mouse tracking must be decoupled from the visual panel background.
+- **Full-Surface Coverage:** The QML `MouseArea` MUST NOT be anchored to the visual panel (`anchors.fill: parent`). Instead, it must cover the entire `root` Item (the full Wayland input region).
+- **Thickness Independence:** This prevents "interaction suffocation" where thin or ultra-slim panels (e.g. 10px) would otherwise clip the mouse catch zone and cause 1.0x zoom click-through failures.
+
+### 19. Kinetic Zoom Physics (The "Kremy" Transition)
+All zoom transitions must exhibit a weighted, liquid motion to provide a premium user experience and prevent "stutter" during orbit exits.
+- **Elastic Return:** When the mouse exits the interaction orbit, icons must not snap instantly to 1.0x. Instead, they must follow a smoothed easing curve (e.g., `Easing.OutBack` or `CubicBezier`) to gracefully return to their rest state.
+- **Intensity Bridging:** This kinetic behavior is driven by an animated `_zoomIntensity` property, which bridges the gap between raw hit-test booleans and the visual zoom wave.
+
+### 20. The Safe Spacing Mandate (Non-Overlapping UI)
+To ensure professional readability and accessibility, all UI elements must respect physical boundaries and prevent visual collisions.
+- **Adaptive Wrapping:** All descriptive labels and text blocks MUST utilize `wrapMode: Text.WordWrap` and `Layout.fillWidth: true` to gracefully adapt to window resizing.
+- **Breathing Room Protocol:** Direct overlaps and negative margins (e.g., `topMargin: -8`) are strictly forbidden. Every element must possess its own logical territory.
+- **Constraint Sovereignty:** When using horizontal layouts (`RowLayout`), width constraints or proportional scaling MUST be enforced to prevent sibling elements from "crushing" each other.

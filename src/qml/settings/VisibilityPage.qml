@@ -106,7 +106,7 @@ QQC2.ScrollView {
 
                // RESERVE MODE SELECTION (Rule 6: UI Blindness Prevention)
                ColumnLayout {
-                   Layout.fillWidth: true; Layout.leftMargin: 32; Layout.topMargin: -8
+                   Layout.fillWidth: true; Layout.leftMargin: 32
                    visible: DockSettings.visibilityMode === 0 && DockSettings.reserveSpace
                    spacing: 8
 

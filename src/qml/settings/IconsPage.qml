@@ -23,18 +23,16 @@ QQC2.ScrollView {
 
     ColumnLayout {
         id: iconsLayout
-        // ONLY fill the width, let the height stretch natively
         width: parent.width
         spacing: 32
 
-        // RULE 7 HELPERS: Mathematical Constitution for the Slot Envelope
-        // This must match the math in AppIcon.qml and PanelPage.qml exactly.
+        // Slot Envelope Calculation (Rule 7)
+        // Must match AppIcon.qml exactly.
         function calculateMaxEnv(size) {
             let floorPad = Math.max(4, Math.round(size * 0.25))
             let dot = Math.max(2, Math.round(size * 0.10))
-            // Pure Proportional Gap: 0.125 base ratio (match v2.1 baseline)
             let gap = Math.max(2, Math.round(size * 0.125) + Math.round(size * 0.15 * (1.0 - DockSettings.indicatorOffset)))
-            return size + floorPad + dot + gap + floorPad // floor + dot + gap + ceiling
+            return size + floorPad + dot + gap + floorPad
         }
         // --- SECTION 1: SIZING & GEOMETRY ---
         ColumnLayout {
@@ -203,7 +201,7 @@ QQC2.ScrollView {
                 }
                 QQC2.Label { 
                     text: i18n("Automatically adjusts icons with excess transparent padding so they appear visually consistent."); 
-                    color: theme.textDim; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.topMargin: -8
+                    color: theme.textDim; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true
                 }
             }
         }

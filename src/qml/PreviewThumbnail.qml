@@ -18,6 +18,10 @@ import com.bhyoo.krema 1.0
 Item {
     id: root
 
+    // --- DEBUG PROTOCOL (Rule 12) ---
+    readonly property bool _debugAll: Qt.application.arguments.indexOf("--debug-all") !== -1
+    readonly property bool _debugZoom: _debugAll || Qt.application.arguments.indexOf("--debug-zoom") !== -1
+
     property var winId
     property string title: ""
     property bool isMinimized: false
@@ -49,10 +53,10 @@ Item {
         id: screencastRequest
         uuid: root.winId ?? ""
         onNodeIdChanged: function() {
-            /* [ISOLATION: SILENCED]
-            console.log("[krema.preview] nodeId:", screencastRequest.nodeId,
-                "for uuid:", screencastRequest.uuid)
-            */
+            if (_debugZoom) {
+                console.log("[PREVIEW-TRACE] nodeId:", screencastRequest.nodeId,
+                    "for uuid:", screencastRequest.uuid)
+            }
         }
     }
 
@@ -110,10 +114,10 @@ Item {
             Accessible.ignored: true
 
             onStateChanged: function() {
-                /* [ISOLATION: SILENCED]
-                console.log("[krema.preview] PipeWire state:", pipeWireItem.state,
-                    "ready:", pipeWireItem.ready, "nodeId:", pipeWireItem.nodeId)
-                */
+                if (_debugZoom) {
+                    console.log("[PREVIEW-TRACE] PipeWire state:", pipeWireItem.state,
+                        "ready:", pipeWireItem.ready, "nodeId:", pipeWireItem.nodeId)
+                }
             }
         }
 

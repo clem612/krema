@@ -43,6 +43,7 @@ class DockView : public QQuickView
     Q_PROPERTY(int iconCacheVersion READ iconCacheVersion NOTIFY iconCacheVersionChanged)
     Q_PROPERTY(int edge READ edge NOTIFY edgeChanged)
     Q_PROPERTY(bool isVertical READ isVertical NOTIFY edgeChanged)
+    Q_PROPERTY(QObject *screenSettings READ screenSettings CONSTANT)
 
 public:
     explicit DockView(std::unique_ptr<DockPlatform> platform, KremaSettings *settings, QWindow *parent = nullptr);
@@ -62,6 +63,7 @@ public:
     [[nodiscard]] int iconCacheVersion() const;
     [[nodiscard]] int edge() const;
     [[nodiscard]] bool isVertical() const;
+    [[nodiscard]] QObject *screenSettings() const;
 
     /// Update the dock edge and recalculate surface size.
     void setEdge(DockPlatform::Edge edge);

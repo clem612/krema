@@ -76,7 +76,7 @@ QQC2.ScrollView {
                 }
                 QQC2.Label { 
                     text: i18n("Automatically adjusts panel thickness when resizing icons to preserve the visual overflow ratio."); 
-                    color: theme.textDim; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.topMargin: -8; Layout.leftMargin: 32
+                    color: theme.textDim; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.leftMargin: 32
                 }
 
                 Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A" }
@@ -110,7 +110,7 @@ QQC2.ScrollView {
                 }
                 QQC2.Label { 
                     text: i18n("Detaches the dock from the screen edge for a modern, pill-shaped look."); 
-                    color: theme.textDim; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.topMargin: -8
+                    color: theme.textDim; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true
                 }
             }
         }

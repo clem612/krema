@@ -30,23 +30,6 @@ Item {
             Accessible.Polite)
     }
 
-    // Surface-level hover detection: keep preview visible when mouse is anywhere
-    // on this surface. The C++ input region (updateInputRegion) already constrains
-    // which events reach this surface to the popup area + margins, so detecting
-    // hover at the surface root is equivalent to detecting hover on the popup.
-    // This is more reliable than a popup-child MouseArea because it doesn't depend
-    // on popup geometry, which can shift during layout.
-    HoverHandler {
-        id: surfaceHover
-        onHoveredChanged: {
-            PreviewController.setPreviewHovered(hovered)
-            // Mouse movement cancels keyboard navigation in preview
-            if (hovered && PreviewController.previewKeyboardActive) {
-                PreviewController.endPreviewKeyboardNav()
-            }
-        }
-    }
-
     // Parent's window IDs — used by both grouped and single preview.
     // On Wayland these are UUID strings matching Plasma's WinIdList format.
     // Kept as a direct QVariantList from the model (like Plasma's approach).
@@ -198,6 +181,20 @@ Item {
         id: popup
         visible: PreviewController.visible && PreviewController.parentIndex >= 0
 
+        // --- Icon-Gated Visibility (Trial 4) ---
+        // Move the HoverHandler inside the visible content box.
+        // This ensures the mouse-catching 'Authority' only applies
+        // when the cursor is explicitly over the thumbnails.
+        HoverHandler {
+            id: popupHover
+            onHoveredChanged: {
+                PreviewController.setPreviewHovered(hovered)
+                if (hovered && PreviewController.previewKeyboardActive) {
+                    PreviewController.endPreviewKeyboardNav()
+                }
+            }
+        }
+
         Accessible.role: Accessible.PopupMenu
         Accessible.name: PreviewController.appName
             ? i18n("Preview for %1", PreviewController.appName)
@@ -212,9 +209,12 @@ Item {
         height: popupContent.implicitHeight + 2 * Kirigami.Units.largeSpacing
         y: {
             if (!DockView) return PreviewController.contentY
-            if (DockView.edge === 0) return 0                            // Top → top edge
-            if (DockView.edge === 1) return parent.height - height       // Bottom → bottom edge
-            return PreviewController.contentY                            // Left/Right → centered
+            let margin = 12 // distance from icons
+            let dockVisualTop = PreviewController.dockHeight - DockView.floatingPadding
+            
+            if (DockView.edge === 0) return dockVisualTop + margin                   // Top → below icons
+            if (DockView.edge === 1) return parent.height - height - dockVisualTop - margin // Bottom → above icons
+            return PreviewController.contentY                                        // Left/Right → centered
         }
         radius: Kirigami.Units.cornerRadius
         color: Kirigami.Theme.backgroundColor

@@ -58,11 +58,8 @@ void DockShell::initialize(DockPlatform::Edge edge, DockPlatform::VisibilityMode
     // 4. Initialize dock view
     m_view->initialize(m_model->tasksModel(), m_model->virtualDesktopInfo(), m_model->activityInfo(), edge, visibilityMode);
 
-    // [SYNC KICK]: Force the dock to re-read disk when settings are saved in the UI
+    // Reload configuration when settings are changed in the UI
     connect(m_settingsWindow.get(), &SettingsWindow::requestSync, this, [this]() {
-        /* [ISOLATION: SILENCED]
-        qCDebug(lcShell) << "Sync requested: Reloading configuration from disk...";
-        */
         m_settings->load();
         m_view->updateSize();
     });
@@ -128,9 +125,6 @@ void DockShell::connectSettingsSignals()
     // Global & Per-screen reactivity: ensure surface resizes instantly when either changes.
     // This fixes the 'Wiggle' bug where surface size would stay stale until a mouse event.
     auto updateThrottled = [this]() {
-        /* [ISOLATION: SILENCED]
-        qCDebug(lcShell) << "Settings changed, updating surface size...";
-        */
         m_view->updateSize();
     };
 

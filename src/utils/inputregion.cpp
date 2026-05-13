@@ -43,22 +43,23 @@ QRegion computeDockInputRegion(const InputRegionParams &p)
             w = p.panelWidth + 2 * p.margin;
 
             if (p.edge == 1) { // Bottom
-                y = p.hovered ? std::max(0, p.panelY - p.zoomOverflowHeight - p.margin) : std::max(0, p.panelY - p.margin);
+                // Rule 17 Compliance: Always cover the potential zoom area to 'catch' the mouse.
+                y = std::max(0, p.panelY - p.zoomOverflowHeight - p.margin);
                 h = p.surfaceHeight - y;
             } else { // Top
                 y = 0;
-                h = p.hovered ? (p.panelY + p.panelHeight + p.zoomOverflowHeight + p.margin) : (p.panelY + p.panelHeight + p.margin);
+                h = p.panelY + p.panelHeight + p.zoomOverflowHeight + p.margin;
             }
         } else { // Vertical (Left=2, Right=3)
             y = std::max(0, p.panelY - p.margin);
             h = p.panelHeight + 2 * p.margin;
 
             if (p.edge == 3) { // Right
-                x = p.hovered ? std::max(0, p.panelX - p.zoomOverflowHeight - p.margin) : std::max(0, p.panelX - p.margin);
+                x = std::max(0, p.panelX - p.zoomOverflowHeight - p.margin);
                 w = p.surfaceWidth - x;
             } else { // Left
                 x = 0;
-                w = p.hovered ? (p.panelX + p.panelWidth + p.zoomOverflowHeight + p.margin) : (p.panelX + p.panelWidth + p.margin);
+                w = p.panelX + p.panelWidth + p.zoomOverflowHeight + p.margin;
             }
         }
         finalRegion += QRect(x, y, w, h);

@@ -127,24 +127,20 @@ Item {
 
     // --- Notification → animation debug logging ---
     on_BadgeCountChanged: {
-        /* [ISOLATION: SILENCED]
         console.log("[NOTIF-TRACE] '" + displayName + "' appId=" + _appId
                     + " badgeCount=" + _badgeCount)
-        */
         if (_badgeCount > _prevBadgeCount) {
             _triggerAttention()
         }
         _prevBadgeCount = _badgeCount
     }
     on_IsDemandingAttentionChanged: {
-        /* [ISOLATION: SILENCED]
         console.log("[NOTIF-TRACE] '" + displayName + "' appId=" + _appId
                     + " isDemandingAttention=" + _isDemandingAttention
                     + " | model.IsDemandingAttention=" + (model.IsDemandingAttention ?? false)
                     + " | smartLauncher.urgent=" + (_smartLauncherItem !== null && _smartLauncherItem.urgent)
                     + " | sniNeedsAttention=" + (_appId.length > 0 ? NotificationTracker.sniNeedsAttention(_appId) : false)
                     + " | badgeCount=" + _badgeCount)
-        */
         if (_isDemandingAttention) {
             _triggerAttention()
         }
@@ -153,12 +149,10 @@ Item {
     // Blink opacity multiplier (animated by type 6)
     property real _blinkOpacity: 1.0
     on_BlinkOpacityChanged: {
-        /* [ISOLATION: SILENCED]
         if (_blinkOpacity !== 1.0)
             console.log("[ANIM-TRACE] _blinkOpacity=" + _blinkOpacity.toFixed(3)
                 + " → iconOpacity=" + iconImage.opacity.toFixed(3)
                 + " for '" + displayName + "'")
-        */
     }
 
     // Dot blink opacity (animated by type 5)
@@ -381,45 +375,30 @@ Item {
 
         // Debug: log appId for notification matching verification
         Qt.callLater(function() {
-            /* [ISOLATION: SILENCED]
             if (_debugNotif && dockItem._appId.length > 0)
                 console.log("[NOTIF-TRACE] DockIcon created: '" + dockItem.displayName + "' appId=" + dockItem._appId)
-            */
 
-            /* [ISOLATION: SILENCED]
             if (_debugGeom) {
                 console.log(`[GEOM-ICON] '${dockItem.displayName}' | SLOT X:${Math.round(x)} Y:${Math.round(y)} W:${width} H:${height} | ICON X:${Math.round(iconImage.x)} Y:${Math.round(iconImage.y)} W:${iconImage.width} H:${iconImage.height} (Scaled:${Math.round(iconImage.width * currentScale)}x${Math.round(iconImage.height * currentScale)}) | TotalH:${_maxTheoreticalThickness} | Floor:${_unitPanelFloor} | Indic:${_unitIndicator}+${_unitInterGap} | Ceil:${_unitCeiling}`);
             }
-            */
         })
     }
 
-    // --- THE INTERACTION FLOORING CONSTITUTION ---
-    // Rule 1: The Fixed Floor (Grounded by Gravity)
-    // Panel Edge to Indicators
+    // --- Interaction Flooring (Rule 17) ---
+    // These units define the vertical stack: Floor -> Indicator -> Gap -> Icon -> Ceiling
     readonly property real _unitPanelFloor: Math.max(4, Math.round(iconSize * 0.25))
-    
-    // The Indicator dot/dash height
     readonly property real _unitIndicator: Math.max(2, Math.round(iconSize * 0.10))
-
-    // The gap between indicators and the icon image. 
-    // This scales with the indicatorOffset slider.
     readonly property real _unitInterGap: Math.max(2, Math.round(iconSize * 0.125) + Math.round(iconSize * 0.15 * (1.0 - DockSettings.indicatorOffset)))
-
-    // The actual visual icon pixels, synchronized with the zoom wave.
     readonly property real _unitIcon: iconSize * currentScale
-
-    // Rule 2: The Illusion of Symmetry (The Empty Gap Rule)
-    // Ceiling padding above the icon is exactly equal to the floor padding.
     readonly property real _unitCeiling: _unitPanelFloor
 
-    // The "Inside World" Territory defines the total unzoomed slot
+    // The Max Height Envelope: thickness required for perfect symmetry at 1.0x
     readonly property real _maxTheoreticalThickness: iconSize + _unitPanelFloor + _unitIndicator + _unitInterGap + _unitCeiling
     
-    // The current dynamic visual thickness (used for orbit and layout sync)
+    // The current dynamic visual thickness (used for orbit and repulsion sync)
     readonly property real _currentVisualThickness: _unitIcon + _unitPanelFloor + _unitIndicator + _unitInterGap + _unitCeiling
 
-    // Property for indicator positioning (used by main.qml for layout)
+    // Helper for indicator positioning (used by main.qml for layout)
     readonly property real _indicatorSpace: _unitPanelFloor + _unitIndicator + _unitInterGap
 
     // Size: The delegate represents the "Inside World" territory (The Slot).
@@ -443,13 +422,11 @@ Item {
 
     // Reset attention properties when animation stops
     on_ShowAttentionAnimChanged: {
-        /* [ISOLATION: SILENCED]
         console.log("[NOTIF-TRACE] '" + displayName + "' appId=" + _appId
                     + " showAttentionAnim=" + _showAttentionAnim
                     + " | isDemandingAttention=" + _isDemandingAttention
                     + " | launching=" + launching
                     + " | attentionSetting=" + DockSettings.attentionAnimation)
-        */
         if (!_showAttentionAnim) {
             attentionBounceT.x = 0
             attentionBounceT.y = 0
@@ -814,11 +791,9 @@ Item {
     // Type 1: Bounce
     SequentialAnimation {
         running: dockItem._showAttentionAnim && dockItem._attentionType === 1
-        /* [ISOLATION: SILENCED]
         onRunningChanged: console.log("[ANIM-TRACE] bounceAttentionAnim.running=" + running
             + " for '" + dockItem.displayName + "'"
             + " | _attentionType=" + dockItem._attentionType)
-        */
         loops: Animation.Infinite
         NumberAnimation {
             target: attentionBounceT; property: dockItem._bounceProp
@@ -881,13 +856,11 @@ Item {
         id: blinkAnim
         running: dockItem._showAttentionAnim && dockItem._attentionType === 6
         loops: Animation.Infinite
-        /* [ISOLATION: SILENCED]
         onRunningChanged: console.log("[ANIM-TRACE] blinkAnim.running=" + running
             + " for '" + dockItem.displayName + "'"
             + " | _showAttentionAnim=" + dockItem._showAttentionAnim
             + " | _attentionType=" + dockItem._attentionType
             + " (type: " + typeof dockItem._attentionType + ")")
-        */
         NumberAnimation {
             target: dockItem; property: "_blinkOpacity"
             to: 0.2; duration: 400; easing.type: Easing.InOutSine

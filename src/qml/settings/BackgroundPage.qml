@@ -38,8 +38,10 @@ QQC2.ScrollView {
            }
            
            KremaCard {
-               RowLayout {
+               ColumnLayout {
                    Layout.fillWidth: true
+                   spacing: 12
+
                    ColumnLayout {
                        Layout.fillWidth: true
                        spacing: 2
@@ -47,16 +49,19 @@ QQC2.ScrollView {
                            text: i18n("Color Mode")
                            color: theme.text
                            font.bold: true 
+                           Layout.fillWidth: true
                        }
                        QQC2.Label { 
                            text: i18n("Switch between light and dark aesthetics.")
                            color: theme.textDim
-                           font.pixelSize: 12
+                           font.pixelSize: 11
+                           wrapMode: Text.WordWrap
+                           Layout.fillWidth: true
                        }
                    }
+
                    RowLayout {
                        spacing: 4
-                       Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
                        Repeater {
                            model: [
                                { icon: "view-brightness", label: i18n("Light"), value: 0 },
@@ -113,8 +118,10 @@ QQC2.ScrollView {
            }
            
            KremaCard {
-               RowLayout {
+               ColumnLayout {
                    Layout.fillWidth: true
+                   spacing: 12
+
                    ColumnLayout {
                        Layout.fillWidth: true
                        spacing: 2
@@ -125,26 +132,29 @@ QQC2.ScrollView {
                            Layout.fillWidth: true
                        }
                        QQC2.Label { 
-                           text: i18n("The primary texture of the dock background.")
+                           text: i18n("The visual texture of the dock material.")
                            color: theme.textDim
-                           font.pixelSize: 12
-                           wrapMode: Text.WordWrap 
-                           Layout.fillWidth: true  
+                           font.pixelSize: 11
+                           wrapMode: Text.WordWrap
+                           Layout.fillWidth: true
                        }
                    }
-                   RowLayout {
+
+                   Flow {
+                       Layout.fillWidth: true
                        spacing: 4
-                       Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
                        Repeater {
                            model: [
-                               { icon: "color-management", label: i18n("Adaptive"), value: 0 },
-                               { icon: "format-fill-color", label: i18n("Solid"), value: 1 },
-                               { icon: "view-glass", label: i18n("Acrylic"), value: 2 }
+                               { icon: "color-management", label: i18n("System Adaptive"), value: 0 },
+                               { icon: "view-hidden", label: i18n("Transparent"), value: 1 },
+                               { icon: "format-fill-color", label: i18n("Solid"), value: 2 },
+                               { icon: "view-glass", label: i18n("Acrylic"), value: 3 },
+                               { icon: "window-duplicate", label: i18n("Mica"), value: 4 }
                            ]
                            delegate: QQC2.Button {
                                id: bgBtn
                                property bool isSelected: DockSettings.backgroundStyle === modelData.value
-                               leftPadding: 12; rightPadding: 12
+                               leftPadding: 16; rightPadding: 16
 
                                contentItem: RowLayout {
                                    spacing: 8
@@ -178,6 +188,7 @@ QQC2.ScrollView {
        ColumnLayout {
            Layout.fillWidth: true
            spacing: 8
+           visible: DockSettings.backgroundStyle !== 1 && DockSettings.backgroundStyle !== 4 // Hide for Transparent and Mica
            
            QQC2.Label { 
                text: i18n("Color & Opacity")
@@ -191,7 +202,6 @@ QQC2.ScrollView {
            KremaCard {
                KremaSwitch {
                    Layout.fillWidth: true
-                   visible: DockSettings.backgroundStyle > 0
                    text: i18n("Use System Accent Color")
                    checked: DockSettings.useSystemColor
                    onToggled: { DockSettings.useSystemColor = checked; DockSettings.save(); }
@@ -199,12 +209,12 @@ QQC2.ScrollView {
 
                Rectangle { 
                    Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A"
-                   visible: DockSettings.backgroundStyle > 0 && !DockSettings.useSystemColor 
+                   visible: !DockSettings.useSystemColor 
                }
 
                RowLayout {
                    Layout.fillWidth: true
-                   visible: DockSettings.backgroundStyle > 0 && !DockSettings.useSystemColor
+                   visible: !DockSettings.useSystemColor
                    QQC2.Label { Layout.fillWidth: true; text: i18n("Custom Tint Color"); color: theme.text; font.bold: true }
                    Rectangle {
                        width: 48; height: 28; radius: 6
@@ -219,7 +229,6 @@ QQC2.ScrollView {
 
                Rectangle { 
                    Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A"
-                   visible: DockSettings.backgroundStyle > 0 
                }
 
                ColumnLayout {
@@ -264,7 +273,8 @@ QQC2.ScrollView {
            property color tempColor: Qt.rgba(rVal, gVal, bVal, 1.0)
 
            onOpened: {
-               let c = Qt.color(DockSettings.tintColor);
+               let tint = DockSettings.tintColor;
+               let c = (tint && tint.length > 0) ? Qt.color(tint) : Qt.color("white");
                rVal = c.r; gVal = c.g; bVal = c.b;
            }
 

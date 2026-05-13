@@ -41,6 +41,7 @@ class PreviewController : public QObject
     Q_PROPERTY(qreal contentY READ contentY NOTIFY positionChanged)
     Q_PROPERTY(qreal contentWidth READ contentWidth NOTIFY contentSizeChanged)
     Q_PROPERTY(qreal contentHeight READ contentHeight NOTIFY contentSizeChanged)
+    Q_PROPERTY(qreal dockHeight READ dockHeight NOTIFY dockHeightChanged)
 
     // Preview keyboard navigation state (driven from dock)
     Q_PROPERTY(bool previewKeyboardActive READ isPreviewKeyboardActive NOTIFY previewKeyboardActiveChanged)
@@ -66,11 +67,15 @@ public:
 
     [[nodiscard]] bool isPreviewKeyboardActive() const;
     [[nodiscard]] int focusedThumbnailIndex() const;
+    [[nodiscard]] qreal dockHeight() const;
 
     /// Show preview for the task at @p index, positioned near the icon.
     /// @p itemGlobalPos is the icon's global X (horizontal) or Y (vertical).
     /// @p itemExtent is the icon's width (horizontal) or height (vertical).
     Q_INVOKABLE void showPreview(int index, qreal itemGlobalPos, qreal itemExtent);
+
+    /// Update the dock height from QML.
+    Q_INVOKABLE void setDockHeight(qreal height);
 
     /// Reconfigure preview surface anchors/margins after edge change.
     void updateEdge();
@@ -127,6 +132,7 @@ Q_SIGNALS:
     void contentSizeChanged();
     void previewKeyboardActiveChanged();
     void focusedThumbnailIndexChanged();
+    void dockHeightChanged();
 
 private:
     void updateInputRegion();
@@ -151,6 +157,7 @@ private:
     qreal m_contentY = 0;
     qreal m_contentWidth = 280;
     qreal m_contentHeight = 200;
+    qreal m_dockHeight = 0;
     qreal m_itemGlobalPos = 0;
     qreal m_itemExtent = 0;
 

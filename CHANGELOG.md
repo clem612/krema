@@ -7,42 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Added
+## [0.8.0] - 2026-05-12
 
-- Multi-monitor support with three modes: Primary Only, All Screens, and Follow Active Screen
-- Per-screen settings override: each monitor can have independent icon size, edge, visibility mode, background, and pinned launchers
-- Follow Active Screen mode with three trigger types: mouse position, active window focus, and composite
-- Virtual desktop filtering: show windows from current desktop only, or all desktops with dimmed icons for other desktops
-- Fedora (COPR), openSUSE (OBS), Debian, and Ubuntu packaging support
-- Compile-time LayerShellQt API detection for cross-distribution compatibility
-- "Reserve screen space" toggle for Always Visible mode, allowing the dock to physically block maximized windows (Exclusive Zone) or allow them to slide underneath (Latte-style "Windows Can Cover")
-- "Reserve screen space" toggle for Always Visible mode, which dynamically adapts to floating padding to ensure maximized windows stop exactly at the dock's edge
-- Strict "Split Mode" task management: creates two distinct zones for pinned launchers and unpinned running windows
-- Reactive etched-glass separator pill that dynamically centers itself in the gap between pinned and active zones
-- Auto-Sort Enforcement: Drag-and-drop now respects the boundary, physically preventing unpinned apps from entering the pinned section
-- Architectural "Blueprint Mode": Features a translucent navy background with a high-contrast white drafting grid that automatically centers and synchronizes during live panel resizing
-- Enhanced Settings UI: Improved layout consistency using Kirigami units, with instant configuration persistence and "Dock Gravity" to keep icons anchored to the panel edge
-- System-level "Ghost" input region that decouples Wayland mouse tracking from visual panel geometry, ensuring icons remain interactive when visually overflowing thin panels
-- Proportional "Skin" hitbox logic that dynamically adjusts the clickable area of each icon based on its current visual zoom state
-- Consolidated icon-related settings (Size, Spacing, Zoom, Scale, and Attention) into a unified Icons page for a more streamlined configuration experience
-- Implemented a nested visual hierarchy in the Settings sidebar, using specific indentation and icon scaling to clearly distinguish sub-pages from top-level categories.
+### Added
+- **Interaction Flooring Constitution (Rule 17):** Implemented a rigorous 5-unit vertical stack (Floor, Indicator, Gap, Icon, Ceiling) to ensure absolute mathematical consistency between visual rendering and interaction logic.
+- **State-Aware Geometry Engine (Rule 15):** New layout system that dynamically toggles between a stable grid (idle state) and recursive displacement (interactive state), resolving architectural race conditions and startup gaps.
+- **Absolute Sync Hit-Testing:** Mathematically precise interaction engine that aligns mouse orbits 1:1 with visual zoomed pixels, eliminating interaction drift and deadzones.
+- **Absolute Zoom Independence (Rule 5):** Strict decoupling of dock panel thickness from icon magnification, ensuring a stable geometric foundation during the parabolic zoom wave.
+- **Multi-Monitor System:** Full support for Primary Only, All Screens, and Follow Active Screen modes with integrated per-screen settings overrides for size, edge, and style.
+- **Modular Settings Interface:** Completely redesigned multi-page UI using Kirigami FormCards with a nested visual hierarchy for streamlined configuration.
+- **Advanced Visual Materials:** Hardware-accelerated Acrylic and Mica-style background themes with real-time blur and noise control.
+- **Split Mode Layout:** Native task management separating pinned launchers from active windows with a reactive etched-glass separator pill.
+- **Ghost Input Region:** System-level mouse tracking that decouples Wayland interaction from visual panel geometry, ensuring icons remain interactive when visually overflowing thin panels.
+- **Architectural Blueprint Mode:** Specialized diagnostic view with a synchronized high-contrast drafting grid for live geometry verification.
+- **Keyboard Navigation Core:** Integrated support for Meta+F5 activation and full arrow-key dock navigation.
+- **Workspace Awareness:** Native task filtering based on Virtual Desktops and Plasma Activities.
+- **Distribution Packaging:** Integrated configuration support for Arch, Fedora (COPR), openSUSE (OBS), Debian, and Ubuntu.
 
 ### Fixed
-
-- Build compatibility with LayerShellQt < 6.4 (Ubuntu 25.04, Debian 13)
-- Build compatibility with strict `QT_NO_CAST_FROM_ASCII` flag on non-Arch distributions
-- Dock icon detection now resolves app icons more reliably by combining launcher URL, desktop entry ID variants, and display-name fallbacks
-- Running Steam game windows now keep game-specific icons instead of reverting to the generic Steam icon after dock reordering
-- Drag ghost icon now uses the same task icon source as dock items, preventing temporary icon swaps while reordering
-- Fixed blurry, low-resolution window icons for Steam/Proton games by prioritizing system theme icons over raw window pixels
-- Eliminated the "Drag Proxy" discrepancy where dock items would change quality or transparency while being reordered
-- Improved reliability of screen space reservation during startup by debouncing layout updates, preventing race conditions with the window manager
-- Eliminated "Model Ghosting" where the dock failed to visually update after pin/unpin actions without a window refresh
-- Corrected separator alignment math to ensure pixel-perfect centering during parabolic zoom
-- Resolved "Unsupported Interceptor" property warnings by consolidating animation behaviors
-- Resolved "ConfigurationView not found" error by updating C++ lookup logic and QML function signatures to correctly catch backend arguments
-- Fixed window crashes and layout breakage in the Settings Dialog caused by duplicate layout containers and mismatched closing braces
-- Standardized Settings window header icons to prevent missing asset placeholders (the "Question Mark" bug)
+- **Sticky Preview Conflict:** Resolved interaction deadlock where window previews would trap the mouse hover state, blocking neighboring icons (fixed via Trial 4: Icon-Gated Visibility).
+- **1.0x Interaction Orbit:** Resolved "Click-through" bug where thin panels would physically clip the interaction zone (fixed via Rule 18: Decoupled Catch Zone).
+- **Blur Expansion Bug:** Isolated KWindowEffects background blur to the visual panel area, preventing frosted "ghost halos" in interaction deadzones.
+- **Preview Misalignment:** Synchronized vertical thumbnail offsets using the `visualIconTop` bridge, ensuring previews float at a consistent altitude regardless of zoom state.
+- **Settings UI Collision:** Resolved text overlaps in the configuration pages by implementing the **Safe Spacing Mandate (Rule 20)** and removing negative margins.
+- **Shadow Clipping:** Restored natural volumetric shadow fade by correctly binding geometry to SDF padding.
 
 ## [0.7.0] - 2026-03-28
 

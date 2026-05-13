@@ -174,6 +174,11 @@ bool DockView::isVertical() const
     return m_edge == DockPlatform::Edge::Left || m_edge == DockPlatform::Edge::Right;
 }
 
+QObject *DockView::screenSettings() const
+{
+    return reinterpret_cast<QObject *>(m_screenSettings);
+}
+
 void DockView::setEdge(DockPlatform::Edge edge)
 {
     if (m_edge == edge)

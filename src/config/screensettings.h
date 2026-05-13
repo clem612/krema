@@ -29,6 +29,16 @@ class ScreenSettings : public QObject
     Q_OBJECT
 
     Q_PROPERTY(bool hasOverrides READ hasOverrides NOTIFY hasOverridesChanged)
+    Q_PROPERTY(int iconSize READ iconSize WRITE setIconSize NOTIFY iconSizeChanged)
+    Q_PROPERTY(int edge READ edge WRITE setEdge NOTIFY edgeChanged)
+    Q_PROPERTY(int visibilityMode READ visibilityMode WRITE setVisibilityMode NOTIFY visibilityModeChanged)
+    Q_PROPERTY(int backgroundStyle READ backgroundStyle WRITE setBackgroundStyle NOTIFY backgroundStyleChanged)
+    Q_PROPERTY(double backgroundOpacity READ backgroundOpacity WRITE setBackgroundOpacity NOTIFY backgroundOpacityChanged)
+    Q_PROPERTY(double maxZoomFactor READ maxZoomFactor WRITE setMaxZoomFactor NOTIFY maxZoomFactorChanged)
+    Q_PROPERTY(bool floating READ floating WRITE setFloating NOTIFY floatingChanged)
+    Q_PROPERTY(int cornerRadius READ cornerRadius WRITE setCornerRadius NOTIFY cornerRadiusChanged)
+    Q_PROPERTY(int panelHeight READ panelHeight WRITE setPanelHeight NOTIFY panelHeightChanged)
+    Q_PROPERTY(QStringList pinnedLaunchers READ pinnedLaunchers WRITE setPinnedLaunchers NOTIFY pinnedLaunchersChanged)
     Q_PROPERTY(int separatorStyle READ separatorStyle WRITE setSeparatorStyle NOTIFY separatorStyleChanged)
     Q_PROPERTY(double separatorOpacity READ separatorOpacity WRITE setSeparatorOpacity NOTIFY separatorOpacityChanged)
     Q_PROPERTY(int separatorWidth READ separatorWidth WRITE setSeparatorWidth NOTIFY separatorWidthChanged)
@@ -72,13 +82,13 @@ public:
     void setSeparatorWidth(int width);
 
     /// Remove all per-screen overrides (revert to global defaults).
-    void clearOverrides();
+    Q_INVOKABLE void clearOverrides();
 
     /// Remove a specific per-screen override.
-    void clearOverride(const QString &key);
+    Q_INVOKABLE void clearOverride(const QString &key);
 
     /// Save changes to disk.
-    void save();
+    Q_INVOKABLE void save();
 
 Q_SIGNALS:
     void hasOverridesChanged();

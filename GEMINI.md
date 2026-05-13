@@ -73,9 +73,19 @@ Before answering any prompts, Gemini must:
 - **Chunking Large Refactors:** If a refactor requires modifying more than 50 lines of code, you must break the task into multiple, isolated steps. State your plan and await user confirmation before proceeding to the next chunk.
 - **Preserve Baseline Integrity:** Never attempt to rewrite an entire geometry engine or logic block in one prompt. Modify one property, one function, or one visual block at a time to ensure the C++ compiler and QML engine remain stable between edits.
 
-## 11. Proactive Reporting Mandate
-- **Inform Before Fix:** If you discover a bug, binding loop, rendering glitch, or mathematical inconsistency via terminal logs, visual inspection, or research, you MUST report it to the user and explain the proposed fix BEFORE applying any changes.
-- **Zero Silent Fixes:** Never apply "silent fixes" even if they seem trivial, obvious, or internal. Every change to the codebase must be preceded by a report of the identified issue and an approved proposal.
+## 11. The Surgical Bug-Fix Protocol (Investigate → Report → Approve)
+- **Zero Silent Fixes:** You are strictly forbidden from modifying any code to fix a bug—no matter how small—without first performing a formal investigation.
+- **Mandatory Diagnostic Report:** Before every fix, you must provide a report containing:
+  1. **Identified Logic:** The specific lines causing the failure.
+  2. **Root Cause:** A clear explanation of *why* it is failing.
+  3. **The Proposal:** A surgical plan to fix it without side effects.
+- **The Approval Lock:** You MUST wait for explicit user approval of the proposal before applying any code changes.
+- **Active Status Mandate:** You MUST update the bug's status in `docs/bugs_report.md` for every significant move:
+  - **🟡 Investigating:** Mark immediately when starting a new trial or research phase.
+  - **🟢 Fixed:** Mark ONLY after empirical verification and user confirmation.
+  - **⚪ On Hold:** Mark when a dependency is pending or the user defers the task.
+- **Trial Logging:** Every attempted fix MUST be logged as a "Trial" in the bug report, including the strategy and the specific outcome (Success/Failure/Reverted).
+- **Rule 14 Integration:** All approved fixes must still follow the **Incremental Verification Mandate** (testing on a single "pilot" file first).
 
 ## 12. The Geometry Debugging Mandate
 - **Unified Diagnostic Flag:** All components that possess physical shape, form, or interactive boundaries MUST support the `--debug-geom` runtime flag.
@@ -88,3 +98,18 @@ Before answering any prompts, Gemini must:
 - **Non-Subtractive Updates:** Never delete or overwrite previous research or bug findings in these files. New information must be appended to the bottom of the file. Specify and organize the info so it is clear which info is outdated and which is new (e.g., mark old sections as `[OUTDATED]` and new as `[CURRENT]`). This ensures we never go backwards in current or future sessions.
 - **Mandates are Absolute Truths:** The Old-to-New history rule does **NOT** apply to Mandate files (like `ARCHITECTURE Mandate.md` or `GEMINI.md`). Mandates are absolute, uncluttered truths and must not be cluttered with history.
 - **Explicit Promotion Required:** NEVER promote any math, logic, or code structure to `ARCHITECTURE Mandate.md` without explicit, direct approval from the user. You may *suggest* a promotion once a feature is proven 100% working and accurate, but you must wait for the "Go".
+
+## 14. The Incremental Verification Mandate
+- **Zero Large-Scale Blind Changes:** You are strictly forbidden from applying systemic refactors or "find-and-replace" style logic across multiple files or modules without first proving the success of the pattern on a single "pilot" file or component.
+- **Empirical Proof Required:** For any architectural shift (such as configuration scope changes or coordinate system re-mapping), you MUST implement it in one representative component, build and run the application, and verify the behavior with the user BEFORE proceeding to any other files.
+- **Verification Priority:** Successful compilation is not enough. You must empirically prove the functional correctness of the change (e.g., via terminal logs or user confirmation) before scaling the update.
+- **Safety Baselines:** If a systematic change fails or introduces regression, you MUST immediately revert the affected files to the last known working state before attempting an alternative strategy.
+
+## 15. The Memory-First Commit Rule
+- **Documentation Precedence:** You are strictly forbidden from committing any code changes to the repository before first updating the project's coordination and memory files to reflect the work completed and the current state of the project.
+- **Mandatory Files to Update:** 
+  1. `.claude/work-state.md` (Status, history, and active tasks).
+  2. `docs/bugs_report.md` (Update status and trial outcomes).
+  3. `docs/research/*.md` (Document new architectural discoveries).
+  4. `ROADMAP.md` (Update milestone progress).
+- **Synchronization Check:** The final turn before a commit MUST involve a review of these files to ensure they accurately describe the "Why" and "What" of the changes being committed.

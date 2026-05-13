@@ -12,18 +12,18 @@ Item {
     objectName: "configuration"
     id: root
 
-    // --- KREMA DYNAMIC THEME ENGINE ---
+    // --- Dynamic Theme Engine ---
     QtObject {
         id: theme
         property bool isDark: DockSettings.settingsThemeMode === 1
         
-        readonly property color base: isDark ? "#181B20" : "#EBE9E4"    // Dark: Midnight Navy
-        readonly property color sidebar: isDark ? "#111418" : "#D8DCE0" // Dark: Deep Charcoal-Blue
-        readonly property color card: isDark ? "#22262B" : "#FDFBFA"    // Dark: Slate Roast
-        readonly property color accent: isDark ? "#7BA4B5" : "#5C7C8A"  // Nordic Blue
+        readonly property color base: isDark ? "#181B20" : "#EBE9E4"
+        readonly property color sidebar: isDark ? "#111418" : "#D8DCE0"
+        readonly property color card: isDark ? "#22262B" : "#FDFBFA"
+        readonly property color accent: isDark ? "#7BA4B5" : "#5C7C8A"
         readonly property color text: isDark ? "#F9F7F2" : "#181C20"
-        readonly property color textDim: isDark ? "#949DA6" : "#5C646B" // Dark: Cool Muted Blue
-        readonly property color border: isDark ? "#2E343A" : "#CAD0D6" // Dark: Steel Edge
+        readonly property color textDim: isDark ? "#949DA6" : "#5C646B"
+        readonly property color border: isDark ? "#2E343A" : "#CAD0D6"
     }
 
     implicitWidth: 840

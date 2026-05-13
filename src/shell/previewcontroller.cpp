@@ -53,7 +53,7 @@ void PreviewController::initialize()
     // Layer-shell configuration: overlay above the dock
     auto *layerWindow = LayerShellQt::Window::get(m_previewView);
     if (layerWindow) {
-        layerWindow->setLayer(LayerShellQt::Window::LayerOverlay);
+        layerWindow->setLayer(LayerShellQt::Window::LayerTop);
         layerWindow->setScope(QStringLiteral("krema-preview"));
         layerWindow->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivityNone);
         layerWindow->setExclusiveZone(0);
@@ -141,10 +141,14 @@ qreal PreviewController::contentWidth() const
 {
     return m_contentWidth;
 }
-
 qreal PreviewController::contentHeight() const
 {
     return m_contentHeight;
+}
+
+qreal PreviewController::dockHeight() const
+{
+    return m_dockHeight;
 }
 
 void PreviewController::showPreview(int index, qreal itemGlobalPos, qreal itemExtent)
@@ -161,9 +165,17 @@ void PreviewController::showPreview(int index, qreal itemGlobalPos, qreal itemEx
     if (indexChanged) {
         Q_EMIT parentIndexChanged();
     }
-    Q_EMIT positionChanged();
 
     doShow();
+}
+
+void PreviewController::setDockHeight(qreal height)
+{
+    if (m_dockHeight != height) {
+        m_dockHeight = height;
+        Q_EMIT dockHeightChanged();
+        recalcContentPosition();
+    }
 }
 
 void PreviewController::hidePreview()
@@ -442,7 +454,10 @@ void PreviewController::applyEdgeLayout()
 
     const auto edge = m_dockView->platform()->edge();
     const bool vertical = (edge == DockPlatform::Edge::Left || edge == DockPlatform::Edge::Right);
-    const int dockMargin = m_dockView->panelBarHeight() + static_cast<int>(std::ceil(m_settings->iconSize() * (m_settings->maxZoomFactor() - 1.0))) + 4;
+
+    // The margin should be the distance from the screen edge to the START of the dock panel.
+    // This allows the preview surface to sit right above the panel.
+    const int dockMargin = m_dockView->floatingPadding();
 
     const QRect screenGeo = m_dockView->screen() ? m_dockView->screen()->geometry() : QRect(0, 0, 1920, 1080);
 
@@ -540,61 +555,36 @@ void PreviewController::recalcContentPosition()
 
 void PreviewController::updateInputRegion()
 {
-    if (!m_previewView) {
-        return;
-    }
-
-    if (!m_visible) {
-        // Hidden: block all meaningful input with a 1x1 region in the corner.
-        // IMPORTANT: empty QRegion (including QRegion(0,0,0,0)) clears the mask,
-        // which makes the entire surface accept ALL input — the opposite of intended!
+    if (!m_previewView || !m_visible) {
+        // Block interaction when hidden (empty QRegion would accept all input)
         m_previewView->setMask(QRegion(0, 0, 1, 1));
         return;
     }
 
-    constexpr int margin = 40;
     const auto edge = m_dockView->platform()->edge();
     const bool vertical = (edge == DockPlatform::Edge::Left || edge == DockPlatform::Edge::Right);
 
+    // --- Surgical Mask Fix (Trial 3) ---
+    // We mask ONLY the popup rectangle containing the thumbnails.
+    // We remove the "Bridge" to the icon entirely to make the area
+    // above neighbor icons 100% click-through.
+    QRegion finalMask;
+
     if (vertical) {
-        // Vertical: input region around contentY area
-        const int surfaceW = m_previewView->width();
-        const int w = static_cast<int>(m_contentWidth);
-
-        int regionX;
-        if (edge == DockPlatform::Edge::Left) {
-            // Preview on right side of dock: content at left edge of surface
-            regionX = 0;
-        } else {
-            // Preview on left side of dock: content at right edge of surface
-            regionX = qMax(0, surfaceW - w - 60);
-        }
-        int regionW = surfaceW - regionX;
-
-        const int y = qMax(0, static_cast<int>(m_contentY) - margin);
-        const int bottom = qMin(m_previewView->height(), static_cast<int>(m_contentY + m_contentHeight) + margin);
-        QRegion region(regionX, y, regionW, bottom - y);
-        m_previewView->setMask(region);
+        const int regionX = (edge == DockPlatform::Edge::Left) ? 0 : qMax(0, m_previewView->width() - static_cast<int>(m_contentWidth));
+        const int regionW = static_cast<int>(m_contentWidth);
+        const int regionY = static_cast<int>(m_contentY);
+        const int regionH = static_cast<int>(m_contentHeight);
+        finalMask += QRect(regionX, regionY, regionW, regionH);
     } else {
-        // Horizontal: input region around contentX area
-        const int surfaceH = m_previewView->height();
-        const int h = static_cast<int>(m_contentHeight);
-
-        int regionY;
-        if (edge == DockPlatform::Edge::Top) {
-            // Preview below dock: content at top edge of surface
-            regionY = 0;
-        } else {
-            // Preview above dock: content at bottom edge of surface
-            regionY = qMax(0, surfaceH - h - 60);
-        }
-        int regionH = surfaceH - regionY;
-
-        const int x = qMax(0, static_cast<int>(m_contentX) - margin);
-        const int right = qMin(m_previewView->width(), static_cast<int>(m_contentX + m_contentWidth) + margin);
-        QRegion region(x, regionY, right - x, regionH);
-        m_previewView->setMask(region);
+        const int regionY = (edge == DockPlatform::Edge::Top) ? 0 : qMax(0, m_previewView->height() - static_cast<int>(m_contentHeight));
+        const int regionH = static_cast<int>(m_contentHeight);
+        const int regionX = static_cast<int>(m_contentX);
+        const int regionW = static_cast<int>(m_contentWidth);
+        finalMask += QRect(regionX, regionY, regionW, regionH);
     }
+
+    m_previewView->setMask(finalMask);
 }
 
 } // namespace krema
