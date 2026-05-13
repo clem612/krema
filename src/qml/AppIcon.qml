@@ -468,13 +468,13 @@ Item {
         // Declarative Grounding in the 'Inside World'
         x: {
             if (!DockView.isVertical) return (parent.width - width) / 2;
-            if (DockView.edge === 2) return _unitPanelFloor + _unitIndicator + _unitInterGap; // Left: anchor after flooring stack
-            return parent.width - (_unitPanelFloor + _unitIndicator + _unitInterGap) - width; // Right: anchor before flooring stack
+            if (DockView.edge === 2) return _indicatorSpace; // Left: anchor after flooring stack
+            return parent.width - _indicatorSpace - width; // Right: anchor before flooring stack
         }
         y: {
             if (DockView.isVertical) return (parent.height - height) / 2;
-            if (DockView.edge === 0) return _unitPanelFloor + _unitIndicator + _unitInterGap; // Top: icon starts after flooring stack
-            return parent.height - (_unitPanelFloor + _unitIndicator + _unitInterGap) - height; // Bottom: icon ends before flooring stack
+            if (DockView.edge === 0) return _indicatorSpace; // Top: icon starts after flooring stack
+            return parent.height - _indicatorSpace - height; // Bottom: icon ends before flooring stack
         }
 
         // (Scale transform merged into the main transform array below to prevent double-property syntax errors)

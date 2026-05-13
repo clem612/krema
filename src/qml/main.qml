@@ -165,7 +165,7 @@ Item {
             // The orbit is anchored to the visual center of the icons, 
             // ensuring hit-testing matches visual pixels exactly.
             let sample = dockRepeater.itemAt(0)
-            let floorUnits = sample ? (sample._unitPanelFloor + sample._unitIndicator + sample._unitInterGap) : 0
+            let floorUnits = sample ? sample._indicatorSpace : 0
             let unitCenter = floorUnits + (iconSize / 2)
             
             let secondaryAxisCenter = 0
@@ -183,7 +183,7 @@ Item {
             let enterOrbit = (iconSize * 0.5) + 5
             let exitOrbit = enterOrbit // fallback
             if (sample) {
-                let visualRadius = (dockRow._maxIconThickness * 0.5) + sample._unitInterGap + sample._unitIndicator + sample._unitPanelFloor
+                let visualRadius = (dockRow._maxIconThickness * 0.5) + sample._indicatorSpace
                 exitOrbit = visualRadius + 10
             }
 
@@ -550,7 +550,7 @@ Item {
         // Used to anchor window previews perfectly.
         readonly property real visualIconTop: {
             let sample = dockRepeater.itemAt(0)
-            let floorUnits = sample ? (sample._unitPanelFloor + sample._unitIndicator + sample._unitInterGap) : 0
+            let floorUnits = sample ? sample._indicatorSpace : 0
             
             // Current visual icon height = unzoomedSize * (1.0 + zoomAmount)
             let currentIconHeight = DockSettings.iconSize * (1.0 + (DockSettings.maxZoomFactor - 1.0) * root._zoomIntensity)
@@ -559,7 +559,7 @@ Item {
         }
         property real currentVisualOverflow: {
             let sample = dockRepeater.itemAt(0)
-            let floorUnits = sample ? (sample._unitPanelFloor + sample._unitIndicator + sample._unitInterGap) : 0
+            let floorUnits = sample ? sample._indicatorSpace : 0
             
             // --- Dynamic Overflow (Bug #7 Fix) ---
             // Calculate the actual visual overflow based on the kinetic zoom intensity.
