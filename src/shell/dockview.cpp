@@ -17,7 +17,7 @@
 #include <QScreen>
 #include <QtQml>
 
-Q_LOGGING_CATEGORY(lcDockView, "krema.shell.dockview")
+#include "utils/debugmanager.h"
 
 namespace krema
 {
@@ -71,7 +71,7 @@ void DockView::initialize(TaskManager::TasksModel *tasksModel,
 
     if (status() == QQuickView::Error) {
         for (const auto &err : errors())
-            qCCritical(lcDockView) << "QML error:" << err.toString();
+            qCCritical(lcShell) << "QML error:" << err.toString();
         return;
     }
 

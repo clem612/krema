@@ -54,8 +54,7 @@ Item {
         uuid: root.winId ?? ""
         onNodeIdChanged: function() {
             if (_debugZoom) {
-                console.log("[PREVIEW-TRACE] nodeId:", screencastRequest.nodeId,
-                    "for uuid:", screencastRequest.uuid)
+                KremaDebug.preview("nodeId: " + screencastRequest.nodeId + " for uuid: " + screencastRequest.uuid)
             }
         }
     }
@@ -115,8 +114,7 @@ Item {
 
             onStateChanged: function() {
                 if (_debugZoom) {
-                    console.log("[PREVIEW-TRACE] PipeWire state:", pipeWireItem.state,
-                        "ready:", pipeWireItem.ready, "nodeId:", pipeWireItem.nodeId)
+                    KremaDebug.preview("PipeWire state: " + pipeWireItem.state + " ready: " + pipeWireItem.ready + " nodeId: " + pipeWireItem.nodeId)
                 }
             }
         }

@@ -11,6 +11,7 @@
 #include "shell/dockview.h"
 #include "shell/dockvisibilitycontroller.h"
 #include "shell/multidockmanager.h"
+#include "utils/debugmanager.h"
 
 #include <KAboutData>
 #include <KActionCollection>
@@ -21,6 +22,7 @@
 #include <LayerShellQt/Shell>
 
 #include <QAction>
+#include <QCommandLineParser>
 #include <QLoggingCategory>
 #include <QQuickStyle>
 #include <QtQml>
@@ -35,17 +37,45 @@ void kremaLogHandler(QtMsgType type, const QMessageLogContext &context, const QS
 
     // ANSI Color Codes
     const char *reset = "\x1b[0m";
+    const char *bold = "\x1b[1m";
     const char *red = "\x1b[31m";
     const char *green = "\x1b[32m";
     const char *yellow = "\x1b[33m";
     const char *blue = "\x1b[34m";
     const char *magenta = "\x1b[35m";
     const char *cyan = "\x1b[36m";
-    const char *bold = "\x1b[1m";
 
     const char *color = reset;
+    bool enabled = true;
 
-    // Clean up tag: Remove "krema." prefix and uppercase it
+    // Map categories to DebugManager
+    krema::DebugManager::Category catType = krema::DebugManager::Count;
+    if (category == u"krema.app"_s)
+        catType = krema::DebugManager::App;
+    else if (category == u"krema.geom"_s)
+        catType = krema::DebugManager::Geom;
+    else if (category == u"krema.input"_s)
+        catType = krema::DebugManager::Input;
+    else if (category == u"krema.anim"_s)
+        catType = krema::DebugManager::Anim;
+    else if (category == u"krema.preview"_s)
+        catType = krema::DebugManager::Preview;
+    else if (category == u"krema.model"_s)
+        catType = krema::DebugManager::Model;
+    else if (category == u"krema.shell"_s)
+        catType = krema::DebugManager::Shell;
+
+    // Filter based on flags (Warnings/Errors/Criticals always pass)
+    if (type == QtDebugMsg || type == QtInfoMsg) {
+        if (catType != krema::DebugManager::Count) {
+            enabled = krema::DebugManager::self()->isEnabled(catType);
+        }
+    }
+
+    if (!enabled)
+        return;
+
+    // Determine Tag and Color
     QString tag = category;
     if (tag.startsWith(u"krema."_s))
         tag.remove(0, 6);
@@ -53,29 +83,20 @@ void kremaLogHandler(QtMsgType type, const QMessageLogContext &context, const QS
     if (tag == u"DEFAULT"_s)
         tag = u"DEBUG"_s;
 
-    // 1. Determine Color by Category
-    if (category.contains(u"model"_s))
-        color = yellow;
-    else if (category.contains(u"notifications"_s) || category.contains(u"notif"_s))
-        color = cyan;
-    else if (category.contains(u"icons"_s))
-        color = magenta;
-    else if (category.contains(u"shell"_s) || category.contains(u"preview"_s))
-        color = green;
-    else if (category.contains(u"config"_s))
-        color = blue;
-    else if (category.contains(u"app"_s))
-        color = bold;
+    if (catType != krema::DebugManager::Count) {
+        color = krema::DebugManager::categoryColor(catType);
+        // Special bold overrides for mandatory mandates
+        if (catType == krema::DebugManager::Geom)
+            color = "\x1b[1;34m"; // Bold Blue
+        if (catType == krema::DebugManager::Input)
+            color = "\x1b[1;33m"; // Bold Yellow
+    }
 
-    // 2. Override Color for Warnings/Errors
     if (type == QtWarningMsg || type == QtCriticalMsg)
         color = red;
 
-    // 3. Print to terminal
     std::fprintf(stderr, "%s[%s]%s %s\n", color, tag.toLocal8Bit().constData(), reset, localMsg.constData());
 }
-
-Q_LOGGING_CATEGORY(lcApp, "krema.app")
 
 // Static library resources must be explicitly initialized.
 // Must be called from global namespace, not inside krema namespace.
@@ -99,44 +120,78 @@ int Application::run()
     // Install the global color interceptor immediately
     qInstallMessageHandler(kremaLogHandler);
 
-    // Ensure Qt Quick Controls use the KDE Plasma style (needed for Kirigami theming)
-    if (QQuickStyle::name().isEmpty()) {
-        QQuickStyle::setStyle(QStringLiteral("org.kde.desktop"));
-    }
-
-    // Initialize KDE crash handler (must be called early)
-    KCrash::initialize();
-
-    // Set up KDE application metadata (required for KGlobalAccel, D-Bus, etc.)
+    // Set up KDE application metadata
     KAboutData aboutData(QStringLiteral("krema"), i18n("Krema"), QStringLiteral(KREMA_VERSION_STRING), i18n("A dock for KDE Plasma 6"), KAboutLicense::GPL_V3);
     aboutData.addAuthor(i18n("Byeonghoon Yoo"), {}, QStringLiteral("bhyoo@bhyoo.com"));
     aboutData.setOrganizationDomain(QByteArrayLiteral("bhyoo.com"));
     KAboutData::setApplicationData(aboutData);
     setDesktopFileName(QStringLiteral("com.bhyoo.krema"));
 
-    // Enforce single instance via D-Bus (exits if another instance is already running)
+    // --- Command Line Parser ---
+    QCommandLineParser parser;
+    parser.setApplicationDescription(i18n("Krema Dock for KDE Plasma 6"));
+    parser.addHelpOption();
+    parser.addVersionOption();
+
+    QCommandLineOption debugAll(QStringLiteral("debug-all"), i18n("Enable all debug logs"));
+    QCommandLineOption debugGeom(QStringLiteral("debug-geom"), i18n("Enable geometry debug logs"));
+    QCommandLineOption debugInput(QStringLiteral("debug-input"), i18n("Enable input/hover debug logs"));
+    QCommandLineOption debugAnim(QStringLiteral("debug-anim"), i18n("Enable animation debug logs"));
+    QCommandLineOption debugPreview(QStringLiteral("debug-preview"), i18n("Enable preview/popup debug logs"));
+    QCommandLineOption debugModel(QStringLiteral("debug-model"), i18n("Enable model/data debug logs"));
+    QCommandLineOption debugShell(QStringLiteral("debug-shell"), i18n("Enable shell/platform debug logs"));
+    QCommandLineOption debugApp(QStringLiteral("debug-app"), i18n("Enable core application debug logs"));
+
+    parser.addOptions({debugAll, debugGeom, debugInput, debugAnim, debugPreview, debugModel, debugShell, debugApp});
+    parser.process(*this);
+
+    auto *dm = DebugManager::self();
+    if (parser.isSet(debugAll)) {
+        for (int i = 0; i < DebugManager::Count; ++i)
+            dm->setEnabled(static_cast<DebugManager::Category>(i), true);
+    } else {
+        if (parser.isSet(debugGeom))
+            dm->setEnabled(DebugManager::Geom, true);
+        if (parser.isSet(debugInput))
+            dm->setEnabled(DebugManager::Input, true);
+        if (parser.isSet(debugAnim))
+            dm->setEnabled(DebugManager::Anim, true);
+        if (parser.isSet(debugPreview))
+            dm->setEnabled(DebugManager::Preview, true);
+        if (parser.isSet(debugModel))
+            dm->setEnabled(DebugManager::Model, true);
+        if (parser.isSet(debugShell))
+            dm->setEnabled(DebugManager::Shell, true);
+        if (parser.isSet(debugApp))
+            dm->setEnabled(DebugManager::App, true);
+    }
+
+    // Ensure Qt Quick Controls use the KDE Plasma style
+    if (QQuickStyle::name().isEmpty()) {
+        QQuickStyle::setStyle(QStringLiteral("org.kde.desktop"));
+    }
+
+    KCrash::initialize();
+
+    // Enforce single instance via D-Bus
     KDBusService service(KDBusService::Unique);
     connect(&service, &KDBusService::activateRequested, this, [](const QStringList &args, const QString &) {
         qCInfo(lcApp) << "Another instance attempted to start, ignoring. args:" << args;
     });
 
-    // Initialize Qt resources from static library
     initResources();
 
-    // LayerShellQt::Shell::useLayerShell(); // Deprecated and removed for modern Qt 6
-
-    // Load settings from KConfig (~/.config/kremarc)
     m_settings = std::make_unique<KremaSettings>();
     m_settings->load();
 
-    // Create data model
     m_dockModel = std::make_unique<DockModel>();
     m_dockModel->setPinnedLaunchers(m_settings->pinnedLaunchers());
 
-    // Create notification tracker (before QML loading)
     m_notificationTracker = std::make_unique<NotificationTracker>();
 
-    // Register global QML singletons (must be before any QML loading)
+    // Register global QML singletons
+    qmlRegisterSingletonInstance("com.bhyoo.krema", 1, 0, "KremaDebug", dm);
+
     auto *model = m_dockModel.get();
     qmlRegisterSingletonType<DockModel>("com.bhyoo.krema", 1, 0, "DockModel", [model](QQmlEngine *, QJSEngine *) -> QObject * {
         QQmlEngine::setObjectOwnership(model, QQmlEngine::CppOwnership);

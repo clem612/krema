@@ -7,6 +7,7 @@
 #include "dockvisibilitycontroller.h"
 #include "krema.h"
 #include "models/dockmodel.h"
+#include "utils/debugmanager.h"
 
 #include <LayerShellQt/Window>
 
@@ -15,12 +16,9 @@
 
 #include <cmath>
 
-#include <QLoggingCategory>
 #include <QQmlEngine>
 #include <QQuickView>
 #include <QScreen>
-
-Q_LOGGING_CATEGORY(lcPreview, "krema.shell.preview")
 
 namespace krema
 {
@@ -151,20 +149,56 @@ qreal PreviewController::dockHeight() const
     return m_dockHeight;
 }
 
-void PreviewController::showPreview(int index, qreal itemGlobalPos, qreal itemExtent)
+void PreviewController::showPreview(int index, qreal itemLocalX, qreal itemLocalY, qreal itemWidth, qreal itemHeight)
 {
+    qCInfo(lcPreview) << "showPreview CALLED: Index [" << index << "] Local [" << itemLocalX << "," << itemLocalY << "]";
     m_hideTimer.stop();
 
     const bool indexChanged = (m_parentIndex != index);
     m_parentIndex = index;
-    m_itemGlobalPos = itemGlobalPos;
-    m_itemExtent = itemExtent;
+
+    // --- Absolute Sync: Coordinate Reconciliation ---
+    // We take the LOCAL coordinates (relative to dock window) and add
+    // the dock's own screen offset to get the TRUE Global Y.
+    const auto edge = m_dockView->platform()->edge();
+    const int dockMargin = m_dockView->floatingPadding();
+    const QRect screenGeo = m_dockView->screen() ? m_dockView->screen()->geometry() : QRect(0, 0, 1920, 1080);
+
+    // Start with local
+    m_itemGlobalX = itemLocalX;
+    m_itemGlobalY = itemLocalY;
+
+    // Add Window Offset to get Screen Coordinates
+    if (edge == DockPlatform::Edge::Bottom) {
+        m_itemGlobalY += (screenGeo.height() - m_dockView->height() - dockMargin);
+        m_itemGlobalX += (screenGeo.width() - m_dockView->width()) / 2.0; // Dock is centered
+    } else if (edge == DockPlatform::Edge::Top) {
+        m_itemGlobalY += dockMargin;
+        m_itemGlobalX += (screenGeo.width() - m_dockView->width()) / 2.0;
+    } else if (edge == DockPlatform::Edge::Right) {
+        m_itemGlobalX += (screenGeo.width() - m_dockView->width() - dockMargin);
+        m_itemGlobalY += (screenGeo.height() - m_dockView->height()) / 2.0;
+    } else if (edge == DockPlatform::Edge::Left) {
+        m_itemGlobalX += dockMargin;
+        m_itemGlobalY += (screenGeo.height() - m_dockView->height()) / 2.0;
+    }
+
+    m_itemWidth = itemWidth;
+    m_itemHeight = itemHeight;
 
     recalcContentPosition();
+
+    Q_EMIT positionChanged();
 
     if (indexChanged) {
         Q_EMIT parentIndexChanged();
     }
+
+    qCDebug(lcPreview) << "RECONCILE:"
+                       << "LocalY [" << itemLocalY << "]"
+                       << "DockWinH [" << m_dockView->height() << "]"
+                       << "ScreenH [" << screenGeo.height() << "]"
+                       << "Result TrueY [" << m_itemGlobalY << "]";
 
     doShow();
 }
@@ -452,64 +486,28 @@ void PreviewController::applyEdgeLayout()
         return;
     }
 
-    const auto edge = m_dockView->platform()->edge();
-    const bool vertical = (edge == DockPlatform::Edge::Left || edge == DockPlatform::Edge::Right);
-
-    // The margin should be the distance from the screen edge to the START of the dock panel.
-    // This allows the preview surface to sit right above the panel.
-    const int dockMargin = m_dockView->floatingPadding();
-
     const QRect screenGeo = m_dockView->screen() ? m_dockView->screen()->geometry() : QRect(0, 0, 1920, 1080);
 
-    // Anchors: same edge as dock + stretch along that edge
+    // --- Absolute Sync: Full-Screen Preview Surface ---
+    // By making the surface cover the entire monitor, we ensure that
+    // global screen coordinates match surface coordinates 1:1.
+    // This eliminates offsets caused by dock padding or thickness.
     LayerShellQt::Window::Anchors anchors;
-    QMargins margins;
-
-    switch (edge) {
-    case DockPlatform::Edge::Bottom:
-        anchors.setFlag(LayerShellQt::Window::AnchorBottom);
-        anchors.setFlag(LayerShellQt::Window::AnchorLeft);
-        anchors.setFlag(LayerShellQt::Window::AnchorRight);
-        margins.setBottom(dockMargin);
-        break;
-    case DockPlatform::Edge::Top:
-        anchors.setFlag(LayerShellQt::Window::AnchorTop);
-        anchors.setFlag(LayerShellQt::Window::AnchorLeft);
-        anchors.setFlag(LayerShellQt::Window::AnchorRight);
-        margins.setTop(dockMargin);
-        break;
-    case DockPlatform::Edge::Left:
-        anchors.setFlag(LayerShellQt::Window::AnchorLeft);
-        anchors.setFlag(LayerShellQt::Window::AnchorTop);
-        anchors.setFlag(LayerShellQt::Window::AnchorBottom);
-        margins.setLeft(dockMargin);
-        break;
-    case DockPlatform::Edge::Right:
-        anchors.setFlag(LayerShellQt::Window::AnchorRight);
-        anchors.setFlag(LayerShellQt::Window::AnchorTop);
-        anchors.setFlag(LayerShellQt::Window::AnchorBottom);
-        margins.setRight(dockMargin);
-        break;
-    }
+    anchors.setFlag(LayerShellQt::Window::AnchorTop);
+    anchors.setFlag(LayerShellQt::Window::AnchorBottom);
+    anchors.setFlag(LayerShellQt::Window::AnchorLeft);
+    anchors.setFlag(LayerShellQt::Window::AnchorRight);
 
     layerWindow->setAnchors(anchors);
-    layerWindow->setMargins(margins);
+    layerWindow->setMargins(QMargins(0, 0, 0, 0));
+    layerWindow->setExclusiveZone(-1); // LayerTop overlay, don't push windows
 
-    // Surface size: stretch along dock axis, 400px in depth axis
-    constexpr int previewDepth = 400;
-    QSize size;
-    if (vertical) {
-        size = QSize(previewDepth, screenGeo.height());
-    } else {
-        size = QSize(screenGeo.width(), previewDepth);
-    }
-
-    m_previewView->setWidth(size.width());
-    m_previewView->setHeight(size.height());
+    m_previewView->setWidth(screenGeo.width());
+    m_previewView->setHeight(screenGeo.height());
 #ifdef KREMA_COMPAT_NO_LAYERSHELL_DESIRED_SIZE
-    m_previewView->resize(size);
+    m_previewView->resize(screenGeo.size());
 #else
-    layerWindow->setDesiredSize(size);
+    layerWindow->setDesiredSize(screenGeo.size());
 #endif
 }
 
@@ -523,10 +521,11 @@ void PreviewController::recalcContentPosition()
     const bool vertical = (edge == DockPlatform::Edge::Left || edge == DockPlatform::Edge::Right);
 
     constexpr qreal pad = 8;
+    constexpr qreal preview_margin = 12;
 
     if (vertical) {
-        // Vertical dock: center popup vertically on the icon
-        const qreal popupCenter = m_itemGlobalPos + m_itemExtent / 2.0;
+        // Vertical dock: center popup vertically on the icon center
+        const qreal popupCenter = m_itemGlobalY + m_itemHeight / 2.0;
         m_contentY = popupCenter - m_contentHeight / 2.0;
 
         const int screenH = m_previewView->height();
@@ -536,10 +535,16 @@ void PreviewController::recalcContentPosition()
         if (m_contentY + m_contentHeight > screenH - pad) {
             m_contentY = screenH - pad - m_contentHeight;
         }
-        // contentX is determined by QML based on edge (left=0 or right=parent.width-width)
+
+        // Horizontal placement: Left or Right of the icon
+        if (edge == DockPlatform::Edge::Left) {
+            m_contentX = m_itemGlobalX + m_itemWidth + preview_margin;
+        } else {
+            m_contentX = m_itemGlobalX - m_contentWidth - preview_margin;
+        }
     } else {
-        // Horizontal dock: center popup horizontally on the icon
-        const qreal popupCenter = m_itemGlobalPos + m_itemExtent / 2.0;
+        // Horizontal dock: center popup horizontally on the icon center
+        const qreal popupCenter = m_itemGlobalX + m_itemWidth / 2.0;
         m_contentX = popupCenter - m_contentWidth / 2.0;
 
         const int screenW = m_previewView->width();
@@ -549,8 +554,37 @@ void PreviewController::recalcContentPosition()
         if (m_contentX + m_contentWidth > screenW - pad) {
             m_contentX = screenW - pad - m_contentWidth;
         }
-        // contentY is determined by QML based on edge (top=0 or bottom=parent.height-height)
+
+        // Vertical placement: Above or Below the icon
+        if (edge == DockPlatform::Edge::Top) {
+            m_contentY = m_itemGlobalY + m_itemHeight + preview_margin;
+        } else {
+            m_contentY = m_itemGlobalY - m_contentHeight - preview_margin;
+        }
     }
+
+    // --- Diagnostic Log: Absolute Geometry Audit ---
+    QString edgeName;
+    switch (edge) {
+    case DockPlatform::Edge::Top:
+        edgeName = QStringLiteral("TOP");
+        break;
+    case DockPlatform::Edge::Bottom:
+        edgeName = QStringLiteral("BOTTOM");
+        break;
+    case DockPlatform::Edge::Left:
+        edgeName = QStringLiteral("LEFT");
+        break;
+    case DockPlatform::Edge::Right:
+        edgeName = QStringLiteral("RIGHT");
+        break;
+    }
+
+    qCInfo(lcPreview) << "GEOM DEBUG:"
+                      << "PLACEMENT [" << edgeName << "]"
+                      << "Icon Global [" << m_itemGlobalX << "," << m_itemGlobalY << "," << m_itemWidth << "," << m_itemHeight << "]"
+                      << "Content Target [" << m_contentX << "," << m_contentY << "]"
+                      << "Surface Size [" << m_previewView->width() << "x" << m_previewView->height() << "]";
 }
 
 void PreviewController::updateInputRegion()
@@ -561,28 +595,18 @@ void PreviewController::updateInputRegion()
         return;
     }
 
-    const auto edge = m_dockView->platform()->edge();
-    const bool vertical = (edge == DockPlatform::Edge::Left || edge == DockPlatform::Edge::Right);
-
-    // --- Surgical Mask Fix (Trial 3) ---
-    // We mask ONLY the popup rectangle containing the thumbnails.
-    // We remove the "Bridge" to the icon entirely to make the area
-    // above neighbor icons 100% click-through.
+    // --- C++ REGION 3: THE PREVIEW REGION (The "Thumbnail Mask") ---
+    // Mask for the separate full-screen preview surface.
+    // Defines exactly where thumbnails are interactive.
+    // Since the surface is full-screen, we use absolute content coordinates.
     QRegion finalMask;
 
-    if (vertical) {
-        const int regionX = (edge == DockPlatform::Edge::Left) ? 0 : qMax(0, m_previewView->width() - static_cast<int>(m_contentWidth));
-        const int regionW = static_cast<int>(m_contentWidth);
-        const int regionY = static_cast<int>(m_contentY);
-        const int regionH = static_cast<int>(m_contentHeight);
-        finalMask += QRect(regionX, regionY, regionW, regionH);
-    } else {
-        const int regionY = (edge == DockPlatform::Edge::Top) ? 0 : qMax(0, m_previewView->height() - static_cast<int>(m_contentHeight));
-        const int regionH = static_cast<int>(m_contentHeight);
-        const int regionX = static_cast<int>(m_contentX);
-        const int regionW = static_cast<int>(m_contentWidth);
-        finalMask += QRect(regionX, regionY, regionW, regionH);
-    }
+    const int regionX = static_cast<int>(m_contentX);
+    const int regionY = static_cast<int>(m_contentY);
+    const int regionW = static_cast<int>(m_contentWidth);
+    const int regionH = static_cast<int>(m_contentHeight);
+
+    finalMask += QRect(regionX, regionY, regionW, regionH);
 
     m_previewView->setMask(finalMask);
 }

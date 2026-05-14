@@ -10,9 +10,9 @@ The dock operates in two strictly isolated coordinate systems.
 ### 2. The Illusion of Symmetry (The Empty Gap Rule)
 Visual symmetry is achieved not by centering the icon unit, but by matching the empty gaps on both sides of the unzoomed icon.
 - **The Floor Unit:** The total space occupied below the icon (Padding + Indicators + Gap).
-- **The Empty Gap Rule:** Symmetry is perfectly realized when the empty space above the icon (`ceiling_padding`) is exactly equal to the empty space below the indicators (`dock_floor_padding`).
+- **The Empty Gap Rule:** Symmetry is perfectly realized when the empty space above the icon (`panel_ceiling_padding`) is exactly equal to the empty space below the indicators (`dock_floor_padding`).
 - **Universal Application:** This rule must be maintained mathematically regardless of panel thickness, icon size, or dynamic indicator scaling. The "air" on both sides must remain identical even during a visual overflow state.
-- **The Max Height Envelope:** The maximum mathematical thickness of a slot is: `iconSize + Floor Unit + ceiling_padding`.
+- **The Max Height Envelope:** The maximum mathematical thickness of a slot is: `iconSize + Floor Unit + panel_ceiling_padding`.
 - **Subordination:** Symmetry is a visual illusion subordinate to Gravity. We do not use "Center anchoring" (e.g., `anchors.centerIn`). We use edge grounding and mathematically enforce the symmetric boundary.
 
 ### 3. The Pixel-Perfect Hitbox Law (Stable Virtual Origin)
@@ -58,8 +58,8 @@ The dock's mathematical logic and geometric rules are strictly edge-agnostic. Fu
 - **Origin Flipping:** The directional origin of the zoom effect (`transformOrigin`) must automatically flip to originate from the panel's anchored inner boundary.
 - **Padding Translation:**
     - `dock_floor_padding` is the internal distance between the indicators and the panel's anchored inner boundary (The Floor).
-    - `ceiling_padding` is the internal distance between the unzoomed icon and the panel's free-facing inner boundary (The Ceiling).
-    - The Symmetry Illusion (Rule 2) enforces that `ceiling_padding` MUST exactly equal `dock_floor_padding` along the Cross Axis to maintain the visual illusion, completely independent of any `floating_offset`.
+    - `panel_ceiling_padding` is the internal distance between the unzoomed icon and the panel's free-facing inner boundary (The Ceiling).
+    - The Symmetry Illusion (Rule 2) enforces that `panel_ceiling_padding` MUST exactly equal `dock_floor_padding` along the Cross Axis to maintain the visual illusion, completely independent of any `floating_offset`.
 
 ### 10. The Surgical Edit Mandate
 To maintain system stability and prevent regression cascades, all modifications to the codebase must be targeted and minimal.
@@ -104,8 +104,8 @@ To ensure absolute mathematical consistency between visual rendering and interac
     2.  `Indicator` (Visual dot/dash height)
     3.  `Gap` (Space between indicator and icon image)
     4.  `Icon` (The visual icon pixels, subject to zoom)
-    5.  `Ceiling Padding` (Internal space above the icon, mirroring Unit #1 per Rule 2)
-- **Dedicated Unit Variables:** Every gap, padding, indicator size, and physical layout element MUST be defined as its own explicit, mathematically calculated unit variable (e.g., `_unitPanelFloor`, `_unitIndicator`, `_unitInterGap`).
+    5.  `Panel Ceiling Padding` (Internal space above the icon, mirroring Unit #1 per Rule 2)
+- **Dedicated Unit Variables:** Every gap, padding, indicator size, and physical layout element MUST be defined as its own explicit, mathematically calculated unit variable (e.g., `_unitPanelFloor`, `_unitIndicator`, `_unitIconIndicatorGap`).
 - **The Ban on Implicit Math (Magic Numbers):** Hardcoded pixel values (e.g., `+ 5`, `- 12`) and implicit math within layout constraints or hit-testing (orbit) formulas are strictly forbidden. All geometric logic must be derived by summing these explicit unit variables.
 - **Constitutional Sync:** Hit-testing (Rule 3) and Wayland Input Regions must utilize the same unit variables as the visual delegates to ensure the "Interaction Orbit" is perfectly synchronized with the visual pixels at all times.
 
@@ -124,3 +124,15 @@ To ensure professional readability and accessibility, all UI elements must respe
 - **Adaptive Wrapping:** All descriptive labels and text blocks MUST utilize `wrapMode: Text.WordWrap` and `Layout.fillWidth: true` to gracefully adapt to window resizing.
 - **Breathing Room Protocol:** Direct overlaps and negative margins (e.g., `topMargin: -8`) are strictly forbidden. Every element must possess its own logical territory.
 - **Constraint Sovereignty:** When using horizontal layouts (`RowLayout`), width constraints or proportional scaling MUST be enforced to prevent sibling elements from "crushing" each other.
+
+### 21. The Layer & Region Traceability Mandate
+To prevent "Ghost" behaviors and ensure system maintainability, every visual layer and logical interaction region MUST be explicitly documented and numbered.
+- **Unified Registry:** All new layers (QML) and regions (C++) must be assigned a unique ID and documented with a standardized header (e.g., `// --- Layer #: [Name] ---`).
+- **The "Ghost Sheet" Protocol:** Any invisible metadata region (such as KWin blur regions) must be explicitly flagged at its calculation point. Bounding-box expansion bugs (Rule 18) are strictly forbidden; regions must represent the actual visual territory of the components.
+- **Documentation Precedence:** This traceability logic is mandatory for all future development and refactors.
+
+### 22. The Variable Documentation Mandate
+To maintain the mathematical integrity of the dock's geometry, all variables used for sizing, spacing, and flooring MUST be explicitly documented.
+- **Constitutional prefixing:** Variables representing the 5-Unit Stack (Rule 17) must be prefixed with `_unit` and follow the standardized commenting format.
+- **Derived Logic:** Any variable derived from the 5-Unit Stack must explain its mathematical intent in the comments.
+- **Registry Synchronization:** The `.claude/rules/variable-documentation.md` file must be updated whenever a new constitutional variable is introduced.

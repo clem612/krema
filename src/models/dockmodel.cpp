@@ -9,14 +9,12 @@
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QIcon>
-#include <QLoggingCategory>
 #include <QScreen>
 
 #include <algorithm>
 
 #include "taskiconprovider.h"
-
-Q_LOGGING_CATEGORY(lcModel, "krema.model")
+#include "utils/debugmanager.h"
 
 namespace krema
 {

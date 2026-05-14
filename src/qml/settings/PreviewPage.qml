@@ -101,6 +101,7 @@ QQC2.ScrollView {
 			onMoved: { 
                                  DockSettings.previewHoverDelay = value;
                                  DockSettings.save();
+                                 KremaDebug.model("Settings: previewHoverDelay changed to " + value + "ms")
                              }
                     }
                 }
@@ -121,6 +122,7 @@ QQC2.ScrollView {
 			onMoved: { 
                                  DockSettings.previewHideDelay = value;
                                  DockSettings.save();
+                                 KremaDebug.model("Settings: previewHideDelay changed to " + value + "ms")
                              }
                     }
                 }

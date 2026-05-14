@@ -18,6 +18,7 @@ import com.bhyoo.krema 1.0
  * PreviewController C++ properties (previewKeyboardActive, focusedThumbnailIndex).
  * This avoids unreliable focus transfer between layer-shell surfaces.
  */
+// --- Layer 1: Window Previews (Thumbnail overlay surface) ---
 Item {
     id: root
     anchors.fill: parent
@@ -179,7 +180,7 @@ Item {
     // The visible popup container
     Rectangle {
         id: popup
-        visible: PreviewController.visible && PreviewController.parentIndex >= 0
+        visible: PreviewController.visible && PreviewController.parentIndex >= 0 && childWindowModel.count > 0
 
         // --- Icon-Gated Visibility (Trial 4) ---
         // Move the HoverHandler inside the visible content box.
@@ -199,23 +200,10 @@ Item {
         Accessible.name: PreviewController.appName
             ? i18n("Preview for %1", PreviewController.appName)
             : ""
-        x: {
-            if (!DockView) return PreviewController.contentX // Safety check for null DockView
-            if (DockView.edge === 2) return 0                            // Left → left edge
-            if (DockView.edge === 3) return parent.width - width         // Right → right edge
-            return PreviewController.contentX                            // Top/Bottom → centered
-        }
+        x: PreviewController.contentX
         width: popupContent.implicitWidth + 2 * Kirigami.Units.largeSpacing
         height: popupContent.implicitHeight + 2 * Kirigami.Units.largeSpacing
-        y: {
-            if (!DockView) return PreviewController.contentY
-            let margin = 12 // distance from icons
-            let dockVisualTop = PreviewController.dockHeight - DockView.floatingPadding
-            
-            if (DockView.edge === 0) return dockVisualTop + margin                   // Top → below icons
-            if (DockView.edge === 1) return parent.height - height - dockVisualTop - margin // Bottom → above icons
-            return PreviewController.contentY                                        // Left/Right → centered
-        }
+        y: PreviewController.contentY
         radius: Kirigami.Units.cornerRadius
         color: Kirigami.Theme.backgroundColor
 

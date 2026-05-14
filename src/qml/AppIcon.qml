@@ -127,7 +127,7 @@ Item {
 
     // --- Notification → animation debug logging ---
     on_BadgeCountChanged: {
-        console.log("[NOTIF-TRACE] '" + displayName + "' appId=" + _appId
+        KremaDebug.model("[NOTIF-TRACE] '" + displayName + "' appId=" + _appId
                     + " badgeCount=" + _badgeCount)
         if (_badgeCount > _prevBadgeCount) {
             _triggerAttention()
@@ -135,7 +135,7 @@ Item {
         _prevBadgeCount = _badgeCount
     }
     on_IsDemandingAttentionChanged: {
-        console.log("[NOTIF-TRACE] '" + displayName + "' appId=" + _appId
+        KremaDebug.model("[NOTIF-TRACE] '" + displayName + "' appId=" + _appId
                     + " isDemandingAttention=" + _isDemandingAttention
                     + " | model.IsDemandingAttention=" + (model.IsDemandingAttention ?? false)
                     + " | smartLauncher.urgent=" + (_smartLauncherItem !== null && _smartLauncherItem.urgent)
@@ -146,11 +146,36 @@ Item {
         }
     }
 
+    // --- Visual Geometry (Rule 12: Ground Truth) ---
+    // The absolute screen pixels occupied by the icon image, accounting for zoom scale and edge origin.
+    readonly property real visualIconWidth: iconSize * currentScale
+    readonly property real visualIconHeight: iconSize * currentScale
+    
+    // The visual top-left of the icon relative to the dock delegate (this item)
+    readonly property real visualIconX: {
+        let growth = iconSize * (currentScale - 1.0)
+        let baseX = iconImage.x
+        switch (DockView.edge) {
+            case 2: return baseX // Left: grows right, X is fixed
+            case 3: return baseX - growth // Right: grows left
+            default: return baseX - growth / 2 // Top/Bottom: centered horizontally
+        }
+    }
+    readonly property real visualIconY: {
+        let growth = iconSize * (currentScale - 1.0)
+        let baseY = iconImage.y
+        switch (DockView.edge) {
+            case 0: return baseY // Top: grows down, Y is fixed
+            case 1: return baseY - growth // Bottom: grows up
+            default: return baseY - growth / 2 // Left/Right: centered vertically
+        }
+    }
+
     // Blink opacity multiplier (animated by type 6)
     property real _blinkOpacity: 1.0
     on_BlinkOpacityChanged: {
         if (_blinkOpacity !== 1.0)
-            console.log("[ANIM-TRACE] _blinkOpacity=" + _blinkOpacity.toFixed(3)
+            KremaDebug.anim("_blinkOpacity=" + _blinkOpacity.toFixed(3)
                 + " → iconOpacity=" + iconImage.opacity.toFixed(3)
                 + " for '" + displayName + "'")
     }
@@ -179,14 +204,14 @@ Item {
        property bool panelMouseInside: false
        property int spacing: 4
        
-       // Re-added the property so the parent can pass the perfect math
-       property real itemCenterX: 0
+        // --- Animation: itemCenterX (The specific point the icon grows from) ---
+        property real itemCenterX: 0
 
        // Gaussian sigma factor
        property real zoomSigmaFactor: 1.2
+       // --- Interaction: zoomSigma (The "width" or influence of the parabolic wave) ---
        readonly property real zoomSigma: iconSize * zoomSigmaFactor
-
-       // Computed zoom factor for this item
+       // --- Animation: zoomFactor (Real-time magnification multiplier) ---
        readonly property real zoomFactor: {
            if (!panelMouseInside || panelMouseX < 0 || maxZoomFactor <= 1.0) {
                return 1.0
@@ -326,7 +351,7 @@ Item {
         }
     }
 
-    // Animated scale
+    // --- Animation: currentScale (Animated value between 1.0 and max zoom factor) ---
     property real currentScale: 1.0
     Behavior on currentScale {
         enabled: _zoomAnimReady
@@ -376,30 +401,35 @@ Item {
         // Debug: log appId for notification matching verification
         Qt.callLater(function() {
             if (_debugNotif && dockItem._appId.length > 0)
-                console.log("[NOTIF-TRACE] DockIcon created: '" + dockItem.displayName + "' appId=" + dockItem._appId)
+                KremaDebug.model("DockIcon created: '" + dockItem.displayName + "' appId=" + dockItem._appId)
 
             if (_debugGeom) {
-                console.log(`[GEOM-ICON] '${dockItem.displayName}' | SLOT X:${Math.round(x)} Y:${Math.round(y)} W:${width} H:${height} | ICON X:${Math.round(iconImage.x)} Y:${Math.round(iconImage.y)} W:${iconImage.width} H:${iconImage.height} (Scaled:${Math.round(iconImage.width * currentScale)}x${Math.round(iconImage.height * currentScale)}) | TotalH:${_maxTheoreticalThickness} | Floor:${_unitPanelFloor} | Indic:${_unitIndicator}+${_unitInterGap} | Ceil:${_unitCeiling}`);
+                KremaDebug.geom(`'${dockItem.displayName}' | SLOT X:${Math.round(x)} Y:${Math.round(y)} W:${width} H:${height} | ICON X:${Math.round(iconImage.x)} Y:${Math.round(iconImage.y)} W:${iconImage.width} H:${iconImage.height} (Scaled:${Math.round(iconImage.width * currentScale)}x${Math.round(iconImage.height * currentScale)}) | TotalH:${_maxTheoreticalThickness} | Floor:${_unitPanelFloor} | Indic:${_unitIndicator}+${_unitIconIndicatorGap} | Ceil:${_unitPanelCeiling}`);
             }
         })
     }
 
-    // --- Interaction Flooring (Rule 17) ---
-    // These units define the vertical stack: Floor -> Indicator -> Gap -> Icon -> Ceiling
+    // --- THE 5-UNIT STACK (Rule 17) ---
+    // --- Unit 1: _unitPanelFloor (Internal distance from panel edge to indicator) ---
     readonly property real _unitPanelFloor: Math.max(4, Math.round(iconSize * 0.25))
+    // --- Unit 2: _unitIndicator (Visual dot/dash height) ---
     readonly property real _unitIndicator: Math.max(2, Math.round(iconSize * 0.10))
-    readonly property real _unitInterGap: Math.max(2, Math.round(iconSize * 0.125) + Math.round(iconSize * 0.15 * (1.0 - DockSettings.indicatorOffset)))
+    // --- Unit 3: _unitIconIndicatorGap (Space between indicator and icon base) ---
+    readonly property real _unitIconIndicatorGap: Math.max(2, Math.round(iconSize * 0.125) + Math.round(iconSize * 0.15 * (1.0 - DockSettings.indicatorOffset)))
+    // --- Unit 4: _unitIcon (Dynamic icon image height subject to zoom) ---
     readonly property real _unitIcon: iconSize * currentScale
-    readonly property real _unitCeiling: _unitPanelFloor
+    // --- Unit 5: _unitPanelCeiling (Internal space above icon, mirrors Unit 1 per Rule 2) ---
+    readonly property real _unitPanelCeiling: _unitPanelFloor
 
-    // The Max Height Envelope: thickness required for perfect symmetry at 1.0x
-    readonly property real _maxTheoreticalThickness: iconSize + _unitPanelFloor + _unitIndicator + _unitInterGap + _unitCeiling
+    // --- DERIVED GEOMETRY ---
+    // --- Derived: _maxTheoreticalThickness (The absolute mathematical envelope of a slot) ---
+    readonly property real _maxTheoreticalThickness: iconSize + _unitPanelFloor + _unitIndicator + _unitIconIndicatorGap + _unitPanelCeiling
     
-    // The current dynamic visual thickness (used for orbit and repulsion sync)
-    readonly property real _currentVisualThickness: _unitIcon + _unitPanelFloor + _unitIndicator + _unitInterGap + _unitCeiling
+    // --- Derived: _currentVisualThickness (The real-time height of the zoomed slot) ---
+    readonly property real _currentVisualThickness: _unitIcon + _unitPanelFloor + _unitIndicator + _unitIconIndicatorGap + _unitPanelCeiling
 
-    // Helper for indicator positioning (used by main.qml for layout)
-    readonly property real _indicatorSpace: _unitPanelFloor + _unitIndicator + _unitInterGap
+    // --- Derived: _unitIconBaseOffset (Total distance from panel edge to icon base) ---
+    readonly property real _unitIconBaseOffset: _unitPanelFloor + _unitIndicator + _unitIconIndicatorGap
 
     // Size: The delegate represents the "Inside World" territory (The Slot).
     // Rule 15: We use currentScale (animated) for the layout size so it smoothly 
@@ -422,7 +452,7 @@ Item {
 
     // Reset attention properties when animation stops
     on_ShowAttentionAnimChanged: {
-        console.log("[NOTIF-TRACE] '" + displayName + "' appId=" + _appId
+        KremaDebug.model("[NOTIF-TRACE] '" + displayName + "' appId=" + _appId
                     + " showAttentionAnim=" + _showAttentionAnim
                     + " | isDemandingAttention=" + _isDemandingAttention
                     + " | launching=" + launching
@@ -468,21 +498,23 @@ Item {
         // Declarative Grounding in the 'Inside World'
         x: {
             if (!DockView.isVertical) return (parent.width - width) / 2;
-            if (DockView.edge === 2) return _indicatorSpace; // Left: anchor after flooring stack
-            return parent.width - _indicatorSpace - width; // Right: anchor before flooring stack
+            if (DockView.edge === 2) return _unitIconBaseOffset; // Left: anchor after flooring stack
+            return parent.width - _unitIconBaseOffset - width; // Right: anchor before flooring stack
         }
         y: {
             if (DockView.isVertical) return (parent.height - height) / 2;
-            if (DockView.edge === 0) return _indicatorSpace; // Top: icon starts after flooring stack
-            return parent.height - _indicatorSpace - height; // Bottom: icon ends before flooring stack
+            if (DockView.edge === 0) return _unitIconBaseOffset; // Top: icon starts after flooring stack
+            return parent.height - _unitIconBaseOffset - height; // Bottom: icon ends before flooring stack
         }
 
         // (Scale transform merged into the main transform array below to prevent double-property syntax errors)
 
             // --- HOVER GLOW ---
             // A subtle radial glow that follows the icon shape
+            // --- Layer 2: Icon Hover Glow (MultiEffect background blur) ---
             Rectangle {
                 id: hoverGlow
+
                 anchors.centerIn: parent
                 width: parent.width * 1.2
                 height: parent.height * 1.2
@@ -720,6 +752,7 @@ Item {
 
     // Bounce property/value depends on edge direction
     readonly property string _bounceProp: DockView.isVertical ? "x" : "y"
+    // --- Animation: _bounceTarget (Pixel distance for launch animation) ---
     readonly property real _bounceTarget: {
         switch (DockView.edge) {
         case 0: return 8    // Top: bounce down
@@ -777,7 +810,7 @@ Item {
 
     // --- Attention animations (6 types) ---
 
-    // Attention bounce target (bigger than launch bounce)
+    // --- Animation: _attentionBounceTarget (Pixel distance for "demands attention" jump) ---
     readonly property real _attentionBounceTarget: {
         switch (DockView.edge) {
         case 0: return 14   // Top: down
@@ -791,7 +824,7 @@ Item {
     // Type 1: Bounce
     SequentialAnimation {
         running: dockItem._showAttentionAnim && dockItem._attentionType === 1
-        onRunningChanged: console.log("[ANIM-TRACE] bounceAttentionAnim.running=" + running
+        onRunningChanged: KremaDebug.anim("bounceAttentionAnim.running=" + running
             + " for '" + dockItem.displayName + "'"
             + " | _attentionType=" + dockItem._attentionType)
         loops: Animation.Infinite
@@ -856,7 +889,7 @@ Item {
         id: blinkAnim
         running: dockItem._showAttentionAnim && dockItem._attentionType === 6
         loops: Animation.Infinite
-        onRunningChanged: console.log("[ANIM-TRACE] blinkAnim.running=" + running
+        onRunningChanged: KremaDebug.anim("blinkAnim.running=" + running
             + " for '" + dockItem.displayName + "'"
             + " | _showAttentionAnim=" + dockItem._showAttentionAnim
             + " | _attentionType=" + dockItem._attentionType

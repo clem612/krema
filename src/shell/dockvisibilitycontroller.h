@@ -161,14 +161,13 @@ private:
     int m_panelWidth = 0;
     int m_panelHeight = 0;
 
-    // Panel Y coordinate when the dock is visible (for overlap detection).
-    // This value persists even while m_panelY moves off-screen during hide animation.
+    // --- Interaction: m_zoomOverflowHeight (Extra interaction "catch zone" above icons) ---
+    int m_zoomOverflowHeight = 0;
+
+    // Panel coordinates when the dock is visible (for overlap detection).
+    // These values persist even while m_panelY moves off-screen during hide animation.
     int m_panelRefY = 0;
     int m_panelRefX = 0;
-
-    // Zoom overflow height (pixels above the panel that zoomed icons occupy).
-    // Used to restrict hovered input region to only the interactive area.
-    int m_zoomOverflowHeight = 0;
 
     // Interaction lock: dock stays visible while context menu / settings window is open
     int m_interactingCount = 0;

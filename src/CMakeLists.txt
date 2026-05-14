@@ -53,6 +53,8 @@ add_library(krema_lib STATIC
     utils/inputregion.cpp
     utils/peiconextractor.cpp
     utils/peiconextractor.h
+    utils/debugmanager.cpp
+    utils/debugmanager.h
 
     ${KREMA_KCFG_SRCS}
     ${QML_RESOURCES}

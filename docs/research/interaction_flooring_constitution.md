@@ -13,7 +13,7 @@ To ensure absolute mathematical consistency between visual rendering and interac
 2.  **`Indicator`**: Visual dot/dash height (default 10% of iconSize).
 3.  **`Gap`**: Space between indicator and icon image (scales with `indicatorOffset`).
 4.  **`Icon`**: The visual icon pixels, synchronized with the zoom factor (`iconSize * currentScale`).
-5.  **`Ceiling Padding`**: Internal space above the icon, strictly mirroring Unit #1 per Rule 2 (Illusion of Symmetry).
+5.  **`Panel Ceiling Padding`**: Internal space above the icon, strictly mirroring Unit #1 per Rule 2 (Illusion of Symmetry).
 
 #### Mandatory Unit Variables
 Every gap, padding, and physical element MUST be defined as its own explicit, mathematically calculated unit variable (e.g., `_unitPanelFloor`). Hardcoded pixel values and implicit math are strictly forbidden in layout and hit-testing calculations.

@@ -14,7 +14,7 @@
 #include <taskmanager/tasksmodel.h>
 #include <taskmanager/virtualdesktopinfo.h>
 
-Q_LOGGING_CATEGORY(lcVisibility, "krema.shell.visibility")
+#include "utils/debugmanager.h"
 
 namespace krema
 {
@@ -142,8 +142,10 @@ void DockVisibilityController::applyInputRegion()
     if (!m_dockWindow)
         return;
 
-    // Translates visual pixels into a Wayland 'Input Stencil'.
-    // Clicks on gaps or transparent areas pass through to the wallpaper.
+    // --- C++ REGION 1: THE INPUT REGION (The "Mask") ---
+    // Defines where the mouse can interact with the dock.
+    // This is a logical 'stencil' passed to the Wayland compositor.
+    // It combines the dock panel, zoom catch-zone, and settings window.
     InputRegionParams params;
     auto *view = qobject_cast<QQuickView *>(parent());
     params.surfaceWidth = view ? view->width() : m_dockWindow->width();
@@ -166,6 +168,18 @@ void DockVisibilityController::applyInputRegion()
     }
 
     m_platform->setInputRegion(finalHitbox);
+
+    // --- Precise Blur Dispatch (RED 2) ---
+    // The blur region is strictly clipped to the visual components.
+    // It excludes the 1px trigger strip and zoom padding.
+    QRegion blurRegion;
+    if (m_visible) {
+        blurRegion += QRect(m_panelX, m_panelY, m_panelWidth, m_panelHeight);
+        if (m_liveEditMode && m_settingsWidth > 0) {
+            blurRegion += QRect(m_settingsX, m_settingsY, m_settingsWidth, m_settingsHeight);
+        }
+    }
+    m_platform->setBlurRegion(blurRegion);
 }
 
 void DockVisibilityController::setSettingsRect(qreal x, qreal y, qreal width, qreal height)
@@ -203,7 +217,7 @@ void DockVisibilityController::evaluateVisibility()
 
             // Selects the 'Exclusive Zone' (maximized window stop point) based on user mode:
             // - Mode 0 (Panel): Windows touch the dock background.
-            // - Mode 1 (Icons): Windows stop at the unzoomed icon envelope (The Ceiling).
+            // - Mode 1 (Icons): Windows stop at the unzoomed icon envelope (The Panel Ceiling).
             if (m_reserveMode == 0) { // Panel Mode
                 thickness = (edgeIndex == 2 || edgeIndex == 3) ? m_panelWidth : m_panelHeight;
             } else { // Icon Mode

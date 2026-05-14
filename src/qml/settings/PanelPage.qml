@@ -54,7 +54,7 @@ QQC2.ScrollView {
                     }
                     QQC2.Slider {
                         id: thicknessSlider; Layout.fillWidth: true; 
-                        // Rule 6: Math Always Wins. Max limit is IconSize + Floor Unit + Ceiling Padding.
+                        // Rule 6: Math Always Wins. Max limit is IconSize + Floor Unit + Panel Ceiling.
                         from: 10; to: Math.floor(panelLayout._maxEnv); stepSize: 2; 
                         value: DockSettings.panelHeight; 
                         onMoved: DockSettings.panelHeight = value

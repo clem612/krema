@@ -114,3 +114,15 @@ Before answering any prompts, Gemini must:
   4. `ROADMAP.md` (Update milestone progress).
   5. `CHANGELOG.md` (Document user-facing feature changes and fixes).
 - **Synchronization Check:** The final turn before a commit MUST involve a review of these files to ensure they accurately describe the "Why" and "What" of the changes being committed.
+
+## 16. The Layer & Region Traceability Protocol (Mandatory)
+To prevent "Ghost" bugs and maintain architectural clarity, every visual layer (QML) and logical region (C++) must be explicitly numbered and documented.
+- **Unified ID System:** Reference `.claude/rules/layer-documentation.md` for the current registry and standardized comment formats.
+- **Anti-Ghosting:** Never allow a functional or visual layer to exist without a `// --- Layer #: [Name] ---` or `// --- Region #: [Name] ---` marker.
+- **Surgical Update:** When adding or modifying a layer/region, you MUST update the registry in the rule file and the relevant code comments in the same turn.
+
+## 17. The Variable Documentation Protocol (Mandatory)
+To ensure the mathematical clarity of the dock's geometry, all variables for sizing, spacing, and flooring must be documented.
+- **Unit Labeling:** Every `_unit` variable must include its functional position in the "5-Unit Stack" (Rule 17).
+- **Mathematical Intent:** Derived variables must explain the logic behind their calculation (e.g., "Symmetry Envelope" or "Visual Catch Zone").
+- **ID Sync:** Maintain the variable registry in `.claude/rules/variable-documentation.md`.

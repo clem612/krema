@@ -113,16 +113,18 @@ void WaylandDockPlatform::setInputRegion(const QRegion &region)
 {
     if (m_window) {
         m_window->setMask(region);
+    }
+}
 
-        // --- Blur Expansion Fix (Rule 18) ---
-        // We only want to blur the area occupied by the dock panel background,
-        // not the entire interaction catch-zone.
-        // We find the largest rectangle in the region (the panel area) to use for blur.
+void WaylandDockPlatform::setBlurRegion(const QRegion &region)
+{
+    if (m_window) {
+        // --- RED 2: THE BLUR REGION (The "Ghost Sheet") ---
+        // Tells KWin where to apply the blur effect.
+        // This now uses the precise region provided by the controller,
+        // avoiding the "Ghost Sheet" bounding box bug (Rule 18).
         if (!region.isEmpty()) {
-            QRect panelRect = region.boundingRect();
-            // Subtract the zoom overflow padding (rough approximation for now)
-            // Ideally, we would pass the actual panel rect from visibility controller.
-            KWindowEffects::enableBlurBehind(m_window, true, QRegion(panelRect));
+            KWindowEffects::enableBlurBehind(m_window, true, region);
         } else {
             KWindowEffects::enableBlurBehind(m_window, false);
         }

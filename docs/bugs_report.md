@@ -24,10 +24,10 @@
 ---
 
 ## 2. The Dolphin/Settings Identity Crisis
-- **Status:** 🟡 Investigating
+- **Status:** 🟢 Fixed
 - **Description:** Wayland App ID mismatch (e.g., `org.kde.systemsettings` vs `systemsettings`) causes "Ghost Gaps" where the dock reserves space for an app that it cannot correctly identify or map to an icon.
-- **Impact:** Causes visual gaps in the dock and prevents pinned icons from showing "running" indicators.
-- **Current Fix Strategy:** Identity Bridge and Fuzzy Hit-Test (10px) implemented as workarounds.
+- **Definitive Resolution:** Implemented a dynamic lookup bridge in `IdentityManager` using `KService`. The system now automatically attempts to prefix unknown short IDs with `org.kde.` to match standard desktop file naming conventions, eliminating the need for hardcoded overrides and resolving the mapping mismatch.
+- **Outcome:** 🟢 Verified. KDE applications now correctly map to their desktop entries and icons.
 
 ---
 
@@ -84,13 +84,18 @@
     3. **Precision Masking:** Implemented a T-shaped precision mask in C++ (refined in Trial 3/4) to ensure the preview surface is only interactive where it is visual.
 - **Outcome:** 🟢 Verified. Previews now close naturally when moving between icons, and neighbor icons are no longer blocked.
 
----
+## 10. RED 2: The "Ghost Sheet" Blur (Rule 18 Violation)
+- **Status:** 🟢 Fixed
+- **Description:** A blurred rectangle incorrectly filled the empty space between the Dock and the Settings loader.
+- **Root Cause Analysis:** The blur effect was tied to the `boundingRect()` of the entire input region, which included disconnected elements and invisible mouse-catch zones.
+- **Definitive Resolution:**
+    1. **Decoupled Interface:** Added `setBlurRegion` to `DockPlatform`.
+    2. **Precision Masking:** `DockVisibilityController` now dispatches a dedicated `blurRegion` that only contains the visual Panel and Settings rects.
+    3. **Clean Separation:** The input region (Hitbox) and blur region (Visuals) are now mathematically isolated.
+- **Outcome:** 🟢 Verified. Blur is now the "Exact Size of the Panel."
 
-*(Template for future bugs)*
-## [Bug Name]
-- **Status:** [🔴 / 🟡 / 🟢]
-- **Description:** ...
-- **Steps to Reproduce:** ...
-- **Failed Attempts:** ...
-- **Current Fix Strategy:** ...
-- **Root Cause Analysis:** *(Filled when marked 🟢 Fixed)*
+## 11. Tooltip Geometry Desync (Altitude & Tracking)
+- **Status:** 🟢 Fixed
+- **Description:** Icon name tooltips (for closed apps) were static and did not track zoomed icons, causing them to be overlapped or misaligned during zoom waves.
+- **Definitive Resolution:** Applied **Absolute Sync** (Calculated Reality) math to `tooltipItem` in `main.qml`. Tooltips now bind directly to `visualIconX/Y` and `visualIconWidth/Height`, ensuring they smoothly follow the icon's visual top edge and center in real-time.
+- **Outcome:** 🟢 Verified. Tooltips now perfectly track zoomed icons across all edges.

@@ -20,15 +20,19 @@
 ## Phase 2: Refinement & The "Everything is a Module" Pivot (Current)
 
 ### Milestone 9: Visual Engine & Foundation Polish (Current Priority) ⬅️
-- [x] **Advanced Surface Shaders:** Implementation of hardware-accelerated Acrylic and Mica background materials.
+- [ ] **Advanced Surface Shaders:** Implementation of hardware-accelerated Acrylic and Mica background materials.
 - [x] **Volumetric Shadow Engine:** Precise outer shadow rendering clamped strictly to the visual panel bounds.
-- [x] **Preview Geometry Sync:** Absolute coordinate synchronization for window preview thumbnails and vertical offsets.
-- [x] **Kinetic Zoom Physics (UX):** Implementation of smoothed Bezier curves and easing functions for entry/exit zoom orbits (the "Kremy" feel).
+- [ ] **Preview Geometry Sync:** Absolute coordinate synchronization for window preview thumbnails and vertical offsets.
+- [ ] **Kinetic Zoom Physics (UX):** Implementation of smoothed Bezier curves and easing functions for entry/exit zoom orbits (the "Kremy" feel).
+- [ ] **Architectural Pivot:** Partial migration to QML Singletons (Mixed with setContextProperty).
 
 ### Stabilization Phase (Foundation Integrity)
 - [x] **Fix "Heisenbug" (Rule 12):** Identified and resolved debug-induced hit-test latency (fixed via Absolute Sync).
 - [x] **Center Deadzone Isolation:** Resolved via Distance-Based Visual Center hit-testing.
-- [ ] **Dolphin Identity Bridge:** Finalize AppID mapping logic.
+- [x] **Sticky Preview Fix (Bug #8):** Resolved via Icon-Gated Visibility.
+- [ ] **Placement Stabilization (Bug #9):** Fix Behavior conflict during edge transitions.
+- [ ] **Vertical Indicator Flow (Bug #10):** Fix dot wrapping in vertical mode.
+
 
 ### Architectural Shift: Mathematical Foundation
 - [x] **Mathematical Constitution:** Established the `ARCHITECTURE Mandate.md` as the absolute source of truth.
@@ -36,8 +40,7 @@
 - [x] **Universal Symmetry (Rule 2):** Perfected the "Empty Gap Rule" for flawless visual balance.
 - [x] **Proactive Rule 6 Enforcement:** Real-time settings clamping to eliminate all UI "dead zones."
 - [x] **Dual Reserve Space Modes (Rule 1):** Choice between "Panel Background" or "Icon Extents".
-- [x] **Dynamic Indicator Proportions (Rule 2):** 10% golden ratio sizing.
-- [x] **Geometry Debugging Mandate (Rule 12):** Unified terminal-based diagnostic framework.
+- [ ] **Dynamic Indicator Proportions (Rule 2):** 10% golden ratio sizing.
 - [x] **The Feature Vault:** Versioned history logs in `docs/features/`.
 - [ ] **Island Protocol & Recursive Containers (Rule 13):** Support nested modules (Widgets inside Areas).
 - [ ] **Fixed Width Mode (Rule 8):** Start/Center/End icon alignment within extended panels.

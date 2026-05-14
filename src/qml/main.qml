@@ -148,7 +148,7 @@ Item {
 
             // Hit-test diagnostic (active with --debug-hit)
             if (_debugHit) {
-                console.log("[GEOM-HIT] Hovering at", mouse.x.toFixed(1), mouse.y.toFixed(1))
+                KremaDebug.input("Hovering at " + mouse.x.toFixed(1) + " " + mouse.y.toFixed(1))
             }
 
             let isVisible = DockVisibility.dockVisible
@@ -165,7 +165,7 @@ Item {
             // The orbit is anchored to the visual center of the icons, 
             // ensuring hit-testing matches visual pixels exactly.
             let sample = dockRepeater.itemAt(0)
-            let floorUnits = sample ? sample._indicatorSpace : 0
+            let floorUnits = sample ? sample._unitIconBaseOffset : 0
             let unitCenter = floorUnits + (iconSize / 2)
             
             let secondaryAxisCenter = 0
@@ -183,7 +183,7 @@ Item {
             let enterOrbit = (iconSize * 0.5) + 5
             let exitOrbit = enterOrbit // fallback
             if (sample) {
-                let visualRadius = (dockRow._maxIconThickness * 0.5) + sample._indicatorSpace
+                let visualRadius = (dockRow._maxIconThickness * 0.5) + sample._unitIconBaseOffset
                 exitOrbit = visualRadius + 10
             }
 
@@ -284,13 +284,16 @@ Item {
         }
     }
 
+    // --- Interaction: hoveredIndex (The ID of the icon currently "under" the cursor) ---
     property int hoveredIndex: -1
+    // --- Interaction: hoveredName (The display name of the hovered icon) ---
     property string hoveredName: ""
     property bool keyboardNavigating: false
     property bool _zoomActive: false
 
     // Kinetic Zoom Physics (Milestone 9)
     // We animate this value to create a 'liquid' exit instead of an instant snap.
+    // --- Kinetic: _zoomIntensity (Bridge for transition smoothing: 0.0 - 1.0) ---
     property real _zoomIntensity: _zoomActive ? 1.0 : 0.0
     Behavior on _zoomIntensity {
         NumberAnimation {
@@ -398,7 +401,7 @@ Item {
                     let item = dockRepeater.itemAt(hoveredIndex)
                     if (item) {
                         let globalPos = item.mapToGlobal(0, 0)
-                        PreviewController.showPreview(hoveredIndex, DockView.isVertical ? globalPos.y : globalPos.x, DockView.isVertical ? item.height : item.width)
+                        PreviewController.showPreview(hoveredIndex, globalPos.x, globalPos.y, item.width, item.height)
                         PreviewController.startPreviewKeyboardNav(); announcePreviewThumbnail();
                     }
                 }
@@ -456,15 +459,14 @@ Item {
     }
 
     function _tryAutoPreview() {
-        if (!DockSettings.previewEnabled || hoveredIndex < 0 || PreviewController.visible || (typeof DockContextMenu !== "undefined" && DockContextMenu.visible)) return
-        let idx = DockModel.tasksModel.index(hoveredIndex, 0)
-        if (DockModel.tasksModel.data(idx, TaskManager.AbstractTasksModel.IsWindow)) {
+        if (!DockSettings.previewEnabled || root.hoveredIndex < 0 || PreviewController.visible || (typeof DockContextMenu !== "undefined" && DockContextMenu.visible)) return
+        
+        let idx = DockModel.tasksModel.index(root.hoveredIndex, 0)
+        let isWindow = DockModel.tasksModel.data(idx, TaskManager.AbstractTasksModel.IsWindow)
+        
+        if (isWindow) {
             tooltipItem.show = false; tooltipTimer.stop()
-            let item = dockRepeater.itemAt(hoveredIndex)
-            if (item) {
-                let globalPos = item.mapToGlobal(0, 0)
-                PreviewController.showPreview(hoveredIndex, DockView.isVertical ? globalPos.y : globalPos.x, DockView.isVertical ? item.height : item.width)
-            }
+            root.updatePreviewGeometry(true)
         }
     }
 
@@ -494,6 +496,7 @@ Item {
         property real panelWidth: dockPanel.width
         property real panelHeight: dockPanel.height
         property real cornerRadius: dockPanel.radius
+        // --- Shadow: elevation (The "height" of the dock above the wallpaper) ---
         property real elevation: DockSettings.shadowElevation
         property real lightX: DockSettings.shadowLightX
         property real lightY: DockSettings.shadowLightY
@@ -503,7 +506,9 @@ Item {
         property real shadowR: _shadowColor.r
         property real shadowG: _shadowColor.g
         property real shadowB: _shadowColor.b
+        // --- Shadow: shadowA (Final opacity of the drop shadow) ---
         property real shadowA: DockSettings.shadowIntensity
+        // --- Shadow: margin (Buffer calculated to ensure shadows aren't clipped) ---
         property real margin: Math.min(64, Math.max((Math.sqrt(lightX*lightX+lightY*lightY)+lightRadius)*elevation/Math.max(lightZ-elevation,1), lightRadius*3)+10)
         
         // --- Shadow Alignment Fix ---
@@ -514,6 +519,7 @@ Item {
         fragmentShader: "qrc:/qml/shaders/outer_shadow.frag.qsb"
     }
 
+    // --- Layer 4: Blueprint Ghost Grid (Live Edit Alignment) ---
     Item {
         id: blueprintGhost
         visible: typeof DockVisibility !== "undefined" && DockVisibility.liveEditMode
@@ -541,25 +547,25 @@ Item {
         }
     }
 
+    // --- Layer 0: Main Dock Panel (Visual container) ---
     Rectangle {
         id: dockPanel
         visible: opacity > 0.01
 
-        // --- Visual Extent (Rule 17/18) ---
-        // The highest physical point of the icons relative to the screen edge.
-        // Used to anchor window previews perfectly.
+        // --- Placement: visualIconTop (Absolute boundary used to align window previews) ---
         readonly property real visualIconTop: {
             let sample = dockRepeater.itemAt(0)
-            let floorUnits = sample ? sample._indicatorSpace : 0
+            let floorUnits = sample ? sample._unitIconBaseOffset : 0
             
             // Current visual icon height = unzoomedSize * (1.0 + zoomAmount)
             let currentIconHeight = DockSettings.iconSize * (1.0 + (DockSettings.maxZoomFactor - 1.0) * root._zoomIntensity)
             
             return _screenFlooring + floorUnits + currentIconHeight
         }
+        // --- Placement: currentVisualOverflow (Dynamic visual territory for surface sizing) ---
         property real currentVisualOverflow: {
             let sample = dockRepeater.itemAt(0)
-            let floorUnits = sample ? sample._indicatorSpace : 0
+            let floorUnits = sample ? sample._unitIconBaseOffset : 0
             
             // --- Dynamic Overflow (Bug #7 Fix) ---
             // Calculate the actual visual overflow based on the kinetic zoom intensity.
@@ -573,6 +579,7 @@ Item {
         }
         onCurrentVisualOverflowChanged: updateWaylandInputRegion()
         
+        // --- Interaction: mouseX / mouseY (Raw coordinates on the interaction surface) ---
         property real mouseX: -9999
         property real mouseY: -9999
         property bool mouseInside: dockMouseArea.containsMouse && !root._dragActive
@@ -591,7 +598,10 @@ Item {
         }
         x: DockView.isVertical ? _panelEdgePos : (parent.width - width) / 2
         y: DockView.isVertical ? (parent.height - height) / 2 : _panelEdgePos
+        // --- Derived: _screenFlooring (External distance from screen edge to panel) ---
         readonly property real _screenFlooring: DockView.floatingPadding
+
+        // --- Placement: _panelEdgePos (Final calculated X/Y coordinate of the dock panel) ---
         property real _panelEdgePos: {
             if (typeof DockVisibility === "undefined") return 0
             let pfb = _screenFlooring
@@ -662,6 +672,7 @@ Item {
             Repeater {
                 id: dockRepeater; model: DockModel.tasksModel
                 AppIcon {
+                    // --- Interaction: virtualCenter (The mathematical center of a slot per Rule 3) ---
                     readonly property real virtualCenter: {
                         let slot = iconSize + dockRow.baseSpacing, total = (dockRepeater.count * slot) - dockRow.baseSpacing
                         let start = (DockView.isVertical ? root.height : root.width) / 2 - (total / 2)
@@ -755,6 +766,7 @@ Item {
         }
     }
 
+    // --- Layer 5: Drag & Drop Ghost (Follows mouse during drag) ---
     Kirigami.Icon {
         id: dragGhost; Accessible.ignored: true; visible: root._dragActive && root._dragSourceIndex >= 0
         width: DockSettings.iconSize; height: DockSettings.iconSize
@@ -777,11 +789,59 @@ Item {
         }
     }
 
-    Timer { id: autoPreviewTimer; interval: 200; repeat: true; running: tooltipItem.visible && !PreviewController.visible && (!DockContextMenu || !DockContextMenu.visible); onTriggered: root._tryAutoPreview() }
+    Timer { id: autoPreviewTimer; interval: Math.min(200, DockSettings.previewHoverDelay); repeat: true; running: tooltipItem.visible && !PreviewController.visible && (!DockContextMenu || !DockContextMenu.visible); onTriggered: root._tryAutoPreview() }
 
     Connections {
         target: PreviewController
         function onVisibleChanged() { if(!PreviewController.visible && !dockMouseArea.containsMouse) { dockPanel.mouseX = -1; dockPanel.mouseY = -1; root._zoomActive = false; DockVisibility.setHovered(false) } }
+    }
+
+    function updatePreviewGeometry(force = false) {
+        if (root.hoveredIndex < 0) return
+        
+        // --- Activation Guard (Rule 18) ---
+        // If the preview isn't visible yet, we ONLY allow it to show if explicitly 
+        // forced by the tooltipTimer or the auto-preview logic. 
+        // This prevents the zoom animation from triggering it instantly.
+        if (!force && !PreviewController.visible) return
+        
+        // --- Filter: Only show previews for actual Windows (Rule 18) ---
+        let idx = DockModel.tasksModel.index(root.hoveredIndex, 0)
+        let isWindow = DockModel.tasksModel.data(idx, TaskManager.AbstractTasksModel.IsWindow)
+        
+        if (!isWindow) {
+            PreviewController.hidePreviewDelayed()
+            return
+        }
+
+        let it = dockRepeater.itemAt(root.hoveredIndex)
+        if (!it) {
+            KremaDebug.preview("FAILED: Item at index " + root.hoveredIndex + " is NULL")
+            return
+        }
+        
+        // --- Absolute Sync: The Full Chain (Rule 17) ---
+        let localX = dockPanel.x + dockRow.x + it.x + it.visualIconX
+        let localY = dockPanel.y + dockRow.y + it.y + it.visualIconY
+        
+        // Capture the real zoomed size
+        let vW = it.visualIconWidth > 0 ? it.visualIconWidth : it.width
+        let vH = it.visualIconHeight > 0 ? it.visualIconHeight : it.height
+        
+        KremaDebug.preview("Trigger: Index=" + root.hoveredIndex + " Pos=[" + localX + "," + localY + "] Size=" + vW + "x" + vH)
+        PreviewController.showPreview(root.hoveredIndex, localX, localY, vW, vH)
+    }
+
+    // --- Absolute Sync: Zoom Tracking ---
+    // Reactively follow the hovered icon's visual expansion.
+    // This handles both mouse-driven zoom and kinetic animation cycles.
+    Connections {
+        target: (root.hoveredIndex >= 0) ? dockRepeater.itemAt(root.hoveredIndex) : null
+        ignoreUnknownSignals: true
+        function onVisualIconYChanged() { root.updatePreviewGeometry() }
+        function onVisualIconXChanged() { root.updatePreviewGeometry() }
+        function onXChanged() { root.updatePreviewGeometry() }
+        function onYChanged() { root.updatePreviewGeometry() }
     }
 
     Timer {
@@ -790,28 +850,50 @@ Item {
             if(root.hoveredIndex < 0 || (DockContextMenu && DockContextMenu.visible)) return
             let idx = DockModel.tasksModel.index(root.hoveredIndex, 0)
             if(DockModel.tasksModel.data(idx, TaskManager.AbstractTasksModel.IsWindow) && DockSettings.previewEnabled) {
-                let it = dockRepeater.itemAt(root.hoveredIndex); if(it) { let gp = it.mapToGlobal(0,0); PreviewController.showPreview(root.hoveredIndex, DockView.isVertical ? gp.y : gp.x, DockView.isVertical ? it.height : it.width) }
+                updatePreviewGeometry(true) // FORCE activation after timer expires
             } else { tooltipItem.show = true }
         }
     }
 
     Rectangle {
         id: tooltipItem; Accessible.ignored: true; property bool show: false; visible: show && root.hoveredName.length > 0; onVisibleChanged: if(!visible) show = false
-        x: { if(root.hoveredIndex<0||root.hoveredIndex>=dockRepeater.count) return 0; let it=dockRepeater.itemAt(root.hoveredIndex); if(!it) return 0; let sp=Kirigami.Units.largeSpacing; if(DockView.edge===2) return dockPanel.x+dockPanel.width+sp; if(DockView.edge===3) return dockPanel.x-width-sp; return dockPanel.x+dockRow.x+it.x+it.width/2-width/2 }
-        y: { if(root.hoveredIndex<0||root.hoveredIndex>=dockRepeater.count) return 0; let it=dockRepeater.itemAt(root.hoveredIndex); if(!it) return 0; let sp=Kirigami.Units.largeSpacing; if(DockView.edge===0) return dockPanel.y+dockPanel.height+sp; if(DockView.edge===1) return dockPanel.y-height-sp; return dockPanel.y+dockRow.y+it.y+it.height/2-height/2 }
+        
+        // --- Absolute Sync: Tooltip Alignment (Rule 17) ---
+        // Labels now track the VISUAL pixels of zoomed icons, not just the static grid slot.
+        x: {
+            if (root.hoveredIndex < 0 || root.hoveredIndex >= dockRepeater.count) return 0
+            let it = dockRepeater.itemAt(root.hoveredIndex)
+            if (!it) return 0
+            let sp = Kirigami.Units.mediumSpacing
+            
+            let absX = dockPanel.x + dockRow.x + it.x + it.visualIconX
+            let vW = it.visualIconWidth > 0 ? it.visualIconWidth : it.width
+            
+            if (DockView.edge === 2) return absX + vW + sp // Left: right of icon
+            if (DockView.edge === 3) return absX - width - sp // Right: left of icon
+            return absX + vW/2 - width/2 // Top/Bottom: centered horizontally
+        }
+        y: {
+            if (root.hoveredIndex < 0 || root.hoveredIndex >= dockRepeater.count) return 0
+            let it = dockRepeater.itemAt(root.hoveredIndex)
+            if (!it) return 0
+            let sp = Kirigami.Units.mediumSpacing
+            
+            let absY = dockPanel.y + dockRow.y + it.y + it.visualIconY
+            let vH = it.visualIconHeight > 0 ? it.visualIconHeight : it.height
+            
+            if (DockView.edge === 0) return absY + vH + sp // Top: below icon
+            if (DockView.edge === 1) return absY - height - sp // Bottom: above icon
+            return absY + vH/2 - height/2 // Left/Right: centered vertically
+        }
+        
         Kirigami.Theme.colorSet: Kirigami.Theme.Tooltip; Kirigami.Theme.inherit: false; width: tooltipLabel.implicitWidth+Kirigami.Units.largeSpacing*2; height: tooltipLabel.implicitHeight+Kirigami.Units.largeSpacing; radius: Kirigami.Units.smallSpacing; color: Kirigami.Theme.backgroundColor; z: 100
         QQC2.Label { id: tooltipLabel; anchors.centerIn: parent; text: root.hoveredName; Accessible.ignored: true }
         Connections { target: root; function onHoveredIndexChanged() { tooltipItem.show = false; tooltipTimer.stop(); if(root.hoveredIndex < 0) PreviewController.hidePreviewDelayed(); else if(!root.keyboardNavigating) { PreviewController.hidePreviewDelayed(); tooltipTimer.restart() } } }
     }
 
-    Connections {
-        target: DockModel.tasksModel
-        function onRowsInserted() {
-            if(root.hoveredIndex<0 || PreviewController.visible || (DockContextMenu && DockContextMenu.visible)) return
-            let idx = DockModel.tasksModel.index(root.hoveredIndex,0); if(DockModel.tasksModel.data(idx, TaskManager.AbstractTasksModel.IsWindow)) { tooltipItem.show=false; let it=dockRepeater.itemAt(root.hoveredIndex); if(it){let gp=it.mapToGlobal(0,0); PreviewController.showPreview(root.hoveredIndex, DockView.isVertical?gp.y:gp.x, DockView.isVertical?it.height:it.width)}}
-        }
-    }
-    
+
+    // --- Layer 8: Settings Dialog Container (Configuration UI) ---
     Loader {
         id: settingsUnifiedLoader
         x: { if(DockSettings.edge===2) return blueprintGhost.width; if(DockSettings.edge===3) return parent.width-blueprintGhost.width-width; return (parent.width-width)/2 }

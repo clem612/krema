@@ -18,10 +18,9 @@
 
 #include <QCursor>
 #include <QGuiApplication>
-#include <QLoggingCategory>
 #include <QScreen>
 
-Q_LOGGING_CATEGORY(lcMultiDock, "krema.shell.multidock")
+#include "utils/debugmanager.h"
 
 namespace krema
 {
@@ -61,7 +60,7 @@ void MultiDockManager::setMonitorMode(MonitorMode mode)
     if (m_mode == mode) {
         return;
     }
-    qCInfo(lcMultiDock) << "Monitor mode changed:" << m_mode << "->" << mode;
+    qCInfo(lcShell) << "Monitor mode changed:" << m_mode << "->" << mode;
     m_mode = mode;
     if (m_initialized) {
         applyMode();
@@ -134,7 +133,7 @@ void MultiDockManager::setupPrimaryOnly()
 {
     auto *screen = QGuiApplication::primaryScreen();
     if (!screen) {
-        qCWarning(lcMultiDock) << "No primary screen available";
+        qCWarning(lcShell) << "No primary screen available";
         return;
     }
     createShellForScreen(screen);
@@ -145,7 +144,7 @@ void MultiDockManager::setupAllScreens()
     const auto screens = QGuiApplication::screens();
     for (auto *screen : screens) {
         if (screen->geometry().isEmpty()) {
-            qCDebug(lcMultiDock) << "Skipping screen with empty geometry:" << screen->name();
+            qCDebug(lcShell) << "Skipping screen with empty geometry:" << screen->name();
             continue;
         }
         createShellForScreen(screen);
@@ -155,11 +154,11 @@ void MultiDockManager::setupAllScreens()
 DockShell *MultiDockManager::createShellForScreen(QScreen *screen)
 {
     if (auto it = m_shells.find(screen); it != m_shells.end()) {
-        qCDebug(lcMultiDock) << "Shell already exists for screen:" << screen->name();
+        qCDebug(lcShell) << "Shell already exists for screen:" << screen->name();
         return it->second.get();
     }
 
-    qCInfo(lcMultiDock) << "Creating dock shell for screen:" << screen->name() << "geometry:" << screen->geometry();
+    qCInfo(lcShell) << "Creating dock shell for screen:" << screen->name() << "geometry:" << screen->geometry();
 
     // Create per-screen settings overlay (falls back to global KremaSettings)
     auto *screenSettings = new ScreenSettings(screen->name(), m_settings, this);
@@ -186,7 +185,7 @@ DockShell *MultiDockManager::createShellForScreen(QScreen *screen)
 void MultiDockManager::destroyShellForScreen(QScreen *screen)
 {
     if (auto it = m_shells.find(screen); it != m_shells.end()) {
-        qCInfo(lcMultiDock) << "Destroying dock shell for screen:" << screen->name();
+        qCInfo(lcShell) << "Destroying dock shell for screen:" << screen->name();
         m_shells.erase(it);
     }
 }
@@ -194,7 +193,7 @@ void MultiDockManager::destroyShellForScreen(QScreen *screen)
 void MultiDockManager::destroyAllShells()
 {
     if (!m_shells.empty()) {
-        qCDebug(lcMultiDock) << "Destroying all" << m_shells.size() << "dock shells";
+        qCDebug(lcShell) << "Destroying all" << m_shells.size() << "dock shells";
         m_shells.clear();
     }
 }
@@ -250,8 +249,8 @@ void MultiDockManager::setupFollowActive()
         }
     }
 
-    qCInfo(lcMultiDock) << "Follow Active mode initialized, trigger:" << trigger
-                        << "active screen:" << (m_activeScreen ? m_activeScreen->name() : QStringLiteral("none"));
+    qCInfo(lcShell) << "Follow Active mode initialized, trigger:" << trigger
+                    << "active screen:" << (m_activeScreen ? m_activeScreen->name() : QStringLiteral("none"));
 }
 
 void MultiDockManager::setActiveScreen(QScreen *screen)
@@ -265,7 +264,7 @@ void MultiDockManager::setActiveScreen(QScreen *screen)
         return;
     }
 
-    qCInfo(lcMultiDock) << "Active screen changing:" << (m_activeScreen ? m_activeScreen->name() : QStringLiteral("none")) << "->" << screen->name();
+    qCInfo(lcShell) << "Active screen changing:" << (m_activeScreen ? m_activeScreen->name() : QStringLiteral("none")) << "->" << screen->name();
 
     // Hide old active shell
     if (m_activeScreen) {
@@ -334,7 +333,7 @@ void MultiDockManager::setShellVisible(DockShell *shell, bool visible)
 
 void MultiDockManager::onScreenAdded(QScreen *screen)
 {
-    qCDebug(lcMultiDock) << "Screen added:" << screen->name() << "geometry:" << screen->geometry();
+    qCDebug(lcShell) << "Screen added:" << screen->name() << "geometry:" << screen->geometry();
     if (m_mode == AllScreens || m_mode == FollowActive) {
         scheduleTopologyUpdate();
     }
@@ -342,7 +341,7 @@ void MultiDockManager::onScreenAdded(QScreen *screen)
 
 void MultiDockManager::onScreenRemoved(QScreen *screen)
 {
-    qCDebug(lcMultiDock) << "Screen removed:" << screen->name();
+    qCDebug(lcShell) << "Screen removed:" << screen->name();
 
     // Immediately destroy the shell for the removed screen to avoid dangling pointers
     destroyShellForScreen(screen);
@@ -357,7 +356,7 @@ void MultiDockManager::onScreenRemoved(QScreen *screen)
 
 void MultiDockManager::onPrimaryScreenChanged(QScreen *screen)
 {
-    qCDebug(lcMultiDock) << "Primary screen changed to:" << (screen ? screen->name() : QStringLiteral("null"));
+    qCDebug(lcShell) << "Primary screen changed to:" << (screen ? screen->name() : QStringLiteral("null"));
     if (m_mode == PrimaryOnly || m_mode == FollowActive) {
         scheduleTopologyUpdate();
     }
@@ -370,7 +369,7 @@ void MultiDockManager::scheduleTopologyUpdate()
 
 void MultiDockManager::processTopologyUpdate()
 {
-    qCDebug(lcMultiDock) << "Processing topology update, mode:" << m_mode;
+    qCDebug(lcShell) << "Processing topology update, mode:" << m_mode;
     applyMode();
 }
 
