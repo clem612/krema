@@ -22,17 +22,11 @@
 ### Milestone 9: Visual Engine & Foundation Polish (Current Priority) ⬅️
 - [ ] **Advanced Surface Shaders:** Implementation of hardware-accelerated Acrylic and Mica background materials.
 - [x] **Volumetric Shadow Engine:** Precise outer shadow rendering clamped strictly to the visual panel bounds.
-- [ ] **Preview Geometry Sync:** Absolute coordinate synchronization for window preview thumbnails and vertical offsets.
+- [x] **Preview Geometry Sync:** Absolute coordinate synchronization for window preview thumbnails and vertical offsets.
 - [ ] **Kinetic Zoom Physics (UX):** Implementation of smoothed Bezier curves and easing functions for entry/exit zoom orbits (the "Kremy" feel).
+- [ ] **Instance-Aware Active Indicators (Dynamic Dash):** Dash indicator visually shifts between dots to represent the currently focused window instance.
 - [ ] **Architectural Pivot:** Partial migration to QML Singletons (Mixed with setContextProperty).
-
-### Stabilization Phase (Foundation Integrity)
-- [x] **Fix "Heisenbug" (Rule 12):** Identified and resolved debug-induced hit-test latency (fixed via Absolute Sync).
-- [x] **Center Deadzone Isolation:** Resolved via Distance-Based Visual Center hit-testing.
-- [x] **Sticky Preview Fix (Bug #8):** Resolved via Icon-Gated Visibility.
-- [ ] **Placement Stabilization (Bug #9):** Fix Behavior conflict during edge transitions.
-- [ ] **Vertical Indicator Flow (Bug #10):** Fix dot wrapping in vertical mode.
-
+- [x] **Resolve Phase 1 Architectural Debt:** Migrated foundation bug-fixes to the Bug Report.
 
 ### Architectural Shift: Mathematical Foundation
 - [x] **Mathematical Constitution:** Established the `ARCHITECTURE Mandate.md` as the absolute source of truth.
@@ -72,6 +66,7 @@
 ---
 
 ## Future & Wildcard Backlog
+- [ ] **Hyprland Support:** Abstract KWin-specific TaskManager and PipeWire protocols to support Hyprland via its custom IPC socket and xdg-desktop-portal.
 - [ ] **Modular Theme Engine:** JSON-based Blueprint system for sharing styles.
 - [ ] **KDE "Get New Stuff" (KNS):** Integration for a Krema Theme Store.
 - [ ] **Dynamic Soundscapes:** Audio feedback for interaction based on active theme.

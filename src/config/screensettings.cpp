@@ -87,7 +87,10 @@ bool ScreenSettings::hasOverrides() const
 
 int ScreenSettings::iconSize() const
 {
-    return readWithFallback(QStringLiteral("IconSize"), m_fallback->iconSize());
+    int val = readWithFallback(QStringLiteral("IconSize"), m_fallback->iconSize());
+    bool isOverride = m_group.hasKey(QStringLiteral("IconSize"));
+    qCDebug(lcScreenSettings) << "ScreenSettings::iconSize() for" << m_screenName << "Value:" << val << "IsOverride:" << isOverride;
+    return val;
 }
 
 int ScreenSettings::edge() const

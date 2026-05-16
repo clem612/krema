@@ -121,8 +121,8 @@ To prevent "Ghost" bugs and maintain architectural clarity, every visual layer (
 - **Anti-Ghosting:** Never allow a functional or visual layer to exist without a `// --- Layer #: [Name] ---` or `// --- Region #: [Name] ---` marker.
 - **Surgical Update:** When adding or modifying a layer/region, you MUST update the registry in the rule file and the relevant code comments in the same turn.
 
-## 17. The Variable Documentation Protocol (Mandatory)
-To ensure the mathematical clarity of the dock's geometry, all variables for sizing, spacing, and flooring must be documented.
-- **Unit Labeling:** Every `_unit` variable must include its functional position in the "5-Unit Stack" (Rule 17).
-- **Mathematical Intent:** Derived variables must explain the logic behind their calculation (e.g., "Symmetry Envelope" or "Visual Catch Zone").
-- **ID Sync:** Maintain the variable registry in `.claude/rules/variable-documentation.md`.
+## Variable Documentation Registry (Mandatory)
+- Every new variable created for sizing, geometry, animation, or state logic MUST be documented in `docs/research/variables/` registry.
+- Refer to `docs/research/variables/README.md` for the documentation protocol.
+- Documentation must include: Name, Owner, Purpose, Consumers, and relevant Architectural Links (e.g., Rule IDs).
+- Updates to variable documentation must be included in the same turn the code change is applied.

@@ -39,21 +39,26 @@ obs-build-rpm distro="openSUSE_Tumbleweed" arch="x86_64":
 obs-build-deb distro="Debian_13" arch="x86_64":
     osc build {{distro}} {{arch}} packaging/obs/debian.control
 
-# Install .desktop file for development (KWin Wayland protocol access)
+# Install .desktop files for development (KWin Wayland protocol access & autostart)
 dev-desktop:
     @mkdir -p ~/.local/share/applications
-    @sed -e 's|@KDE_INSTALL_FULL_BINDIR@/krema|'$PWD'/build/dev/bin/krema|' \
+    @mkdir -p ~/.config/autostart
+    @sed -e 's|@KDE_INSTALL_FULL_BINDIR@/krema|sh -c "XDG_DATA_DIRS=\\"\$HOME/.local/share:/usr/local/share:/usr/share:\${XDG_DATA_DIRS:-}\\" QT_PLUGIN_PATH=\\"/usr/lib/qt6/plugins:\${QT_PLUGIN_PATH:-}\\" '$PWD'/build/dev/bin/krema"|' \
          -e '/^NoDisplay=/d' \
          src/com.bhyoo.krema.desktop.in > ~/.local/share/applications/com.bhyoo.krema.desktop
+    @sed -e 's|@KDE_INSTALL_FULL_BINDIR@/krema|sh -c "XDG_DATA_DIRS=\\"\$HOME/.local/share:/usr/local/share:/usr/share:\${XDG_DATA_DIRS:-}\\" QT_PLUGIN_PATH=\\"/usr/lib/qt6/plugins:\${QT_PLUGIN_PATH:-}\\" '$PWD'/build/dev/bin/krema"|' \
+         src/com.bhyoo.krema.autostart.desktop.in > ~/.config/autostart/com.bhyoo.krema.autostart.desktop
     @echo "Installed dev launcher to ~/.local/share/applications/com.bhyoo.krema.desktop"
+    @echo "Installed dev autostart to ~/.config/autostart/com.bhyoo.krema.autostart.desktop"
     @echo "Run: kbuildsycoca6 --noincremental"
     @# Clean up legacy dev desktop files if they exist
     @rm -f ~/.local/share/applications/org.krema.dev.desktop
     @rm -f ~/.local/share/applications/org.krema.desktop
 
-# Remove dev .desktop file
+# Remove dev .desktop files
 dev-desktop-clean:
     @rm -f ~/.local/share/applications/org.krema.dev.desktop
     @rm -f ~/.local/share/applications/org.krema.desktop
     @rm -f ~/.local/share/applications/com.bhyoo.krema.desktop
-    @echo "Removed dev .desktop file"
+    @rm -f ~/.config/autostart/com.bhyoo.krema.autostart.desktop
+    @echo "Removed dev .desktop files"

@@ -135,6 +135,11 @@ QPixmap TaskIconProvider::requestPixmap(const QString &id, QSize *size, const QS
         auto info = analyzeIcon(originalId, icon);
         const bool hasSignificantPadding = info.contentRatio < 0.95;
         const double effectiveRatio = hasSignificantPadding ? info.contentRatio * std::sqrt(info.fillRatio) : info.contentRatio;
+
+        // --- DIAGNOSTIC LOGGING ---
+        qDebug().noquote() << "\x1b[36m[NORM MATH]\x1b[0m" << originalId << "| CR:" << info.contentRatio << "| FR:" << info.fillRatio
+                           << "| EffR:" << effectiveRatio;
+
         if (effectiveRatio >= kMinContentRatio) {
             result = shrinkPixmap(icon, targetSize, (info.contentRatio > kEdgeToEdgeFill) ? kEdgeToEdgeFill / info.contentRatio : 1.0);
         } else {
@@ -339,8 +344,9 @@ IconNormalizationInfo TaskIconProvider::analyzeIcon(const QString &iconName, con
 
 QPixmap TaskIconProvider::normalizePixmap(const QIcon &icon, int targetSize, const IconNormalizationInfo &info)
 {
-    const double margin = (info.fillRatio < 0.95) ? 0.01 : kMinMarginRatio;
-    double targetFill = std::min(info.contentRatio * std::sqrt(info.fillRatio) * kMaxEffectiveScale, 1.0 - margin * 2);
+    const double margin = (info.fillRatio < 0.95) ? 0.05 : kMinMarginRatio;
+    // Increase targetFill to allow icons to occupy more of the slot
+    double targetFill = std::min(info.contentRatio * std::sqrt(info.fillRatio) * 1.15, 1.0 - margin * 1.5);
     int targetContentPx = static_cast<int>(std::round(targetSize * targetFill));
     QImage img = icon.pixmap(QSize(static_cast<int>(std::ceil(static_cast<double>(targetContentPx) / info.contentRatio)),
                                    static_cast<int>(std::ceil(static_cast<double>(targetContentPx) / info.contentRatio))),

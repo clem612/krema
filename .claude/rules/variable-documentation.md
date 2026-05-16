@@ -1,9 +1,15 @@
 # Variable Documentation Protocol
 
 ## Objective
-To maintain the mathematical integrity of the dock's geometry. Every variable used in the calculation of spacing, sizing, zoom, or interaction flooring must be explicitly defined and documented.
+To maintain the mathematical integrity of the dock's geometry. Every variable used in the calculation of spacing, sizing, zoom, or interaction flooring must be explicitly defined and tracked.
 
-## 1. Constitutional Unit Variables
+## 1. The Variable Documentation Registry (Mandatory)
+ALL new variables for sizing, geometry, animation, or state logic MUST be documented in the registry at `docs/research/variables/`.
+- Refer to `docs/research/variables/README.md` for the documentation protocol.
+- Documentation for new variables must be included in the same turn the code change is applied.
+- The registry MUST include: Name, Owner, Purpose, Consumers, and Architectural Links (Rule IDs).
+
+## 2. Constitutional Unit Variables
 Variables representing the "5-Unit Stack" (Rule 17) must be prefixed with `_unit` and include a comment explaining their role in the stack.
 
 ### Required Comment Format:
@@ -49,6 +55,9 @@ Variables controlling animations or hit-test logic must be documented with their
 - `m_itemGlobalPos`: Global screen coordinate used as an anchor for popups.
 - `m_itemExtent`: Width/height of the icon that triggered the popup.
 - `preview_margin`: The physical "air" between icons and previews (Standard: 12px).
+- `m_contentX` / `m_contentY`: Absolute screen coordinates of the preview popup surface.
+- `m_contentWidth` / `m_contentHeight`: Dimensions of the popup container.
+- `m_hideTimer`: 200ms delay timer bridging the dock-to-preview mouse transition.
 
 ### Shadow Stack (Visual Depth)
 - `margin`: Buffer calculated to ensure shadows aren't clipped.

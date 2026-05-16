@@ -92,10 +92,43 @@
     1. **Decoupled Interface:** Added `setBlurRegion` to `DockPlatform`.
     2. **Precision Masking:** `DockVisibilityController` now dispatches a dedicated `blurRegion` that only contains the visual Panel and Settings rects.
     3. **Clean Separation:** The input region (Hitbox) and blur region (Visuals) are now mathematically isolated.
-- **Outcome:** 🟢 Verified. Blur is now the "Exact Size of the Panel."
+---
 
 ## 11. Tooltip Geometry Desync (Altitude & Tracking)
 - **Status:** 🟢 Fixed
 - **Description:** Icon name tooltips (for closed apps) were static and did not track zoomed icons, causing them to be overlapped or misaligned during zoom waves.
 - **Definitive Resolution:** Applied **Absolute Sync** (Calculated Reality) math to `tooltipItem` in `main.qml`. Tooltips now bind directly to `visualIconX/Y` and `visualIconWidth/Height`, ensuring they smoothly follow the icon's visual top edge and center in real-time.
 - **Outcome:** 🟢 Verified. Tooltips now perfectly track zoomed icons across all edges.
+
+## 12. Autohide and Auto-Dodge Failure
+- **Status:** 🟡 Investigating
+- **Description:** Dock autohide and auto-dodge mechanisms are failing to trigger. The dock remains visible even when windows are covering its area or when the mouse has left the dock.
+- **Trial 1:** (TBD) Diagnostic check of `DockVisibilityController` interaction locks.
+- **Root Cause Analysis:** Currently investigating `DockVisibilityController::setInteracting` and potential signal desync with Wayland state.
+
+## 13. Icon Sizing Regression
+- **Status:** ⚪ On Hold
+- **Description:** Icons appear disproportionately small inside a larger bounding box. When adjusting the icon size slider to max, the bounding box successfully grows, but the KDE icons inside remain small. The 'Neshi' icon (an Electron AppImage) is the only exception—it renders at the correct size and fully fills the box according to the slider value.
+- **Trial 1 (Diagnostic):** Added lifecycle logging to `AppIcon.qml`.
+- **Finding:** All icons are initializing, but a discrepancy exists between container size and visual rendering. 'Neshi' triggers a `Destruction` event, which is a related but separate lifecycle failure.
+- **Trial 2 (Diagnostic):** Investigated the "split-brain config" hypothesis (QML reading global vs C++ reading per-screen).
+- **Finding:** User clarified this was not the root cause. The UI slider does work to make the overall container bigger, but the icons inside remain small.
+- **Trial 3 (Diagnostic):** Investigated C++ `TaskIconProvider` image normalization. Discovered the math was previously commented out.
+- **Finding:** User confirmed it was commented out because it "did nothing anyway." The core issue appears to be that standard KDE icons (SVGs) carry significant internal transparent padding, making them render tiny inside the allocated Wayland slot, whereas direct raw images (like Neshi) do not.
+- **Trial 4 (Action):** Uncommented the normalization math in `TaskIconProvider::requestPixmap` to observe its effect and verify if bypassing it caused or exposed the sizing bug.
+- **Root Cause Analysis:** Currently investigating how `AppIcon.qml` sizes standard KDE icons versus direct images, and why the previous normalization math failed to crop the transparent padding.
+- **Finding:** User confirmed this was not the problem. The bug remains elusive.
+- **Outcome:** Shelved by user. Will revisit if the bug resurfaces and becomes more consistently reproducible.
+
+---
+
+## 14. Placement Stabilization (Bug #9)
+- **Status:** ⚪ On Hold
+- **Description:** Behavior conflict during edge transitions.
+- **Root Cause Analysis:** TBD.
+
+## 15. Vertical Indicator Flow (Bug #10)
+- **Status:** ⚪ On Hold
+- **Description:** Dot wrapping in vertical mode.
+- **Root Cause Analysis:** TBD.
+
