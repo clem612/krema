@@ -240,6 +240,7 @@ void MultiDockManager::setupFollowActive()
             connect(shell->view()->visibilityController(), &DockVisibilityController::dockVisibleChanged, this, [this, screen = screen]() {
                 if (m_mode == FollowActive && screen != m_activeScreen) {
                     m_followActiveDebounce.stop();
+                    m_followActiveDebounce.disconnect();
                     connect(&m_followActiveDebounce, &QTimer::timeout, this, [this, screen]() {
                         setActiveScreen(screen);
                     });

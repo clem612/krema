@@ -1,21 +1,33 @@
 ## Krema Dock: Mathematical & Interaction Mandates
-This document serves as the absolute source of truth for the dock's layout, math, and interaction logic. All QML properties, UI controls, and visual elements must strictly inherit from these rules.
+This document serves as the absolute source of truth for the dock's layout, math, and interaction logic. All components, QML properties, and system logic MUST strictly inherit from these rules to ensure the dock remains modular, performant, and perfectly debuggable.
 
-### 1. The Supreme Law of Gravity (Grounding)
-The dock operates in two strictly isolated coordinate systems.
+### I. Mathematical & Geometric Integrity (The Law of Gravity)
+
+**1. The 3-Tier Hierarchy & Alignment**
+The dock is a recursive "Tree of Islands," managed across three alignment layers:
+- **Tier 1: Panel (Global Container):** Manages `floating_offset` and `Panel-to-Screen Alignment` (Start, Center, End).
+- **Tier 2: Island (Logical Group):** Maintains `_islandPadding` (background pill) and adheres to `Content-to-Panel Alignment` (Start, Center, End, Justify).
+- **Tier 3: Item (Atomic Capsule):** Manages `_itemContentSize` and internal indicator/gap units.
+- **Justification Logic:** In 'Justify' mode, the `_islandGap` is dynamically calculated to distribute Islands across the full Panel width.
+
+**Gravity Chain (Grounding Law):**
+The dock operates in two strictly isolated coordinate systems:
 - **The Outside World (Screen Flooring):** The Dock Panel anchors to the screen edge using `floating_offset`. This handles the physical distance from the screen to the exterior of the panel box.
 - **The Inside World (Dock Flooring):** The Icons and Indicators are anchored to the panel's interior using `dock_floor_padding` (the distance from the panel edge to the indicators).
 - **Geometric Gravity:** The internal layout container (`dockRow`) MUST be anchored flush (0px offset) to the panel's screen-facing edge. The "Gravity Chain" is physical and unbreakable: Screen -> Floating Gap -> Panel Edge -> Floor Padding -> Indicators -> Icon.
 
-### 2. The Illusion of Symmetry (The Empty Gap Rule)
-Visual symmetry is achieved not by centering the icon unit, but by matching the empty gaps on both sides of the unzoomed icon.
-- **The Floor Unit:** The total space occupied below the icon (Padding + Indicators + Gap).
-- **The Empty Gap Rule:** Symmetry is perfectly realized when the empty space above the icon (`panel_ceiling_padding`) is exactly equal to the empty space below the indicators (`dock_floor_padding`).
-- **Universal Application:** This rule must be maintained mathematically regardless of panel thickness, icon size, or dynamic indicator scaling. The "air" on both sides must remain identical even during a visual overflow state.
-- **The Max Height Envelope:** The maximum mathematical thickness of a slot is: `iconSize + Floor Unit + panel_ceiling_padding`.
-- **Subordination:** Symmetry is a visual illusion subordinate to Gravity. We do not use "Center anchoring" (e.g., `anchors.centerIn`). We use edge grounding and mathematically enforce the symmetric boundary.
+> `[LEGACY — 5-Unit Stack]` The current implementation uses a flat "5-Unit Stack" model (Floor Padding → Indicator → Gap → Icon → Ceiling Padding) within each Item. This will be migrated to the 3-Tier recursive model. Until migration is complete, the 5-Unit variables (`_unitPanelFloor`, `_unitIndicator`, `_unitIconIndicatorGap`) remain valid within Tier 3 (Item) scope.
 
-### 3. The Pixel-Perfect Hitbox Law (Stable Virtual Origin)
+**2. The Indicator Modes & Geometry Constitution**
+To ensure absolute mathematical consistency across all capsule modes:
+- **Indicator Modes:** "Icon-Anchored" (centered under icon), "Full-Span" (stretches across item), or "Leading Edge" (vertical pill shifting the gap horizontally).
+- **Dynamic Dash Protocol:** Indicators (dots/dashes) representing window instances MUST remain horizontally centered at the bottom of the icon portion. The total width of the indicator group is strictly bounded by the icon's visual width.
+- **Dedicated Unit Variables:** Every geometric limit MUST be bound to explicit mathematical variables.
+- **The Ban on Implicit Math (Magic Numbers):** Hardcoded pixel values and implicit math are strictly forbidden. All geometric logic must be derived by summing explicit unit variables.
+- **Traceable Variable Registry:** Every variable used for sizing, spacing, or geometry MUST be documented in the central `docs/research/variables/` registry. Documentation must include Name, Owner, Purpose, and consumers, ensuring total transparency of the mathematical state.
+- **Constitutional Prefixing:** Variables representing the unit stack must be prefixed with `_unit` and follow the standardized commenting format. Derived variables must explain their mathematical intent.
+
+**3. The Pixel-Perfect Hitbox Law (Stable Virtual Origin)**
 Interaction boundaries must strictly respect the visual pixels of the icon, ignoring transparent bounding boxes or invisible containers. To achieve this without introducing deadzones (the "Moving Target" problem), hit-testing MUST use a Stable Virtual Origin.
 - **The Ban on Buffers:** "Fuzzy logic" or adding pixel buffers (e.g., +10px margins) to hide jitter is strictly forbidden. 
 - **The Unscaled Slot Base:** The Chassis defines a fixed, unscaled "Slot" for each icon (grounded by Rule 1). Hit-testing is calculated by mapping the mouse coordinates back to the center of this Unscaled Slot, *before* any visual scaling transformations are applied. 
@@ -23,116 +35,127 @@ Interaction boundaries must strictly respect the visual pixels of the icon, igno
 - **Hover State:** An icon is only "hovered" when the mapped cursor is mathematically inside the 2D boundaries of the dynamically scaled Unscaled Slot.
 - **Exit State:** The instant the cursor leaves the exact boundary of the mathematically scaled slot, the hover state for that specific icon is terminated.
 
-### 4. The Decoupled Parabolic Zoom Rule
+**4. The Illusion of Symmetry (The Empty Gap Rule)**
+Visual symmetry is achieved not by centering the icon unit, but by matching the empty gaps on both sides of the unzoomed icon.
+- **The Floor Unit:** The total space occupied below the icon (Padding + Indicators + Gap).
+- **The Empty Gap Rule:** Symmetry is perfectly realized when the empty space above the icon (`panel_ceiling_padding`) is exactly equal to the empty space below the indicators (`dock_floor_padding`).
+- **The Max Height Envelope:** The maximum mathematical thickness of a slot is: `iconSize + Floor Unit + panel_ceiling_padding`.
+- **Universal Application:** This rule must be maintained mathematically regardless of panel thickness, icon size, or dynamic indicator scaling. The "air" on both sides must remain identical even during a visual overflow state.
+- **Subordination:** Symmetry is a visual illusion subordinate to Gravity. We do not use "Center anchoring" (e.g., `anchors.centerIn`). We use edge grounding and mathematically enforce the symmetric boundary.
+
+**5. The Decoupled Parabolic Zoom Rule**
 The zoom wave is mathematically decoupled from the pixel-perfect hover state.
 - **Horizontal Continuity:** The zoom effect spans horizontally across the icons as a continuous wave, tracking the cursor's global X-coordinate on the panel, regardless of whether the cursor is actively inside a pixel-perfect icon boundary.
+- **Visual Center Imperative (The Hybrid Mapping):** The mathematical distance for the parabolic zoom equation MUST be measured from the cursor to the icon's *actual displaced visual center* on the screen, not its static unzoomed grid position. To prevent circular binding loops (Scale → Layout → Center → Scale), this computation MUST be performed imperatively (top-down) from the centralized interaction handler, evaluating the physical geometry from the previous frame.
 - **Vertical Limits:** The vertical scale of the zoom is bound by the icon's mathematical scale factor. The hitbox grows dynamically with the zoom scale but must continually obey the Pixel-Perfect Law.
+- **Global Toggle:** Parabolic Zoom is strictly restricted to **Icon-Only Mode**. In **Icon-Label Mode**, the zoom wave is globally locked OFF to preserve text readability and prevent layout jitter.
 
-### 5. The Independent Panel Height & Visual Overflow (The Top-Down Reveal)
-The dock panel's thickness (height) is decoupled from the size of the icons, utilizing the "Fixed Floor, Moving Ceiling" principle.
+**6. Island Overflow & Vertical Geometry**
+Panel thickness and Item content size are decoupled, utilizing the "Fixed Floor, Moving Ceiling" principle.
+- **Island Height:** An Island calculates its own vertical height based on its internal padding and Items.
+- **Island Overflow:** If the Island's height exceeds the Panel's thickness, the Island visually overflows the Panel boundary. Internal math remains relative to the Island's floor, preserving symmetry.
 - **The Moving Ceiling:** The panel's inner (free-facing) edge is the only part of the background that moves when height is adjusted. Resizing the panel is a "Top-Down Reveal" mechanism.
 - **Uncovering the Icon (Visual Overflow):** When the panel thickness is reduced, the "Ceiling" moves toward the "Floor". Because the icon is locked by Gravity (Rule 1) to the Fixed Floor, the shrinking ceiling simply *uncovers* the icon from the top, allowing it to visually overflow strictly toward the screen center.
-- **Illusion of Symmetry:** Symmetry is achieved only at the Max Height Envelope. During overflow, symmetry is sacrificed to maintain the Unbreakable Anchor Chain.
 - **Absolute Zoom Independence:** The Zoom Scale variable (`maxZoomFactor`) and visual projection are strictly decoupled from physical Panel Thickness. The dock panel MUST NOT increase or decrease its thickness in response to zoom magnification. Icons zoom freely as visual projections and are permitted to overflow the panel boundary indefinitely without triggering a panel resize.
 
-### 6. The Dynamic UI Blindness Prevention (Slider Rule)
-User-facing configuration controls (sliders, spinboxes) must never operate blindly. They must dynamically bind to the mathematical limits of the dock's current state.
-- **Math Always Wins:** If a mathematical rule caps a value (e.g., panel thickness cannot exceed the Max Height Envelope), the UI slider controlling that value must instantly adopt this mathematical cap as its new maximum.
-- **Zero Dead Zones:** Sliders must never be allowed to move into ranges that produce no visual changes. If the mathematical limit is 100px, the slider max is 100px, even if its hardcoded absolute maximum is 200px.
+**7. Proportional Corner Radius & Dimensional Sync**
+- **Ratio-Based Radius:** Corner radius is stored as a `RadiusRatio`, not a fixed pixel value.
+- **1:1 Scaling:** The Panel's visual radius scales dynamically: `PanelThickness * RadiusRatio`.
+- **Island Sync:** Islands use the same `RadiusRatio` against their own height: `ActualIslandRadius = IslandHeight * RadiusRatio`.
+- **Alignment Isolation:** Internal padding and alignment must flip origin based on the active screen edge (Omnidirectional Axis).
+- **Dimensional Sync Toggle:**
+    - **Independent Mode (Absolute Thickness):** When desynchronized, resizing the icons alters the Max Height Envelope (Rule 4) but leaves the absolute pixel height of the dock panel unchanged. The visual overflow size changes dynamically, but the gravity floor remains mathematically fixed.
+    - **Synchronized Mode (Proportional Lock):** When synchronized, the current ratio between the panel thickness and the Max Height Envelope is locked. Modifying the base icon size will automatically calculate and apply a new panel thickness to preserve the exact visual overflow ratio.
+    - **Permanent Radius Sync:** The corner radius is exempt from the synchronization toggle. It MUST always scale 1:1 proportionally with the base icon size to maintain a consistent visual "roundness" across all dock scales.
+    - **Mathematical Subordination:** Sync calculations are strictly subordinate to Rule 6 and the Slider Rule (Rule 16). A synchronized scale operation can never force the panel thickness or radius to exceed the Max Height Envelope.
 
-### 7. The Dimensional Sync Protocol (Scaling Toggle)
-Icon size and panel thickness must support both independent and proportional scaling during a Visual Overflow state, governed by a strict synchronization toggle.
-- **Independent Mode (Absolute Thickness):** When desynchronized, resizing the icons alters the Max Height Envelope (Rule 5) but leaves the absolute pixel height of the dock panel unchanged. The visual overflow size changes dynamically, but the gravity floor remains mathematically fixed.
-- **Synchronized Mode (Proportional Lock):** When synchronized, the current ratio between the panel thickness and the Max Height Envelope is locked. Modifying the base icon size will automatically calculate and apply a new panel thickness to preserve the exact visual overflow ratio.
-- **Permanent Radius Sync:** The corner radius is exempt from the synchronization toggle. It MUST always scale 1:1 proportionally with the base icon size to maintain a consistent visual "roundness" across all dock scales.
-- **Mathematical Subordination:** Sync calculations are strictly subordinate to Rule 5 and Rule 6. A synchronized scale operation can never force the panel thickness or radius to exceed the Max Height Envelope.
-
-### 8. The Omnidirectional Axis & Floating Offset Mandate
+**8. The Omnidirectional Axis & Floating Offset Mandate**
 The dock's mathematical logic and geometric rules are strictly edge-agnostic. Furthermore, the internal geometry of the dock must remain strictly isolated from its global position on the screen.
 
 - **Axis Transposition:**
-    - **Primary Axis (Length):** The axis parallel to the screen edge (X-axis for Top/Bottom; Y-axis for Left/Right). The Parabolic Zoom Rule (Rule 4) and layout flow strictly along this axis.
-    - **Cross Axis (Thickness):** The axis perpendicular to the screen edge (Y-axis for Top/Bottom; X-axis for Left/Right). Max thickness limits, grounding, and visual overflow (Rules 1 & 5) are calculated against this axis.
+    - **Primary Axis (Length):** The axis parallel to the screen edge (X-axis for Top/Bottom; Y-axis for Left/Right). The Parabolic Zoom Rule (Rule 5) and layout flow strictly along this axis.
+    - **Cross Axis (Thickness):** The axis perpendicular to the screen edge (Y-axis for Top/Bottom; X-axis for Left/Right). Max thickness limits, grounding, and visual overflow (Rules 1 & 6) are calculated against this axis.
 - **The Floating Offset (External Geometry):** The Dock Panel anchors to the physical screen edge offset by a dynamic `floating_offset` variable (e.g., `0px` for flush, `10px` for floating). This offset dictates the panel's global position on the Cross Axis but MUST remain entirely mathematically invisible to the internal sizing, scaling, and hitbox calculations of the dock.
 - **Isolated Panel-Edge Grounding (Internal Geometry):** The icons must be permanently anchored to the specific *inner boundary of the Dock Panel* that corresponds to the active screen edge. The icons are entirely blind to the `floating_offset` and the physical screen edge.
 - **Origin Flipping:** The directional origin of the zoom effect (`transformOrigin`) must automatically flip to originate from the panel's anchored inner boundary.
 - **Padding Translation:**
     - `dock_floor_padding` is the internal distance between the indicators and the panel's anchored inner boundary (The Floor).
     - `panel_ceiling_padding` is the internal distance between the unzoomed icon and the panel's free-facing inner boundary (The Ceiling).
-    - The Symmetry Illusion (Rule 2) enforces that `panel_ceiling_padding` MUST exactly equal `dock_floor_padding` along the Cross Axis to maintain the visual illusion, completely independent of any `floating_offset`.
+    - The Symmetry Illusion (Rule 4) enforces that `panel_ceiling_padding` MUST exactly equal `dock_floor_padding` along the Cross Axis to maintain the visual illusion, completely independent of any `floating_offset`.
 
-### 10. The Surgical Edit Mandate
-To maintain system stability and prevent regression cascades, all modifications to the codebase must be targeted and minimal.
-- **Chunking:** Refactors exceeding 50 lines must be broken into isolated, verifiable steps.
-- **Baseline Integrity:** Never rewrite stable geometry or logic blocks in a single operation. Modify one property or visual block at a time.
-
-### 11. The Proactive Reporting Mandate
-The AI agent must identify and report any bugs, binding loops, or mathematical anomalies found in the logs BEFORE attempting a fix.
-- **Transparency:** All anomalies must be explained technically to the user.
-- **Empirical Reproduction:** For bug fixes, the failure state must be reproduced and logged before the fix is applied.
-
-### 12. Geometry Debugging Mandate
-All physical and interactive components must support a standardized diagnostic layer, enabled via the `--debug-geom` and `--debug-hit` flags.
-- **Standardized Logging:** Components must provide real-time reporting of their X, Y, Width, and Height to the terminal in the mandated functional formats.
-- **Visual Baseline:** Debug logs are the ultimate authority for verifying Mandates #1-#11. If a visual element looks correct but the log shows a mathematical error, the geometry is considered "broken."
-
-### 13. The Island Protocol
-Every logical group (App, Widget, Folder) shall be encapsulated as an 'Island'. Each Island maintains its own grounded origin and symmetry math.
-- **Recursive Containers:** Islands can contain other modules, inheriting the same Gravity and Symmetry constraints as leaf modules.
-
-### 14. The Coupling Lock Protocol
-To safeguard geometric integrity (Rule 1 & Rule 2), Island coupling and membership changes are protected by an explicit 'Lock' state. 
-- **Immutable State:** When locked, the dock's logical layout is immutable.
-- **Intentionality:** Modifications to the Island's structure or links between islands require an intentional unlock action (Edit Mode).
-
-### 15. The Dynamic Repulsion Protocol
+**9. The Dynamic Repulsion Protocol**
 To prevent visual overlap and maintain individual "territory" during interaction, zoomed icons must physically displace their neighbors.
 - **Dynamic Slot Sizing:** The primary axis of an icon's layout slot (Width for horizontal, Height for vertical) must scale 1:1 with its visual zoom factor.
 - **Collision Avoidance:** The resulting layout repulsion ensures that no two icons can visually occupy the same coordinate space, preserving the Parabolic Wave's mathematical clarity.
 - **Hit-test Stability:** Repulsion-driven movement must be compensated for by 'Ironclad' coordinate mapping (Rule 3) to prevent hover-state flicker during icon displacement.
 
-### 16. The Proportional Gap Protocol
+**10. The Proportional Gap Protocol**
 To maintain consistent visual rhythm and prevent 'cramping' at high scales, the empty space (Gap) between icons must scale proportionally with the current zoom level.
 - **Linear Scaling:** The gap between Icon A and Icon B must scale based on the average zoom factor of both icons.
 - **Rhythmic Preservation:** This ensures that the ratio between 'Ink' and 'Air' remains constant, providing a premium, high-fidelity visual experience regardless of the dock's magnification state.
 
-### 17. The Interaction Flooring Constitution (The Unit Mandate)
-To ensure absolute mathematical consistency between visual rendering and interaction logic, the dock's vertical (or cross-axis) stack is governed by a strict variable-based constitution.
+### II. System Architecture & Performance
+**11. GPU-Accelerated Rendering Architecture**
+- **C++ Logic Backend (The Brain):** Responsible for protocols, math, and state. Independent of visual implementation.
+- **QML/QtQuick Visual Frontend (The Body):** Responsible for SceneGraph, shaders, and animations.
+- **Shader Mandate:** All visual effects (blur, shadows) MUST use GPU shaders (`.frag` / `.vert`) via QRhi. CPU-based pixel manipulation is forbidden.
 
-- **The 5-Unit Stack:** Every interactive slot is composed of five fundamental units:
-    1.  `Floor Padding` (Internal space between the panel's anchored edge and the indicators)
-    2.  `Indicator` (Visual dot/dash height)
-    3.  `Gap` (Space between indicator and icon image)
-    4.  `Icon` (The visual icon pixels, subject to zoom)
-    5.  `Panel Ceiling Padding` (Internal space above the icon, mirroring Unit #1 per Rule 2)
-- **Dedicated Unit Variables:** Every gap, padding, indicator size, and physical layout element MUST be defined as its own explicit, mathematically calculated unit variable (e.g., `_unitPanelFloor`, `_unitIndicator`, `_unitIconIndicatorGap`).
-- **The Ban on Implicit Math (Magic Numbers):** Hardcoded pixel values (e.g., `+ 5`, `- 12`) and implicit math within layout constraints or hit-testing (orbit) formulas are strictly forbidden. All geometric logic must be derived by summing these explicit unit variables.
-- **Constitutional Sync:** Hit-testing (Rule 3) and Wayland Input Regions must utilize the same unit variables as the visual delegates to ensure the "Interaction Orbit" is perfectly synchronized with the visual pixels at all times.
+**12. High-Performance Project Structure**
+- **Module Separation:** The project MUST be structured into distinct CMake modules: `libkrema-core` (Math Engine, State, Config), `krema-shell` (Wayland/KWin Protocols), and `krema-ui` (QML/Shaders).
+- **Build Efficiency:** Utilize precompiled headers and explicit export macros (hidden visibility).
 
-### 18. The Decoupled Catch Zone (Rule of Geometry Sovereignty)
-To ensure absolute interaction reliability regardless of the dock's aesthetic configuration, mouse tracking must be decoupled from the visual panel background.
-- **Full-Surface Coverage:** The QML `MouseArea` MUST NOT be anchored to the visual panel (`anchors.fill: parent`). Instead, it must cover the entire `root` Item (the full Wayland input region).
-- **Thickness Independence:** This prevents "interaction suffocation" where thin or ultra-slim panels (e.g. 10px) would otherwise clip the mouse catch zone and cause 1.0x zoom click-through failures.
+**13. Threading & Event Loop Integrity**
+- **Main Thread Sovereignty:** Reserved for UI rendering.
+- **Off-Thread Math:** High-complexity layouts MUST use asynchronous task queues or signals. Never block the main loop.
 
-### 19. Kinetic Zoom Physics (The "Kremy" Transition)
-All zoom transitions must exhibit a weighted, liquid motion to provide a premium user experience and prevent "stutter" during orbit exits.
-- **Elastic Return:** When the mouse exits the interaction orbit, icons must not snap instantly to 1.0x. Instead, they must follow a smoothed easing curve (e.g., `Easing.OutBack` or `CubicBezier`) to gracefully return to their rest state.
-- **Intensity Bridging:** This kinetic behavior is driven by an animated `_zoomIntensity` property, which bridges the gap between raw hit-test booleans and the visual zoom wave.
+### III. Interaction, Debugging & Maintenance
+**14. The Observability Manifesto (Deep-State Telemetry)**
+Every module added to the system MUST support this high-performance diagnostic suite:
+- **Universal Instrumentation:** Every functional module MUST expose internal state transitions via the telemetry feed.
+- **Compile-Time Stripping:** All diagnostic code must be wrapped in `KREMA_DEBUG` preprocessor directives.
+- **Zero-Copy & Lazy Evaluation:** Telemetry data must be published via efficient pointer-based structs and only broadcast if a listener is active.
+- **Frame-Budget Safety:** Diagnostic operations are subordinate to the 60fps render-loop.
+- **Precision Observability:** Must provide visualization of internal hitboxes, inter-icon gaps, and zoom-decoupling state. Enabled via `--debug-geom` and `--debug-hit` runtime flags.
+- **Bi-Directional Telemetry:** Every geometric feature MUST implement parallel logging in both C++ (Logic State) and QML (Visual SceneGraph State). C++ logs describe the "Intended" geometry; QML logs (`mapToGlobal`) describe the "Actual" screen reality. Discrepancies between the two are treated as high-priority bugs.
+- **High-Signal Compactness:** All diagnostic output MUST be compact (single-line whenever possible) and color-coded using the `KremaConsole` system. Verbose or multi-line logs are forbidden in production debug modes.
+- **The "Ghost Sheet" Protocol:** Any invisible metadata region (such as KWin blur regions) must be explicitly flagged at its calculation point. Bounding-box expansion bugs are strictly forbidden; regions must represent the actual visual territory of the components.
+- **Layer & Region Traceability:** Every visual layer (QML) and logical interaction region (C++) MUST be explicitly documented with a unified registry and numbered IDs (e.g., `// --- Layer #: [Name] ---`).
 
-### 20. The Safe Spacing Mandate (Non-Overlapping UI)
-To ensure professional readability and accessibility, all UI elements must respect physical boundaries and prevent visual collisions.
-- **Adaptive Wrapping:** All descriptive labels and text blocks MUST utilize `wrapMode: Text.WordWrap` and `Layout.fillWidth: true` to gracefully adapt to window resizing.
-- **Breathing Room Protocol:** Direct overlaps and negative margins (e.g., `topMargin: -8`) are strictly forbidden. Every element must possess its own logical territory.
-- **Constraint Sovereignty:** When using horizontal layouts (`RowLayout`), width constraints or proportional scaling MUST be enforced to prevent sibling elements from "crushing" each other.
+**15. The Island Protocol (Universal Encapsulation)**
+Every functional component (Widget, Tray, App) shall be encapsulated as an 'Island'.
+- **Standardized Foundation:** Each Island maintains isolated origin, geometry, and state, inheriting Rule 1 and Rule 4 constraints.
+- **Recursive Containers:** Islands can contain other modules, inheriting the same Gravity and Symmetry constraints as leaf modules.
+- **Inter-Island Contract:** Interaction between Islands MUST be handled through strictly defined interfaces.
+- **The Coupling Lock Protocol:** To safeguard geometric integrity (Rule 1 & Rule 4), Island coupling and membership changes are protected by an explicit 'Lock' state.
+    - **Immutable State:** When locked, the dock's logical layout is immutable.
+    - **Intentionality:** Modifications to the Island's structure or links between islands require an intentional unlock action (Edit Mode).
 
-### 21. The Layer & Region Traceability Mandate
-To prevent "Ghost" behaviors and ensure system maintainability, every visual layer and logical interaction region MUST be explicitly documented and numbered.
-- **Unified Registry:** All new layers (QML) and regions (C++) must be assigned a unique ID and documented with a standardized header (e.g., `// --- Layer #: [Name] ---`).
-- **The "Ghost Sheet" Protocol:** Any invisible metadata region (such as KWin blur regions) must be explicitly flagged at its calculation point. Bounding-box expansion bugs (Rule 18) are strictly forbidden; regions must represent the actual visual territory of the components.
-- **Documentation Precedence:** This traceability logic is mandatory for all future development and refactors.
+**16. Standardized Maintenance Mandates**
+- **Geometry Debugging:** All components must support `--debug-geom` and `--debug-hit` flags with standardized logging formats.
+- **Kinetic Physics (The "Kremy" Transition):** All zoom transitions must exhibit a weighted, liquid motion. When the mouse exits the interaction orbit, icons must follow a smoothed easing curve (e.g., `Easing.OutBack` or `CubicBezier`) driven by the animated `_zoomIntensity` property.
+- **Safe Spacing (Non-Overlapping UI):** Negative margins and direct overlaps are forbidden. All labels must use `wrapMode: Text.WordWrap` and `Layout.fillWidth: true` for adaptive wrapping. Width constraints must prevent sibling elements from "crushing" each other in horizontal layouts.
+- **Dynamic UI (Slider Rule):** User-facing configuration controls (sliders, spinboxes) must dynamically bind to the mathematical limits of the dock's current state. If a mathematical rule caps a value, the UI slider must instantly adopt this cap. Sliders must never move into ranges that produce no visual changes.
+- **Surgical Edit Mandate:** Refactors exceeding 50 lines must be broken into isolated, verifiable steps.
+- **Proactive Reporting:** Anomalies must be reproduced before a fix is applied.
+- **Traceability:** Every visual/logic layer MUST be documented with a unified registry.
 
-### 22. The Variable Documentation Mandate
-To maintain the mathematical integrity of the dock's geometry, all variables used for sizing, spacing, and flooring MUST be explicitly documented.
-- **Constitutional prefixing:** Variables representing the 5-Unit Stack (Rule 17) must be prefixed with `_unit` and follow the standardized commenting format.
-- **Derived Logic:** Any variable derived from the 5-Unit Stack must explain its mathematical intent in the comments.
-- **Registry Synchronization:** The `.claude/rules/variable-documentation.md` file must be updated whenever a new constitutional variable is introduced.
+### IV. Project State & Synchronization
+**17. The Project State Update**
+- **Continuous Sync:** Development is not considered complete until all layers of the Project State Update are reconciled.
+
+**18. The Visual Style Constitution**
+The dock background MUST strictly adhere to legibility mandates across all four styles:
+- **Adaptive:** Dynamic color sampling from the wallpaper/theme must maintain a minimum contrast ratio of 4.5:1 against icons and text.
+- **Tinted:** User-defined accents must respect a global opacity floor (e.g., 0.6) to prevent total transparency jitter.
+- **Acrylic & Mica:** Blur radius and noise-texture intensity must be mathematically linked to the `PanelThickness` to maintain visual density.
+
+**19. The Task Manager Invariant**
+Application ordering within an `AppIsland` follows a strict deterministic logic:
+- **Pins First:** Pinned applications are always anchored to the start of the Island.
+- **Launcher Order:** Running applications follow the launch order or user-defined manual arrangement.
+- **Grouping:** Multiple instances of the same AppID MUST be grouped into a single Item capsule unless configured otherwise.
+
+**20. The Island Encapsulation Rule**
+Complex components (System Tray, Plasma Widgets) MUST inherit the geometry of their parent Island.
+- **Constraint Isolation:** Internal widget layout changes must NOT propagate size fluctuations to the Panel without explicit re-validation of Rule 9 (Dynamic Repulsion).
+- **Interactive Consistency:** Tray icons and Widgets must adhere to Rule 3 (Hitbox Law) and Rule 4 (Symmetry).

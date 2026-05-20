@@ -79,9 +79,15 @@ QRect computeDockScreenRect(const DockScreenRectParams &p)
 {
     int surfaceX = 0, surfaceY = 0;
     switch (p.edge) {
+    case 0:
+        surfaceY = p.screenY;
+        break; // Top anchor
     case 1:
         surfaceY = p.screenY + p.screenHeight - p.surfaceHeight;
         break; // Bottom anchor
+    case 2:
+        surfaceX = p.screenX;
+        break; // Left anchor
     case 3:
         surfaceX = p.screenX + p.screenWidth - p.surfaceWidth;
         break; // Right anchor

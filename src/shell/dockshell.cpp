@@ -124,8 +124,15 @@ void DockShell::connectSettingsSignals()
 
     // Global & Per-screen reactivity: ensure surface resizes instantly when either changes.
     // This fixes the 'Wiggle' bug where surface size would stay stale until a mouse event.
-    auto updateThrottled = [this]() {
+    // Throttle Wayland surface resizes to prevent compositor desync during slider drags
+    auto resizeTimer = new QTimer(this);
+    resizeTimer->setSingleShot(true);
+    resizeTimer->setInterval(150);
+    connect(resizeTimer, &QTimer::timeout, this, [this]() {
         m_view->updateSize();
+    });
+    auto updateThrottled = [resizeTimer]() {
+        resizeTimer->start();
     };
 
     connect(s, &KremaSettings::IconSizeChanged, m_view.get(), updateThrottled);

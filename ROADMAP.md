@@ -4,73 +4,71 @@
 > **Source of Truth:** [ARCHITECTURE Mandate.md](ARCHITECTURE%20Mandate.md)
 >
 > The spiritual successor to Latte Dock, defined by performance, continuous curvature, and "Everything is a Module" architecture. Krema honors the legacy of Latte while establishing a unique identity focused on modularity and premium visual standards.
+>
+> Krema is built from the ground up to respect KDE Plasma 6 Wayland protocols. Development follows an **Architectural-First** approach: stability, mathematical rigour, and modularity before features.
 
 ---
 
-## Phase 1: Completed Foundation (v0.7.0)
+## Phase 1: Foundational Architecture (v0.8.0) ⬅️
+*Focus: Establishing the core C++ engine, workspace-aware configuration, and geometric mandates.*
+
+- [x] **M1: Configuration Backbone (KConfigXT / Universal JSON):** 
+  - Define the schema for dock geometry, behavior, and theme (including per-screen, per-activity/workspace settings).
+  - **Theme-Aware Architecture:** Ensure the config system is designed to be easily overridden by external JSON theme files (future-proofing for M16).
+- [x] **M1.1: Visual Styles Protocol:** Implement the foundation for Adaptive, Tinted, Acrylic, and Mica backgrounds (compositor-agnostic shaders).
+- [x] **M2: Core Dock Shell (C++):** Implement base Wayland surface and Protocol Abstraction (`IProtocol`) supporting both KWin and Hyprland (via Layer-Shell).
+- [x] **M2.1: Universal Attention Engine:** Implement the four-level urgency system with cross-platform triggers (MPRIS, LibTaskManager/Hyprland IPC, Unity Entry) and Rule 16 animations.
+- [ ] **M3: 3-Tier Mathematical Engine:** Implement the recursive Panel -> Island -> Item hierarchy with Direct Recursive Repulsion and Proportional Gaps (Rules 1-10). `[CURRENT: 5-Unit Stack implemented — migration to 3-Tier pending]`
+- [ ] **M4: Rendering & Animation Pipeline:** Setup QRhi-based rendering pipeline with support for visual overflow (Rule 6) and integrated Easing/Animation primitives (Rule 16).
+- [x] **M5: Geometry Debugging:** Implement `--debug-geom` for real-time verification of all layout mandates.
+- [x] **M5.1: Task Manager & Pinning Engine:** Implement AppIsland logic using `ITaskProvider` abstraction (KWin/Plasma via LibTaskManager and Hyprland via IPC).
+- [x] **M5.2: Icon Size Normalization:** Implement C++ Alpha Bounding Box scanner for visual sizing consistency.
+- [ ] **M6: Workspace Awareness Engine:** Implement filtering logic for Virtual Desktops/Workspaces and Activities using platform-specific task provider extensions.
+- [ ] **M7: Layout Mode Controller:** Implement the dual-personality toggle (Icon-Only vs. Icon-Label) with global zoom-locks.
+- [x] **M8: Parabolic Zoom Engine:** Axis-agnostic zoom wave (Primary/Cross Axis) with kinetic orbits.
+- [ ] **M9: Fixed-Width Constraints:** Implement Squish (Dynamic Scaling) and Arrow-Scroll (Pagination) mechanics.
+- [x] **M10: Decoupled Catch Zone:** Implement Rule 18 for full-surface interaction coverage (Buffered via HOVER_BUFFER).
+
+### Completed Foundation (Pre-v0.8.0)
 - **Foundation:** C++23, LayerShellQt, DockModel (LibTaskManager).
 - **Core UI:** Parabolic zoom, Indicator dots, Tooltips.
 - **Persistence:** KConfig-based settings, Context menu, Keyboard shortcuts.
 - **Interaction:** Drag & Drop, Window Previews (PipeWire), Pixel-Perfect 2D Hit-testing.
-- **Visuals:** Basic background styles (Acrylic, Mica, Adaptive), Attention animations.
+- **Visuals:** Basic background styles (Acrylic, Mica, Adaptive), Attention animations, Volumetric Shadow Engine.
 - **Multi-Monitor Core:** Follow Active mode, Virtual Desktop filtering.
+- **Architectural Shift:** Mathematical Constitution (`ARCHITECTURE Mandate.md`), Geometric Gravity, Universal Symmetry, Proactive Rule 6 Enforcement, Dual Reserve Space Modes, Feature Vault.
 
 ---
 
-## Phase 2: Refinement & The "Everything is a Module" Pivot (Current)
+## Phase 2: Visual & Modular System (v0.9.0)
+*Focus: Indicators, recursive folders, and the Island Protocol.*
 
-### Milestone 9: Visual Engine & Foundation Polish (Current Priority) ⬅️
-- [ ] **Advanced Surface Shaders:** Implementation of hardware-accelerated Acrylic and Mica background materials.
-- [x] **Volumetric Shadow Engine:** Precise outer shadow rendering clamped strictly to the visual panel bounds.
-- [x] **Preview Geometry Sync:** Absolute coordinate synchronization for window preview thumbnails and vertical offsets.
-- [ ] **Kinetic Zoom Physics (UX):** Implementation of smoothed Bezier curves and easing functions for entry/exit zoom orbits (the "Kremy" feel).
-- [ ] **Instance-Aware Active Indicators (Dynamic Dash):** Dash indicator visually shifts between dots to represent the currently focused window instance.
-- [ ] **Architectural Pivot:** Partial migration to QML Singletons (Mixed with setContextProperty).
-- [x] **Resolve Phase 1 Architectural Debt:** Migrated foundation bug-fixes to the Bug Report.
-
-### Architectural Shift: Mathematical Foundation
-- [x] **Mathematical Constitution:** Established the `ARCHITECTURE Mandate.md` as the absolute source of truth.
-- [x] **Geometric Gravity (Rule 1):** Isolated Screen-to-Panel and Panel-to-Icon geometry.
-- [x] **Universal Symmetry (Rule 2):** Perfected the "Empty Gap Rule" for flawless visual balance.
-- [x] **Proactive Rule 6 Enforcement:** Real-time settings clamping to eliminate all UI "dead zones."
-- [x] **Dual Reserve Space Modes (Rule 1):** Choice between "Panel Background" or "Icon Extents".
-- [ ] **Dynamic Indicator Proportions (Rule 2):** 10% golden ratio sizing.
-- [x] **The Feature Vault:** Versioned history logs in `docs/features/`.
-- [ ] **Island Protocol & Recursive Containers (Rule 13):** Support nested modules (Widgets inside Areas).
-- [ ] **Fixed Width Mode (Rule 8):** Start/Center/End icon alignment within extended panels.
-- [ ] **Coupling Lock Protocol (Rule 14):** Explicit 'Lock' state for geometric integrity.
-- [ ] **Dynamic Repulsion & Proportional Gaps (Rules 15 & 16):** Perfecting the Parabolic Wave physics.
+- [ ] **M11: Widget & Tray Ecosystem:** Implement SNI protocol (System Tray) and native shell-specific widget support (KDE Plasma Widgets / Hyprland Bar-Plugins).
+- [ ] **M12: Global Tray Protocol:** Logic for overflow, interaction, and hover-previews for tray items.
+- [ ] **M13: Tablet-Class Folders:** Implement recursive Item-as-a-Container logic with Inline and Pop-up expansion.
+- [ ] **M14: Indicator Engine:** Implement multi-mode, instance-aware active indicators (Icon-Anchored, Full-Span, Leading-Edge).
+- [ ] **M15: Advanced Visuals:** Hardware-accelerated Acrylic/Mica backgrounds, volumetric shadows, and particle effects.
 
 ---
 
-## Phase 3: Modular Architecture & System Integration
+## Phase 3: Multi-Panel Architecture & System Integration (v1.0.0)
 
-### Milestone 10: The Modular System
-- [ ] **Island Protocol (Rule 13):** Implement recursive container logic for Widgets and Areas.
-- [ ] **System Tray Integration:** Full StatusNotifierItem (SNI) protocol support.
-- [ ] **Widget Module Ecosystem:** Initial support for System Stats, Media, and Toggles.
-- [ ] **Unified DockShell:** Consolidate DockView and MultiDockManager into a robust modular shell.
-
-### Milestone 11: Workspace Awareness & Profile Management
-- [ ] **Virtual Desktop & Activity Awareness:** Implement "Filter vs. Global" modes for apps.
-- [ ] **Profile-Based Visibility:** Toggle buttons to separate apps by Activity or Virtual Desktop.
-- [ ] **Custom Layout Profiles:** Ability to save, export, and load custom dock configurations.
-- [ ] **Activity-Specific Docks:** Automatic profile switching based on the current KDE Activity.
-- [ ] **Global Default Config:** A "Reset to Factory" and "Default Template" system for new panels.
-
-### Milestone 12: Multi-Panel Architecture
-- [ ] **Parallel Panel support:** Allow multiple independent dock panels on the same display/screen.
-- [ ] **Multi-Panel Logic:** Independent z-index, visibility, and filtering rules for each panel instance.
-- [ ] **Panel Synchronization:** Shared drag-and-drop between multiple panels on the same display.
+- [ ] **M16: Multi-Panel Architecture:** Allow multiple independent dock panels on the same display/screen.
+    - Independent z-index, visibility, and filtering rules for each panel instance.
+    - Shared drag-and-drop between multiple panels on the same display.
+- [ ] **M17: Workspace Awareness & Profile Management:**
+    - Virtual Desktop & Activity Awareness: "Filter vs. Global" modes for apps.
+    - Profile-Based Visibility: Toggle buttons to separate apps by Activity or Virtual Desktop.
+    - Custom Layout Profiles: Save, export, and load custom dock configurations.
+    - Activity-Specific Docks: Automatic profile switching based on the current KDE Activity.
 
 ---
 
-## Future & Wildcard Backlog
-- [ ] **Hyprland Support:** Abstract KWin-specific TaskManager and PipeWire protocols to support Hyprland via its custom IPC socket and xdg-desktop-portal.
-- [ ] **Modular Theme Engine:** JSON-based Blueprint system for sharing styles.
-- [ ] **KDE "Get New Stuff" (KNS):** Integration for a Krema Theme Store.
-- [ ] **Dynamic Soundscapes:** Audio feedback for interaction based on active theme.
-- [ ] **Particle Layer:** `QtQuick.Particles` for reactive mouse trails.
+## Future Backlog
+- [ ] Modular Theme Engine (JSON-based Blueprint system)
+- [ ] KDE "Get New Stuff" (KNS) Integration for a Krema Theme Store
+- [ ] Dynamic Soundscapes: Audio feedback for interaction based on active theme
+- [ ] Particle Layer: `QtQuick.Particles` for reactive mouse trails
 
 ---
 
@@ -78,7 +76,7 @@
 | Component | Technology |
 |---|---|
 | Language | C++23 |
-| Desktop | KDE Plasma 6 (Wayland only) |
+| Desktop | KDE Plasma 6 (Wayland) / Hyprland |
 | Framework | Qt 6.8+ / Qt Quick / QRhi |
 | KDE Tooling | Frameworks 6.0+, LibTaskManager, LayerShellQt, KPipeWire, Kirigami |
 | Build System | CMake + ECM + Ninja |

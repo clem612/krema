@@ -36,13 +36,22 @@ public:
     static QString appIdFromUrl(const QUrl &url);
 
     /**
+     * Standardizes a launcher URL to the 'applications:' scheme if possible.
+     */
+    static QUrl canonicalLauncherUrl(const QUrl &url);
+
+    /**
      * Returns a prioritized list of potential icon names for an identifier.
      */
     static QStringList iconCandidates(const QString &appId, const QUrl &launcherUrl = QUrl(), const QString &displayRole = QString());
 
+    /**
+     * Strips the .desktop suffix from an identifier if present.
+     */
+    static QString stripDesktopSuffix(const QString &id);
+
 private:
     static QString applyKdeBridge(const QString &id);
-    static QString stripDesktopSuffix(const QString &id);
 };
 
 } // namespace krema

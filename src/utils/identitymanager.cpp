@@ -38,6 +38,39 @@ QString IdentityManager::normalizeAppId(const QString &appId)
     return id;
 }
 
+QUrl IdentityManager::canonicalLauncherUrl(const QUrl &url)
+{
+    if (!url.isValid()) {
+        return url;
+    }
+
+    QString id;
+    if (url.scheme() == QLatin1String("applications")) {
+        id = url.path();
+    } else if (url.isLocalFile()) {
+        QString path = url.toLocalFile();
+        if (path.endsWith(QLatin1String(".desktop"))) {
+            KService::Ptr service = KService::serviceByDesktopPath(path);
+            if (service) {
+                id = service->storageId();
+            } else {
+                id = QFileInfo(path).fileName();
+            }
+        }
+    }
+
+    if (id.isEmpty()) {
+        return url;
+    }
+
+    // Ensure it has .desktop suffix for applications: scheme
+    if (!id.endsWith(QLatin1String(".desktop"))) {
+        id += QLatin1String(".desktop");
+    }
+
+    return QUrl(QStringLiteral("applications:") + id);
+}
+
 QString IdentityManager::appIdFromUrl(const QUrl &url)
 {
     if (!url.isValid()) {

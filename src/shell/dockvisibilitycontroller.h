@@ -8,6 +8,8 @@
 #include <QObject>
 #include <QTimer>
 
+class QAbstractItemModel;
+
 namespace TaskManager
 {
 class ActivityInfo;
@@ -46,7 +48,7 @@ public:
     void updateRegionGeometry();
     [[nodiscard]] bool liveEditMode() const;
     explicit DockVisibilityController(DockPlatform *platform,
-                                      TaskManager::TasksModel *tasksModel,
+                                      QAbstractItemModel *tasksModel,
                                       TaskManager::VirtualDesktopInfo *virtualDesktopInfo,
                                       TaskManager::ActivityInfo *activityInfo,
                                       QWindow *dockWindow,
@@ -131,14 +133,11 @@ private:
     /// @param activeOnly If true, only checks if an active window overlaps.
     [[nodiscard]] bool hasOverlappingWindow(bool activeOnly = false) const;
 
-    /// Check if any window is maximized or fullscreen.
-    [[nodiscard]] bool hasMaximizedOrFullscreenWindow() const;
-
     void connectModelSignals();
 
     DockPlatform *m_platform;
-    TaskManager::TasksModel *m_tasksModel;
-    TaskManager::TasksModel *m_overlapModel = nullptr;
+    QAbstractItemModel *m_tasksModel;
+    TaskManager::TasksModel *m_overlapModel = nullptr; // Note: Overlap model currently still relies on KDE TasksModel for geometry filtering.
     TaskManager::VirtualDesktopInfo *m_virtualDesktopInfo = nullptr;
     TaskManager::ActivityInfo *m_activityInfo = nullptr;
     QWindow *m_dockWindow;

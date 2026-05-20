@@ -10,6 +10,7 @@ Q_LOGGING_CATEGORY(lcAnim, "krema.anim")
 Q_LOGGING_CATEGORY(lcPreview, "krema.preview")
 Q_LOGGING_CATEGORY(lcModel, "krema.model")
 Q_LOGGING_CATEGORY(lcShell, "krema.shell")
+Q_LOGGING_CATEGORY(lcShader, "krema.shader")
 
 namespace krema
 {
@@ -109,6 +110,10 @@ void DebugManager::model(const QString &msg)
 void DebugManager::shell(const QString &msg)
 {
     qCDebug(lcShell) << msg;
+}
+void DebugManager::shader(const QString &msg)
+{
+    qCDebug(lcShader) << msg;
 }
 
 } // namespace krema

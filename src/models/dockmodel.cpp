@@ -2,13 +2,18 @@
 // SPDX-FileCopyrightText: 2026 Krema Contributors
 
 #include "dockmodel.h"
+#include "hyprlandtasksmodel.h"
+#include "utils/identitymanager.h"
 
 #include <taskmanager/abstracttasksmodel.h>
+#include <taskmanager/activityinfo.h>
 #include <taskmanager/tasksmodel.h>
+#include <taskmanager/virtualdesktopinfo.h>
 
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QIcon>
+#include <QProcessEnvironment>
 #include <QScreen>
 
 #include <algorithm>
@@ -63,11 +68,11 @@ QStringList iconCandidates(const QModelIndex &idx)
     // THE IDENTITY RESOLVER:
     // Standardizes disparate app identifiers (appId, launcherUrl, display name)
     // to map raw metadata to high-res system theme icons and prevent 'Ghost Icons'.
-    const QString appId = idx.data(TaskManager::AbstractTasksModel::AppId).toString();
+    const QString appId = idx.data(HyprlandTasksModel::AppId).toString(); // Roles are same value
     const QString stripped = stripDesktopSuffix(appId);
     const QString segment = lastSegment(stripped);
     const QString display = idx.data(Qt::DisplayRole).toString().trimmed();
-    const QString launcherName = desktopNameFromUrl(idx.data(TaskManager::AbstractTasksModel::LauncherUrlWithoutIcon).toUrl());
+    const QString launcherName = desktopNameFromUrl(idx.data(HyprlandTasksModel::LauncherUrlWithoutIcon).toUrl());
 
     auto addCandidate = [&candidates](const QString &value) {
         if (value.isEmpty()) {
@@ -90,10 +95,6 @@ QStringList iconCandidates(const QModelIndex &idx)
     addCandidate(display);
 
     // THE IDENTITY BRIDGE: Functional Constraints
-    // These are hard-coded overrides for core KDE applications that use
-    // inconsistent desktop entry names (e.g. 'org.kde.dolphin' vs 'dolphin').
-    // While this logic looks specific, it is a mandatory architectural bridge
-    // to ensure a 'Latte-like' seamless experience for the desktop environment.
     if (stripped == QLatin1String("org.kde.dolphin") || stripped == QLatin1String("dolphin")) {
         addCandidate(QStringLiteral("org.kde.dolphin"));
         addCandidate(QStringLiteral("dolphin"));
@@ -120,72 +121,81 @@ QStringList iconCandidates(const QModelIndex &idx)
 
 DockModel::DockModel(QObject *parent)
     : QObject(parent)
-    , m_tasksModel(std::make_unique<TaskManager::TasksModel>(this))
-    , m_virtualDesktopInfo(std::make_shared<TaskManager::VirtualDesktopInfo>(this))
-    , m_activityInfo(std::make_shared<TaskManager::ActivityInfo>(this))
 {
-    // CRITICAL COMPONENT CONTRACT:
-    // Manual initialization of 'TasksModel' (requires classBegin before settings
-    // and componentComplete after to activate Wayland window source models).
-    m_tasksModel->classBegin();
+    const auto env = QProcessEnvironment::systemEnvironment();
+    const QString desktop = env.value(QStringLiteral("XDG_CURRENT_DESKTOP")).toLower();
+    m_isHyprland = desktop.contains(QStringLiteral("hyprland")) || env.contains(QStringLiteral("HYPRLAND_INSTANCE_SIGNATURE"));
 
-    // Configure for dock-style behavior:
-    // - Group windows by application (pinned + running merged)
-    // - Manual sort for drag reordering
-    // - Hide activated launchers (avoid duplicates: pinned + running)
-    m_tasksModel->setGroupMode(TaskManager::TasksModel::GroupApplications);
-    m_tasksModel->setSortMode(TaskManager::TasksModel::SortManual);
-    m_tasksModel->setHideActivatedLaunchers(true);
-    m_tasksModel->setSeparateLaunchers(true);
-    m_tasksModel->setLaunchInPlace(true);
-    m_tasksModel->setGroupInline(false);
-    m_tasksModel->setTaskReorderingEnabled(true);
+    if (m_isHyprland) {
+        qCInfo(lcModel) << "Instantiating HyprlandTasksModel";
+        m_hyprTasksModel = std::make_unique<HyprlandTasksModel>(this);
+    } else {
+        qCInfo(lcModel) << "Instantiating TaskManager::TasksModel (KDE)";
+        m_kdeTasksModel = std::make_unique<TaskManager::TasksModel>(this);
+        m_virtualDesktopInfo = std::make_shared<TaskManager::VirtualDesktopInfo>(this);
+        m_activityInfo = std::make_shared<TaskManager::ActivityInfo>(this);
 
-    // VirtualDesktopInfo and ActivityInfo are required for the Wayland
-    // window backend to properly detect running windows on KDE Plasma.
-    // These MUST be set BEFORE componentComplete() — mirrors QML property binding order.
-    m_tasksModel->setVirtualDesktop(m_virtualDesktopInfo->currentDesktop());
-    m_tasksModel->setActivity(m_activityInfo->currentActivity());
+        m_kdeTasksModel->classBegin();
+        m_kdeTasksModel->setGroupMode(TaskManager::TasksModel::GroupApplications);
+        m_kdeTasksModel->setSortMode(TaskManager::TasksModel::SortManual);
+        m_kdeTasksModel->setHideActivatedLaunchers(true);
+        m_kdeTasksModel->setSeparateLaunchers(true);
+        m_kdeTasksModel->setLaunchInPlace(true);
+        m_kdeTasksModel->setGroupInline(false);
+        m_kdeTasksModel->setTaskReorderingEnabled(true);
 
-    // Screen geometry — Plasma Task Manager always sets this.
-    if (auto *screen = QGuiApplication::primaryScreen()) {
-        m_tasksModel->setScreenGeometry(screen->geometry());
+        m_kdeTasksModel->setVirtualDesktop(m_virtualDesktopInfo->currentDesktop());
+        m_kdeTasksModel->setActivity(m_activityInfo->currentActivity());
+
+        if (auto *screen = QGuiApplication::primaryScreen()) {
+            m_kdeTasksModel->setScreenGeometry(screen->geometry());
+        }
+
+        m_kdeTasksModel->setFilterByVirtualDesktop(false);
+        m_kdeTasksModel->setFilterByScreen(false);
+        m_kdeTasksModel->setFilterByActivity(false);
+        m_kdeTasksModel->setFilterHidden(false);
+
+        m_kdeTasksModel->componentComplete();
+
+        connect(m_virtualDesktopInfo.get(), &TaskManager::VirtualDesktopInfo::currentDesktopChanged, this, [this]() {
+            m_kdeTasksModel->setVirtualDesktop(m_virtualDesktopInfo->currentDesktop());
+            Q_EMIT currentDesktopChanged();
+        });
+        connect(m_activityInfo.get(), &TaskManager::ActivityInfo::currentActivityChanged, this, [this]() {
+            m_kdeTasksModel->setActivity(m_activityInfo->currentActivity());
+        });
     }
 
-    // Show all windows regardless of desktop/screen/activity.
-    // Filtering can be enabled later (M8: multi-monitor + virtual desktop).
-    m_tasksModel->setFilterByVirtualDesktop(false);
-    m_tasksModel->setFilterByScreen(false);
-    m_tasksModel->setFilterByActivity(false);
-    m_tasksModel->setFilterHidden(false);
-
-    // NOW activate internal source models (launcher model, window model, etc.)
-    // All properties are set, so the backends will correctly discover running windows.
-    m_tasksModel->componentComplete();
-
-    // Track desktop/activity changes so the model stays up to date.
-    connect(m_virtualDesktopInfo.get(), &TaskManager::VirtualDesktopInfo::currentDesktopChanged, this, [this]() {
-        m_tasksModel->setVirtualDesktop(m_virtualDesktopInfo->currentDesktop());
-        Q_EMIT currentDesktopChanged();
+    auto *model = tasksModel();
+    connect(model, &QAbstractItemModel::rowsInserted, this, [model]() {
+        qCDebug(lcModel) << "Model rows after insert:" << model->rowCount();
     });
-    connect(m_activityInfo.get(), &TaskManager::ActivityInfo::currentActivityChanged, this, [this]() {
-        m_tasksModel->setActivity(m_activityInfo->currentActivity());
-    });
-
-    // Debug logging for model row changes
-    connect(m_tasksModel.get(), &QAbstractItemModel::rowsInserted, this, [this]() {
-        qCDebug(lcModel) << "Model rows after insert:" << m_tasksModel->rowCount();
-    });
-    connect(m_tasksModel.get(), &QAbstractItemModel::rowsRemoved, this, [this]() {
-        qCDebug(lcModel) << "Model rows after remove:" << m_tasksModel->rowCount();
+    connect(model, &QAbstractItemModel::rowsRemoved, this, [model]() {
+        qCDebug(lcModel) << "Model rows after remove:" << model->rowCount();
     });
 }
 
 DockModel::~DockModel() = default;
 
-TaskManager::TasksModel *DockModel::tasksModel() const
+QAbstractItemModel *DockModel::tasksModel() const
 {
-    return m_tasksModel.get();
+    return m_isHyprland ? static_cast<QAbstractItemModel *>(m_hyprTasksModel.get()) : static_cast<QAbstractItemModel *>(m_kdeTasksModel.get());
+}
+
+TaskManager::TasksModel *DockModel::kdeTasksModel() const
+{
+    return m_kdeTasksModel.get();
+}
+
+HyprlandTasksModel *DockModel::hyprTasksModel() const
+{
+    return m_hyprTasksModel.get();
+}
+
+bool DockModel::isHyprland() const
+{
+    return m_isHyprland;
 }
 
 TaskManager::VirtualDesktopInfo *DockModel::virtualDesktopInfo() const
@@ -200,52 +210,52 @@ TaskManager::ActivityInfo *DockModel::activityInfo() const
 
 QStringList DockModel::pinnedLaunchers() const
 {
-    return m_tasksModel->launcherList();
+    return m_isHyprland ? m_hyprTasksModel->launcherList() : m_kdeTasksModel->launcherList();
 }
 
 void DockModel::setPinnedLaunchers(const QStringList &launchers)
 {
-    m_tasksModel->setLauncherList(launchers);
+    if (m_isHyprland) {
+        m_hyprTasksModel->setLauncherList(launchers);
+    } else {
+        m_kdeTasksModel->setLauncherList(launchers);
+    }
     Q_EMIT pinnedLaunchersChanged();
 }
 
 QVariant DockModel::iconData(int index) const
 {
-    const QModelIndex idx = m_tasksModel->index(index, 0);
+    auto *model = tasksModel();
+    const QModelIndex idx = model->index(index, 0);
     if (!idx.isValid())
         return {};
 
-    // 1. UNIVERSAL THEME PRIORITY (The "Drag" Logic)
-    // Always check if the system theme has a high-res SVG for this app first.
     QString name = iconName(index);
     if (QIcon::hasThemeIcon(name)) {
         return QIcon::fromTheme(name);
     }
 
-    // 2. STEAM-SPECIFIC FALLBACK
-    QString id = idx.data(TaskManager::AbstractTasksModel::AppId).toString();
+    QString id = idx.data(HyprlandTasksModel::AppId).toString();
     if (id.startsWith(QLatin1String("steam_app_"))) {
         QString steamIconId = QStringLiteral("steam_icon_") + id.mid(10);
         if (QIcon::hasThemeIcon(steamIconId))
             return QIcon::fromTheme(steamIconId);
 
-        return QIcon::fromTheme(QStringLiteral("steam")); // Clean fallback
+        return QIcon::fromTheme(QStringLiteral("steam"));
     }
 
-    // 3. RAW PIXEL FALLBACK (The "Blurry" Window Pixels)
-    // Only use these if the system theme completely failed to find the app.
     const QVariant decoration = idx.data(Qt::DecorationRole);
     if (decoration.isValid() && !decoration.value<QIcon>().isNull()) {
         return decoration;
     }
 
-    // 4. ABSOLUTE FALLBACK
     return QIcon::fromTheme(QStringLiteral("application-x-executable"));
 }
 
 QString DockModel::iconName(int index) const
 {
-    const QModelIndex idx = m_tasksModel->index(index, 0);
+    auto *model = tasksModel();
+    const QModelIndex idx = model->index(index, 0);
     if (!idx.isValid()) {
         return {};
     }
@@ -257,17 +267,17 @@ QString DockModel::iconName(int index) const
         }
     }
 
-    // Keep drag ghost/icon provider alive with a best-effort identifier.
     return candidates.value(0, QStringLiteral("application-x-executable"));
 }
 
 QUrl DockModel::launcherUrl(int index) const
 {
-    const QModelIndex idx = m_tasksModel->index(index, 0);
+    auto *model = tasksModel();
+    const QModelIndex idx = model->index(index, 0);
     if (!idx.isValid()) {
         return {};
     }
-    return idx.data(TaskManager::AbstractTasksModel::LauncherUrlWithoutIcon).toUrl();
+    return idx.data(HyprlandTasksModel::LauncherUrlWithoutIcon).toUrl();
 }
 
 bool DockModel::isDesktopFile(const QUrl &url) const
@@ -283,45 +293,72 @@ bool DockModel::isDesktopFile(const QUrl &url) const
 
 bool DockModel::isPinned(int index) const
 {
-    const QModelIndex idx = m_tasksModel->index(index, 0);
+    auto *model = tasksModel();
+    const QModelIndex idx = model->index(index, 0);
     if (!idx.isValid()) {
         return false;
     }
 
-    const QUrl url = idx.data(TaskManager::AbstractTasksModel::LauncherUrlWithoutIcon).toUrl();
-    return url.isValid() && m_tasksModel->launcherList().contains(url.toString());
+    const QUrl url = idx.data(HyprlandTasksModel::LauncherUrlWithoutIcon).toUrl();
+    if (!url.isValid()) {
+        return false;
+    }
+
+    QString canonical = IdentityManager::canonicalLauncherUrl(url).toString();
+    for (const QString &pinned : pinnedLaunchers()) {
+        if (IdentityManager::canonicalLauncherUrl(QUrl(pinned)).toString() == canonical) {
+            return true;
+        }
+    }
+    return false;
+}
+
+int DockModel::pinnedBoundaryIndex() const
+{
+    auto *model = tasksModel();
+    int count = model->rowCount();
+    int lp = -1;
+    for (int i = 0; i < count; ++i) {
+        if (isPinned(i)) {
+            lp = i;
+        }
+    }
+    return lp;
 }
 
 QVariantList DockModel::windowIds(int index) const
 {
-    const QModelIndex idx = m_tasksModel->index(index, 0);
+    auto *model = tasksModel();
+    const QModelIndex idx = model->index(index, 0);
     if (!idx.isValid()) {
         return {};
     }
-    return idx.data(TaskManager::AbstractTasksModel::WinIdList).toList();
+    return idx.data(HyprlandTasksModel::WinIdList).toList();
 }
 
 int DockModel::childCount(int index) const
 {
-    const QModelIndex idx = m_tasksModel->index(index, 0);
+    auto *model = tasksModel();
+    const QModelIndex idx = model->index(index, 0);
     if (!idx.isValid()) {
         return 0;
     }
-    return m_tasksModel->rowCount(idx);
+    return model->rowCount(idx);
 }
 
 QModelIndex DockModel::taskModelIndex(int index) const
 {
-    return m_tasksModel->index(index, 0);
+    return tasksModel()->index(index, 0);
 }
 
 QString DockModel::appId(int index) const
 {
-    const QModelIndex idx = m_tasksModel->index(index, 0);
+    auto *model = tasksModel();
+    const QModelIndex idx = model->index(index, 0);
     if (!idx.isValid()) {
         return {};
     }
-    return idx.data(TaskManager::AbstractTasksModel::AppId).toString();
+    return idx.data(HyprlandTasksModel::AppId).toString();
 }
 
 int DockModel::virtualDesktopMode() const
@@ -335,36 +372,40 @@ void DockModel::setVirtualDesktopMode(int mode)
         return;
     }
     m_virtualDesktopMode = mode;
-    // Mode 2 (CurrentOnly): use TasksModel built-in filter
-    m_tasksModel->setFilterByVirtualDesktop(mode == 2);
+    if (!m_isHyprland) {
+        m_kdeTasksModel->setFilterByVirtualDesktop(mode == 2);
+    }
     Q_EMIT virtualDesktopModeChanged();
 }
 
 QVariant DockModel::currentDesktop() const
 {
-    return m_virtualDesktopInfo->currentDesktop();
+    if (m_isHyprland)
+        return 0; // TODO: Hyprland workspaces
+    return m_virtualDesktopInfo ? m_virtualDesktopInfo->currentDesktop() : QVariant();
 }
 
 bool DockModel::isOnCurrentDesktop(int index) const
 {
-    const QModelIndex idx = m_tasksModel->index(index, 0);
+    auto *model = tasksModel();
+    const QModelIndex idx = model->index(index, 0);
     if (!idx.isValid()) {
         return true;
     }
 
-    // Launchers (no window) are always considered "on current desktop"
-    if (!idx.data(TaskManager::AbstractTasksModel::IsWindow).toBool()) {
+    if (!idx.data(HyprlandTasksModel::IsWindow).toBool()) {
         return true;
     }
 
-    // Windows on all desktops are always visible
-    if (idx.data(TaskManager::AbstractTasksModel::IsOnAllVirtualDesktops).toBool()) {
+    if (idx.data(HyprlandTasksModel::IsOnAllVirtualDesktops).toBool()) {
         return true;
     }
 
-    // Check if any of the task's desktops match the current desktop
+    if (m_isHyprland)
+        return true; // TODO
+
     const QVariant currentDesktop = m_virtualDesktopInfo->currentDesktop();
-    const QVariantList desktops = idx.data(TaskManager::AbstractTasksModel::VirtualDesktops).toList();
+    const QVariantList desktops = idx.data(HyprlandTasksModel::VirtualDesktops).toList();
     return desktops.contains(currentDesktop);
 }
 

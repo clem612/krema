@@ -15,12 +15,13 @@
 #include <taskmanager/virtualdesktopinfo.h>
 
 #include "utils/debugmanager.h"
+#include <QProcessEnvironment>
 
 namespace krema
 {
 
 DockVisibilityController::DockVisibilityController(DockPlatform *platform,
-                                                   TaskManager::TasksModel *tasksModel,
+                                                   QAbstractItemModel *tasksModel,
                                                    TaskManager::VirtualDesktopInfo *virtualDesktopInfo,
                                                    TaskManager::ActivityInfo *activityInfo,
                                                    QWindow *dockWindow,
@@ -32,33 +33,39 @@ DockVisibilityController::DockVisibilityController(DockPlatform *platform,
     , m_activityInfo(activityInfo)
     , m_dockWindow(dockWindow)
 {
-    // Initialization of the Window Overlap Model.
-    // This model is the core engine for the 'Dodge Windows' feature. It performs
-    // real-time intersection tests between the dock surface and all active
-    // windows on the current virtual desktop and activity.
-    m_overlapModel = new TaskManager::TasksModel(this);
-    m_overlapModel->classBegin();
-    m_overlapModel->setGroupMode(TaskManager::TasksModel::GroupDisabled);
-    m_overlapModel->setFilterByRegion(RegionFilterMode::Intersect);
-    m_overlapModel->setFilterMinimized(true);
-    m_overlapModel->setFilterHidden(true);
-    m_overlapModel->setFilterByVirtualDesktop(true);
-    m_overlapModel->setFilterByActivity(true);
-    if (m_virtualDesktopInfo) {
-        m_overlapModel->setVirtualDesktop(m_virtualDesktopInfo->currentDesktop());
-        connect(m_virtualDesktopInfo, &TaskManager::VirtualDesktopInfo::currentDesktopChanged, this, [this]() {
+    const auto env = QProcessEnvironment::systemEnvironment();
+    const QString desktop = env.value(QStringLiteral("XDG_CURRENT_DESKTOP")).toLower();
+    bool isHyprland = desktop.contains(QStringLiteral("hyprland")) || env.contains(QStringLiteral("HYPRLAND_INSTANCE_SIGNATURE"));
+
+    if (!isHyprland) {
+        // Initialization of the Window Overlap Model.
+        // This model is the core engine for the 'Dodge Windows' feature. It performs
+        // real-time intersection tests between the dock surface and all active
+        // windows on the current virtual desktop and activity.
+        m_overlapModel = new TaskManager::TasksModel(this);
+        m_overlapModel->classBegin();
+        m_overlapModel->setGroupMode(TaskManager::TasksModel::GroupDisabled);
+        m_overlapModel->setFilterByRegion(RegionFilterMode::Intersect);
+        m_overlapModel->setFilterMinimized(true);
+        m_overlapModel->setFilterHidden(true);
+        m_overlapModel->setFilterByVirtualDesktop(true);
+        m_overlapModel->setFilterByActivity(true);
+        if (m_virtualDesktopInfo) {
             m_overlapModel->setVirtualDesktop(m_virtualDesktopInfo->currentDesktop());
-            m_evaluateTimer.start();
-        });
-    }
-    if (m_activityInfo) {
-        m_overlapModel->setActivity(m_activityInfo->currentActivity());
-        connect(m_activityInfo, &TaskManager::ActivityInfo::currentActivityChanged, this, [this]() {
+            connect(m_virtualDesktopInfo, &TaskManager::VirtualDesktopInfo::currentDesktopChanged, this, [this]() {
+                m_overlapModel->setVirtualDesktop(m_virtualDesktopInfo->currentDesktop());
+                m_evaluateTimer.start();
+            });
+        }
+        if (m_activityInfo) {
             m_overlapModel->setActivity(m_activityInfo->currentActivity());
-            m_evaluateTimer.start();
-        });
+            connect(m_activityInfo, &TaskManager::ActivityInfo::currentActivityChanged, this, [this]() {
+                m_overlapModel->setActivity(m_activityInfo->currentActivity());
+                m_evaluateTimer.start();
+            });
+        }
+        m_overlapModel->componentComplete();
     }
-    m_overlapModel->componentComplete();
 
     m_showTimer.setSingleShot(true);
     m_showTimer.setInterval(200);
@@ -348,7 +355,9 @@ void DockVisibilityController::updateRegionGeometry()
         p.panelHeight = m_panelHeight;
         p.edge = static_cast<int>(m_platform->edge());
 
-        m_overlapModel->setScreenGeometry(computeDockScreenRect(p));
+        if (m_overlapModel) {
+            m_overlapModel->setScreenGeometry(computeDockScreenRect(p));
+        }
     }
 
     applyInputRegion();
@@ -356,6 +365,8 @@ void DockVisibilityController::updateRegionGeometry()
 
 bool DockVisibilityController::hasOverlappingWindow(bool activeOnly) const
 {
+    if (!m_overlapModel)
+        return false;
     const int count = m_overlapModel->rowCount();
     if (!activeOnly)
         return count > 0;
@@ -430,20 +441,33 @@ void DockVisibilityController::setKeyboardActive(bool active)
 
 void DockVisibilityController::connectModelSignals()
 {
-    connect(m_overlapModel, &QAbstractItemModel::rowsInserted, this, [this]() {
-        m_evaluateTimer.start();
-    });
-    connect(m_overlapModel, &QAbstractItemModel::rowsRemoved, this, [this]() {
-        m_evaluateTimer.start();
-    });
-    connect(m_overlapModel, &QAbstractItemModel::modelReset, this, [this]() {
-        m_evaluateTimer.start();
-    });
-    connect(m_overlapModel, &QAbstractItemModel::dataChanged, this, [this](const QModelIndex &, const QModelIndex &, const QList<int> &) {
-        // We no longer filter by specific roles. If ANY property of a window changes
-        // (especially its geometry while dragging), we trigger an evaluation.
-        m_evaluateTimer.start();
-    });
+    if (m_overlapModel) {
+        connect(m_overlapModel, &QAbstractItemModel::rowsInserted, this, [this]() {
+            m_evaluateTimer.start();
+        });
+        connect(m_overlapModel, &QAbstractItemModel::rowsRemoved, this, [this]() {
+            m_evaluateTimer.start();
+        });
+        connect(m_overlapModel, &QAbstractItemModel::modelReset, this, [this]() {
+            m_evaluateTimer.start();
+        });
+        connect(m_overlapModel, &QAbstractItemModel::dataChanged, this, [this](const QModelIndex &, const QModelIndex &, const QList<int> &) {
+            m_evaluateTimer.start();
+        });
+    } else if (m_tasksModel) {
+        connect(m_tasksModel, &QAbstractItemModel::rowsInserted, this, [this]() {
+            m_evaluateTimer.start();
+        });
+        connect(m_tasksModel, &QAbstractItemModel::rowsRemoved, this, [this]() {
+            m_evaluateTimer.start();
+        });
+        connect(m_tasksModel, &QAbstractItemModel::modelReset, this, [this]() {
+            m_evaluateTimer.start();
+        });
+        connect(m_tasksModel, &QAbstractItemModel::dataChanged, this, [this](const QModelIndex &, const QModelIndex &, const QList<int> &) {
+            m_evaluateTimer.start();
+        });
+    }
 }
 
 } // namespace krema

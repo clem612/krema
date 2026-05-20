@@ -33,7 +33,7 @@ DockView::DockView(std::unique_ptr<DockPlatform> platform, KremaSettings *settin
 
 DockView::~DockView() = default;
 
-void DockView::initialize(TaskManager::TasksModel *tasksModel,
+void DockView::initialize(QAbstractItemModel *tasksModel,
                           TaskManager::VirtualDesktopInfo *virtualDesktopInfo,
                           TaskManager::ActivityInfo *activityInfo,
                           DockPlatform::Edge edge,
@@ -176,7 +176,7 @@ bool DockView::isVertical() const
 
 QObject *DockView::screenSettings() const
 {
-    return reinterpret_cast<QObject *>(m_screenSettings);
+    return m_screenSettings;
 }
 
 void DockView::setEdge(DockPlatform::Edge edge)

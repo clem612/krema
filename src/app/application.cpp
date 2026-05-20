@@ -37,13 +37,7 @@ void kremaLogHandler(QtMsgType type, const QMessageLogContext &context, const QS
 
     // ANSI Color Codes
     const char *reset = "\x1b[0m";
-    const char *bold = "\x1b[1m";
     const char *red = "\x1b[31m";
-    const char *green = "\x1b[32m";
-    const char *yellow = "\x1b[33m";
-    const char *blue = "\x1b[34m";
-    const char *magenta = "\x1b[35m";
-    const char *cyan = "\x1b[36m";
 
     const char *color = reset;
     bool enabled = true;
@@ -64,6 +58,8 @@ void kremaLogHandler(QtMsgType type, const QMessageLogContext &context, const QS
         catType = krema::DebugManager::Model;
     else if (category == u"krema.shell"_s)
         catType = krema::DebugManager::Shell;
+    else if (category == u"krema.shader"_s)
+        catType = krema::DebugManager::Shader;
 
     // Filter based on flags (Warnings/Errors/Criticals always pass)
     if (type == QtDebugMsg || type == QtInfoMsg) {

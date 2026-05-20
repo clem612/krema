@@ -10,6 +10,8 @@
 
 #include <memory>
 
+class QAbstractItemModel;
+
 namespace TaskManager
 {
 class ActivityInfo;
@@ -50,7 +52,7 @@ public:
     ~DockView() override;
 
     /// Initialize the dock view. @p tasksModel is used for visibility control.
-    void initialize(TaskManager::TasksModel *tasksModel,
+    void initialize(QAbstractItemModel *tasksModel,
                     TaskManager::VirtualDesktopInfo *virtualDesktopInfo,
                     TaskManager::ActivityInfo *activityInfo,
                     DockPlatform::Edge edge,

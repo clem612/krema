@@ -20,6 +20,8 @@
 #include <QQuickView>
 #include <QScreen>
 
+#include "models/hyprlandtasksmodel.h"
+
 namespace krema
 {
 
@@ -379,21 +381,29 @@ void PreviewController::navigatePreviewThumbnail(int delta)
 
 void PreviewController::activatePreviewThumbnail()
 {
-    const QModelIndex idx = focusedThumbnailModelIndex();
-    if (!idx.isValid()) {
-        return;
+    if (m_model->isHyprland()) {
+        m_model->hyprTasksModel()->requestActivate(m_parentIndex);
+    } else {
+        const QModelIndex idx = focusedThumbnailModelIndex();
+        if (!idx.isValid()) {
+            return;
+        }
+        m_model->kdeTasksModel()->requestActivate(idx);
     }
-    m_model->tasksModel()->requestActivate(idx);
     hidePreview();
 }
 
 void PreviewController::closePreviewThumbnail()
 {
-    const QModelIndex idx = focusedThumbnailModelIndex();
-    if (!idx.isValid()) {
-        return;
+    if (m_model->isHyprland()) {
+        m_model->hyprTasksModel()->requestClose(m_parentIndex);
+    } else {
+        const QModelIndex idx = focusedThumbnailModelIndex();
+        if (!idx.isValid()) {
+            return;
+        }
+        m_model->kdeTasksModel()->requestClose(idx);
     }
-    m_model->tasksModel()->requestClose(idx);
 
     // Adjust focus index if needed
     const int count = previewThumbnailCount();
@@ -413,7 +423,9 @@ int PreviewController::previewThumbnailCount() const
     if (childCount == 0) {
         // Check if it's a window (not just a launcher)
         const QModelIndex parentIdx = m_model->tasksModel()->index(m_parentIndex, 0);
-        bool isWindow = parentIdx.data(TaskManager::AbstractTasksModel::IsWindow).toBool();
+        bool isWindow =
+            parentIdx.data(m_model->isHyprland() ? static_cast<int>(HyprlandTasksModel::IsWindow) : static_cast<int>(TaskManager::AbstractTasksModel::IsWindow))
+                .toBool();
         return isWindow ? 1 : 0;
     }
     return childCount;
@@ -434,7 +446,8 @@ bool PreviewController::focusedThumbnailIsActive() const
     if (!idx.isValid()) {
         return false;
     }
-    return idx.data(TaskManager::AbstractTasksModel::IsActive).toBool();
+    return idx.data(m_model->isHyprland() ? static_cast<int>(HyprlandTasksModel::IsActive) : static_cast<int>(TaskManager::AbstractTasksModel::IsActive))
+        .toBool();
 }
 
 bool PreviewController::focusedThumbnailIsMinimized() const
@@ -443,7 +456,8 @@ bool PreviewController::focusedThumbnailIsMinimized() const
     if (!idx.isValid()) {
         return false;
     }
-    return idx.data(TaskManager::AbstractTasksModel::IsMinimized).toBool();
+    return idx.data(m_model->isHyprland() ? static_cast<int>(HyprlandTasksModel::IsMinimized) : static_cast<int>(TaskManager::AbstractTasksModel::IsMinimized))
+        .toBool();
 }
 
 QModelIndex PreviewController::focusedThumbnailModelIndex() const
@@ -459,7 +473,12 @@ QModelIndex PreviewController::focusedThumbnailModelIndex() const
     if (m_focusedThumbnailIndex >= childCount) {
         return {};
     }
-    return m_model->tasksModel()->makeModelIndex(m_parentIndex, m_focusedThumbnailIndex);
+
+    if (m_model->isHyprland()) {
+        return m_model->tasksModel()->index(m_parentIndex, 0);
+    } else {
+        return m_model->kdeTasksModel()->makeModelIndex(m_parentIndex, m_focusedThumbnailIndex);
+    }
 }
 
 void PreviewController::setHideDelay(int ms)

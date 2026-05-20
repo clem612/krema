@@ -14,6 +14,14 @@ add_library(krema_lib STATIC
     platform/dockplatformfactory.cpp
     platform/waylanddockplatform.h
     platform/waylanddockplatform.cpp
+    platform/hyprlanddockplatform.h
+    platform/hyprlanddockplatform.cpp
+
+    utils/hyprlandipc.h
+    utils/hyprlandipc.cpp
+
+    models/hyprlandtasksmodel.h
+    models/hyprlandtasksmodel.cpp
 
     shell/dockshell.h
     shell/dockshell.cpp
@@ -51,6 +59,8 @@ add_library(krema_lib STATIC
     utils/surfacegeometry.h
     utils/inputregion.h
     utils/inputregion.cpp
+    utils/identitymanager.h
+    utils/identitymanager.cpp
     utils/peiconextractor.cpp
     utils/peiconextractor.h
     utils/debugmanager.cpp

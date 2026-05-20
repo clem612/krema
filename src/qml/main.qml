@@ -125,6 +125,11 @@ Item {
                 return
             }
             if (root.hoveredIndex < 0) return
+            
+            if (_debugHit) {
+                KremaDebug.input("Clicked index: " + root.hoveredIndex + " button: " + mouse.button)
+            }
+
             if (mouse.button === Qt.LeftButton) {
                 DockActions.activate(root.hoveredIndex)
             } else if (mouse.button === Qt.MiddleButton) {
@@ -136,6 +141,14 @@ Item {
 
         onWheel: function(wheel) {
             if (root.hoveredIndex < 0) return
+            
+            let item = dockRepeater.itemAt(root.hoveredIndex)
+            if (!item || !item.model || !item.model.IsWindow) return
+            
+            if (_debugHit) {
+                KremaDebug.input("Wheel on index: " + root.hoveredIndex + " delta: " + wheel.angleDelta.y)
+            }
+
             if (wheel.angleDelta.y > 0) {
                 DockActions.cycleWindows(root.hoveredIndex, false)
             } else if (wheel.angleDelta.y < 0) {
@@ -217,6 +230,7 @@ Item {
             root._zoomActive = true
             dockPanel.mouseX = DockView.isVertical ? mouse.y : mouse.x
             dockPanel.mouseY = DockView.isVertical ? mouse.x : mouse.y
+            updateZoomFactors()
 
             // 4. PIXEL-PERFECT HIT-TESTING
             let hitIndex = -1;
@@ -301,6 +315,42 @@ Item {
             easing.type: Easing.OutBack // Provides a subtle bounce/liquid feel
         }
     }
+    on_ZoomIntensityChanged: updateZoomFactors()
+
+    // --- Hybrid Zoom Engine ---
+    // Computes parabolic zoom for all icons using their ACTUAL visual centers.
+    // This guarantees max zoom when cursor is dead-center on the visual icon,
+    // unlike the old approach which used unzoomed grid positions.
+    function updateZoomFactors() {
+        let maxZoom = 1.0 + (DockSettings.maxZoomFactor - 1.0) * root._zoomIntensity
+        if (maxZoom <= 1.0 || dockRepeater.count === 0) {
+            for (let i = 0; i < dockRepeater.count; i++) {
+                let item = dockRepeater.itemAt(i)
+                if (item) item.zoomFactor = 1.0
+            }
+            return
+        }
+
+        let sigma = DockSettings.iconSize * 1.2
+        let sigma2 = sigma * sigma
+        let mPos = dockPanel.mouseX
+
+        for (let i = 0; i < dockRepeater.count; i++) {
+            let item = dockRepeater.itemAt(i)
+            if (!item) continue
+
+            // Compute icon's actual visual center in root coordinates
+            let visualCenter
+            if (DockView.isVertical) {
+                visualCenter = dockPanel.y + dockRow.y + item.y + item.height / 2
+            } else {
+                visualCenter = dockPanel.x + dockRow.x + item.x + item.width / 2
+            }
+
+            let distance = Math.abs(mPos - visualCenter)
+            item.zoomFactor = 1.0 + (maxZoom - 1.0) * Math.exp(-(distance * distance) / (2.0 * sigma2))
+        }
+    }
 
     focus: true
 
@@ -357,6 +407,7 @@ Item {
         if (item) {
             dockPanel.mouseX = item.itemCenterX
             dockPanel.mouseY = dockRow.y + item.height / 2
+            updateZoomFactors()
             let msg = item.displayName + ", " + i18n("%1 of %2", hoveredIndex + 1, count)
             Accessible.announce(msg, Accessible.Polite)
         }
@@ -653,16 +704,34 @@ Item {
 
         Item {
             id: dockRow; z: 2; readonly property real baseSpacing: DockSettings.iconSpacing
+            property int layoutTrigger: 0
+
+            Connections {
+                target: dockRepeater
+                function onItemAdded() { Qt.callLater(() => dockRow.layoutTrigger++) }
+                function onItemRemoved() { Qt.callLater(() => dockRow.layoutTrigger++) }
+            }
+
             // Rule 15 & 16: Content dimensions account for dynamic expansion.
             // [STABILITY]: We use a stable base width to prevent startup "Identity Crisis" gaps.
             readonly property real baseWidth: (dockRepeater.count === 0) ? 0 : (dockRepeater.count * (DockSettings.iconSize + baseSpacing)) - baseSpacing
             readonly property real baseHeight: (dockRepeater.count === 0) ? 0 : (dockRepeater.count * (DockSettings.iconSize + baseSpacing)) - baseSpacing
 
-            implicitWidth: DockView.isVertical ? _maxIconThickness : Math.max(baseWidth, (dockRepeater.count === 0 ? 0 : (dockRepeater.itemAt(dockRepeater.count-1)?.x + dockRepeater.itemAt(dockRepeater.count-1)?.width || 0)))
-            implicitHeight: !DockView.isVertical ? _maxIconThickness : Math.max(baseHeight, (dockRepeater.count === 0 ? 0 : (dockRepeater.itemAt(dockRepeater.count-1)?.y + dockRepeater.itemAt(dockRepeater.count-1)?.height || 0)))
+            implicitWidth: {
+                let dummy = layoutTrigger
+                return DockView.isVertical ? _maxIconThickness : Math.max(baseWidth, (dockRepeater.count === 0 ? 0 : (dockRepeater.itemAt(dockRepeater.count-1)?.x + dockRepeater.itemAt(dockRepeater.count-1)?.width || 0)))
+            }
+            implicitHeight: {
+                let dummy = layoutTrigger
+                return !DockView.isVertical ? _maxIconThickness : Math.max(baseHeight, (dockRepeater.count === 0 ? 0 : (dockRepeater.itemAt(dockRepeater.count-1)?.y + dockRepeater.itemAt(dockRepeater.count-1)?.height || 0)))
+            }
+            // FIX: Removed `itemAt(i)` loop which caused stale values and floating icons during resize!
             readonly property real _maxIconThickness: {
-                let m = 0; for (let i=0; i<dockRepeater.count; i++) { let it = dockRepeater.itemAt(i); if (it) { let t = DockView.isVertical ? it.width : it.height; if (t > m) m = t } }
-                return m
+                let size = DockSettings.iconSize
+                let floor = Math.max(4, Math.round(size * 0.25))
+                let ind = Math.max(2, Math.round(size * 0.10))
+                let gap = Math.max(2, Math.round(size * 0.125) + Math.round(size * 0.15 * (1.0 - DockSettings.indicatorOffset)))
+                return size + floor + ind + gap + floor // Rule 2: Ceiling mirrors floor
             }
             onImplicitWidthChanged: if (DockVisibility) DockVisibility.setContentDimensions(implicitWidth, implicitHeight)
             onImplicitHeightChanged: if (DockVisibility) DockVisibility.setContentDimensions(implicitWidth, implicitHeight)
@@ -679,28 +748,47 @@ Item {
                         return start + (index * slot) + (iconSize / 2)
                     }
 
+                    onCurrentScaleChanged: dockRow.layoutTrigger++
+
                     // --- State-Aware Layout (Rule 15) ---
                     // [STABILITY]: Use stable grid when idle to prevent startup gaps.
                     // [INTERACTION]: Use recursive displacement when zooming to push neighbors.
+                    // FIX: Uses stateless mathematical sum instead of p.x to prevent evaluation race conditions when resizing!
                     x: {
+                        let trigger = dockRow.layoutTrigger
                         if (DockView.isVertical) return (dockRow._maxIconThickness - width) / 2
                         if (index === 0) return 0
                         
                         let slotSize = iconSize + dockRow.baseSpacing
                         if (root._zoomIntensity <= 0) return index * slotSize
                         
-                        let p = dockRepeater.itemAt(index-1)
-                        return p ? p.x + p.width + (dockRow.baseSpacing * (currentScale + p.currentScale) / 2) : index * slotSize
+                        let sum = 0
+                        for (let j = 0; j < index; j++) {
+                            let it1 = dockRepeater.itemAt(j)
+                            let it2 = dockRepeater.itemAt(j+1)
+                            let sc1 = it1 ? it1.currentScale : 1.0
+                            let sc2 = it2 ? it2.currentScale : 1.0
+                            sum += (iconSize * sc1) + (dockRow.baseSpacing * (sc1 + sc2) / 2)
+                        }
+                        return sum
                     }
                     y: {
+                        let trigger = dockRow.layoutTrigger
                         if (!DockView.isVertical) return (dockRow._maxIconThickness - height) / 2
                         if (index === 0) return 0
 
                         let slotSize = iconSize + dockRow.baseSpacing
                         if (root._zoomIntensity <= 0) return index * slotSize
                         
-                        let p = dockRepeater.itemAt(index-1)
-                        return p ? p.y + p.height + (dockRow.baseSpacing * (currentScale + p.currentScale) / 2) : index * slotSize
+                        let sum = 0
+                        for (let j = 0; j < index; j++) {
+                            let it1 = dockRepeater.itemAt(j)
+                            let it2 = dockRepeater.itemAt(j+1)
+                            let sc1 = it1 ? it1.currentScale : 1.0
+                            let sc2 = it2 ? it2.currentScale : 1.0
+                            sum += (iconSize * sc1) + (dockRow.baseSpacing * (sc1 + sc2) / 2)
+                        }
+                        return sum
                     }
 
                     z: (root.hoveredIndex === index) ? 1 : 0
@@ -708,8 +796,7 @@ Item {
                     isKeyboardFocused: root.keyboardNavigating && root.hoveredIndex === index
                     iconSize: DockSettings.iconSize
                     maxZoomFactor: 1.0 + (DockSettings.maxZoomFactor - 1.0) * root._zoomIntensity
-                    panelMouseX: dockPanel.mouseX
-                    panelMouseInside: root._zoomIntensity > 0
+
                     spacing: DockSettings.iconSpacing
                     itemCenterX: virtualCenter
                     isDragSource: root._dragActive && root._dragSourceIndex === index
@@ -720,30 +807,52 @@ Item {
 
         Item {
             id: pinnedSeparator
-            z: 1
+            z: 10
             property int _rt: 0
             Connections {
                 target: DockModel.tasksModel
                 function onLayoutChanged() { pinnedSeparator._rt++ }
                 function onRowsInserted() { pinnedSeparator._rt++ }
                 function onRowsRemoved() { pinnedSeparator._rt++ }
+                function onModelReset() { pinnedSeparator._rt++ }
             }
             property int boundaryIndex: {
                 let p = pinnedSeparator._rt
-                let lp = -1
-                for(let i=0; i<dockRepeater.count; i++){
-                    if(DockModel.isPinned(i)) lp=i
-                    else break
-                }
-                return lp
+                return DockModel.pinnedBoundaryIndex()
             }
-            visible: boundaryIndex >= 0 && boundaryIndex < (dockRepeater.count - 1)
+            // Visible only if there are pinned apps followed by at least one unpinned app
+            visible: boundaryIndex >= 0 && boundaryIndex < (DockModel.tasksModel.rowCount() - 1)
             opacity: DockSettings.separatorOpacity
             property real at: Math.max(1, Math.round(DockSettings.iconSize * 0.05))
             property real al: Math.round(DockSettings.iconSize * 0.7)
             width: Math.round(!DockView.isVertical ? at : al); height: Math.round(DockView.isVertical ? at : al)
-            x: { if(!visible) return 0; let i=dockRepeater.itemAt(boundaryIndex), n=dockRepeater.itemAt(boundaryIndex+1); if(!i||!n) return 0; let g=dockRow.baseSpacing*(i.currentScale+n.currentScale)/2; return Math.round(DockView.isVertical ? dockRow.x+(dockRow.width-width)/2 : dockRow.x+i.x+i.width+(g/2)-(width/2)) }
-            y: { if(!visible) return 0; let i=dockRepeater.itemAt(boundaryIndex), n=dockRepeater.itemAt(boundaryIndex+1); if(!i||!n) return 0; let g=dockRow.baseSpacing*(i.currentScale+n.currentScale)/2; return Math.round(DockView.isVertical ? dockRow.y+i.y+i.height+(g/2)-(height/2) : dockRow.y+i.y+(i.height-height)/2) }
+            x: { 
+                let trigger = dockRow.layoutTrigger
+                if (!visible) return 0
+                if (root._zoomIntensity <= 0) {
+                    let slotSize = DockSettings.iconSize + dockRow.baseSpacing
+                    return Math.round(DockView.isVertical ? dockRow.x + (dockRow.implicitWidth - width) / 2 : dockRow.x + (boundaryIndex * slotSize) + DockSettings.iconSize + (dockRow.baseSpacing / 2) - (width / 2))
+                }
+                let i = dockRepeater.itemAt(boundaryIndex)
+                let n = dockRepeater.itemAt(boundaryIndex + 1)
+                if (!i || !n) return 0
+                let g = dockRow.baseSpacing * (i.currentScale + n.currentScale) / 2
+                return Math.round(DockView.isVertical ? dockRow.x + (dockRow.implicitWidth - width) / 2 : dockRow.x + i.x + i.width + (g / 2) - (width / 2))
+            }
+            y: { 
+                let trigger = dockRow.layoutTrigger
+                if (!visible) return 0
+                if (root._zoomIntensity <= 0) {
+                    let slotSize = DockSettings.iconSize + dockRow.baseSpacing
+                    return Math.round(DockView.isVertical ? dockRow.y + (boundaryIndex * slotSize) + DockSettings.iconSize + (dockRow.baseSpacing / 2) - (height / 2) : dockRow.y + (dockRow.implicitHeight - height) / 2)
+                }
+                let i = dockRepeater.itemAt(boundaryIndex)
+                let n = dockRepeater.itemAt(boundaryIndex + 1)
+                if (!i || !n) return 0
+                let g = dockRow.baseSpacing * (i.currentScale + n.currentScale) / 2
+                return Math.round(DockView.isVertical ? dockRow.y + i.y + i.height + (g / 2) - (height / 2) : dockRow.y + (dockRow.implicitHeight - height) / 2)
+            }
+
             Rectangle { anchors.fill: parent; visible: DockSettings.separatorStyle === 0; color: "white"; radius: width/2 }
             Grid {
                 anchors.centerIn: parent; visible: DockSettings.separatorStyle === 1; spacing: Math.max(2, Math.round(DockSettings.iconSize * 0.15)); rows: DockView.isVertical ? 1 : 3; columns: DockView.isVertical ? 3 : 1
@@ -902,7 +1011,7 @@ Item {
         Connections {
             target: SettingsController || null
             function onVisibleChanged() {
-                if(DockVisibility) { if(SettingsController.visible){ DockVisibility.liveEditMode=true; DockVisibility.setInteracting(true) } else { DockVisibility.liveEditMode=false; DockVisibility.setInteracting(false); DockVisibility.setSettingsRect(0,0,0,0) } }
+                if(DockVisibility) { if(SettingsController.visible){ DockVisibility.liveEditMode=true } else { DockVisibility.liveEditMode=false; DockVisibility.setSettingsRect(0,0,0,0) } }
             }
         }
         onXChanged: updateSettingsHitbox(); onYChanged: updateSettingsHitbox(); onWidthChanged: updateSettingsHitbox(); onHeightChanged: updateSettingsHitbox()
