@@ -60,6 +60,8 @@ void kremaLogHandler(QtMsgType type, const QMessageLogContext &context, const QS
         catType = krema::DebugManager::Shell;
     else if (category == u"krema.shader"_s)
         catType = krema::DebugManager::Shader;
+    else if (category == u"krema.config"_s)
+        catType = krema::DebugManager::Config;
 
     // Filter based on flags (Warnings/Errors/Criticals always pass)
     if (type == QtDebugMsg || type == QtInfoMsg) {
@@ -86,6 +88,8 @@ void kremaLogHandler(QtMsgType type, const QMessageLogContext &context, const QS
             color = "\x1b[1;34m"; // Bold Blue
         if (catType == krema::DebugManager::Input)
             color = "\x1b[1;33m"; // Bold Yellow
+        if (catType == krema::DebugManager::Config)
+            color = "\x1b[1;35m"; // Bold Magenta
     }
 
     if (type == QtWarningMsg || type == QtCriticalMsg)
@@ -137,8 +141,10 @@ int Application::run()
     QCommandLineOption debugModel(QStringLiteral("debug-model"), i18n("Enable model/data debug logs"));
     QCommandLineOption debugShell(QStringLiteral("debug-shell"), i18n("Enable shell/platform debug logs"));
     QCommandLineOption debugApp(QStringLiteral("debug-app"), i18n("Enable core application debug logs"));
+    QCommandLineOption debugConfig(QStringLiteral("debug-config"), i18n("Enable configuration desync debug logs"));
+    QCommandLineOption debugIcons(QStringLiteral("debug-icons"), i18n("Enable icon resolution debug logs"));
 
-    parser.addOptions({debugAll, debugGeom, debugInput, debugAnim, debugPreview, debugModel, debugShell, debugApp});
+    parser.addOptions({debugAll, debugGeom, debugInput, debugAnim, debugPreview, debugModel, debugShell, debugApp, debugConfig, debugIcons});
     parser.process(*this);
 
     auto *dm = DebugManager::self();
@@ -160,6 +166,8 @@ int Application::run()
             dm->setEnabled(DebugManager::Shell, true);
         if (parser.isSet(debugApp))
             dm->setEnabled(DebugManager::App, true);
+        if (parser.isSet(debugConfig))
+            dm->setEnabled(DebugManager::Config, true);
     }
 
     // Ensure Qt Quick Controls use the KDE Plasma style

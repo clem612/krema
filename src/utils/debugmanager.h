@@ -20,6 +20,7 @@ class DebugManager : public QObject
     Q_PROPERTY(bool modelEnabled READ modelEnabled NOTIFY enabledChanged)
     Q_PROPERTY(bool shellEnabled READ shellEnabled NOTIFY enabledChanged)
     Q_PROPERTY(bool shaderEnabled READ shaderEnabled NOTIFY enabledChanged)
+    Q_PROPERTY(bool configEnabled READ configEnabled NOTIFY enabledChanged)
 public:
     static DebugManager *self();
 
@@ -32,6 +33,7 @@ public:
         Model,
         Shell,
         Shader,
+        Config,
         Count
     };
     Q_ENUM(Category)
@@ -80,6 +82,10 @@ public:
     {
         return m_enabled[Shader];
     }
+    bool configEnabled() const
+    {
+        return m_enabled[Config];
+    }
 
     static const char *categoryName(Category cat);
     static const char *categoryColor(Category cat);
@@ -93,6 +99,7 @@ public:
     Q_INVOKABLE void model(const QString &msg);
     Q_INVOKABLE void shell(const QString &msg);
     Q_INVOKABLE void shader(const QString &msg);
+    Q_INVOKABLE void config(const QString &msg);
 
 Q_SIGNALS:
     void enabledChanged();
@@ -112,3 +119,4 @@ Q_DECLARE_LOGGING_CATEGORY(lcPreview)
 Q_DECLARE_LOGGING_CATEGORY(lcModel)
 Q_DECLARE_LOGGING_CATEGORY(lcShell)
 Q_DECLARE_LOGGING_CATEGORY(lcShader)
+Q_DECLARE_LOGGING_CATEGORY(lcConfig)

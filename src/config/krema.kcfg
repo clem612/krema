@@ -110,7 +110,7 @@
     <entry name="BackgroundOpacity" type="Double">
       <label>Background opacity</label>
       <default>0.6</default>
-      <min>0.0</min>
+      <min>0.3</min>
       <max>1.0</max>
     </entry>
 
@@ -272,7 +272,7 @@
     </entry>
 
     <entry name="SeparatorStyle" type="Int">
-      <label>0=Classic, 1=Dots</label>
+      <label>0=Classic, 1=Dots, 2=Gradient</label>
       <default>0</default>
     </entry>
 
@@ -306,6 +306,18 @@
       <default>1</default>
       <min>0</min>
       <max>1</max>
+    </entry>
+
+    <entry name="RimLightEnabled" type="Bool">
+      <label>Enable a subtle glowing border around the dock panel</label>
+      <default>false</default>
+    </entry>
+
+    <entry name="RimLightOpacity" type="Double">
+      <label>Rim light intensity</label>
+      <default>0.1</default>
+      <min>0.05</min>
+      <max>0.5</max>
     </entry>
 
   </group>

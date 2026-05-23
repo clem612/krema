@@ -60,6 +60,7 @@ public:
         ScreenGeometry,
         Activities,
         IsDemandingAttention,
+        ActiveChildIndex,
     };
 
     explicit HyprlandTasksModel(QObject *parent = nullptr);
@@ -79,6 +80,9 @@ public:
     // Launcher management (pinned apps)
     QStringList launcherList() const;
     void setLauncherList(const QStringList &launchers);
+
+    /// Check if any window overlaps the given screen rect (used for DodgeWindows)
+    bool hasOverlappingWindow(const QRect &dockRect, bool activeOnly = false) const;
 
 private:
     void refresh();

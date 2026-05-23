@@ -9,17 +9,18 @@ Krema is a dedicated dock for **KDE Plasma 6 (Wayland)**. It is the "spiritual s
 ## 2. Session Protocol (Mandatory)
 Before answering any prompts, Gemini must:
 1. **The Master Mind Review:** Read `.claude/work-state.md` to identify current tasks and the knowledge index.
-2. **Technical Memory Refresh:** Follow links in `work-state.md` to read `docs/bugs_report.md` and relevant research logs in `docs/research/`.
-3. **Verify Progress & Vision:** 
+2. **Graphify Context:** Read `graphify-out/manifest.json` and `graphify-out/.graphify_analysis.json` to understand the current codebase structure and relationships.
+3. **Technical Memory Refresh:** Follow links in `work-state.md` to read `docs/bugs_report.md` and relevant research logs in `docs/research/`.
+4. **Verify Progress & Vision:** 
    - Find the current milestone in `ROADMAP.md` (marked with ⬅️).
    - Cross-reference the task with `ARCHITECTURE Mandate.md` to ensure the proposed logic obeys the mathematical laws.
-4. On Session Close: Synchronize ALL tracking files:
+5. On Session Close: Synchronize ALL tracking files:
    - Update `work-state.md` (Status & History).
    - Update `ROADMAP.md` (Milestone progress).
    - Update `docs/bugs_report.md` (New trials, failures, or fixes).
    - **Update/Create lessons in `.claude/product-quality-lessons.md` (Codify failures into anti-patterns).**
    - Update/Create logs in `docs/research/` (New architectural discoveries or KDE research).
-5. **Transparency & Proposal Phase:** Before any file edit, Gemini must provide a "Refactor Proposal":
+6. **Transparency & Proposal Phase:** Before any file edit, Gemini must provide a "Refactor Proposal":
    - **Identified Logic:** What specific lines look "optimizable"?
    - **Functional Assessment:** What does this logic currently achieve (e.g., handles separators, fixes Electron icons)?
    - **Optimization Strategy:** How will the new code preserve this EXACT behavior while being more efficient?

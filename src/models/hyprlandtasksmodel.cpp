@@ -100,6 +100,13 @@ QVariant HyprlandTasksModel::data(const QModelIndex &index, int role) const
         return geometry;
     case IsDemandingAttention:
         return false; // TODO
+    case ActiveChildIndex: {
+        for (int i = 0; i < task.windows.size(); ++i) {
+            if (task.windows[i].isActive)
+                return i;
+        }
+        return -1;
+    }
     }
 
     return {};
@@ -143,6 +150,7 @@ QHash<int, QByteArray> HyprlandTasksModel::roleNames() const
     roles[ScreenGeometry] = "ScreenGeometry";
     roles[Activities] = "Activities";
     roles[IsDemandingAttention] = "IsDemandingAttention";
+    roles[ActiveChildIndex] = "ActiveChildIndex";
     return roles;
 }
 
@@ -265,6 +273,24 @@ void HyprlandTasksModel::setLauncherList(const QStringList &launchers)
 {
     m_pinnedLaunchers = launchers;
     refresh();
+}
+
+bool HyprlandTasksModel::hasOverlappingWindow(const QRect &dockRect, bool activeOnly) const
+{
+    if (!dockRect.isValid())
+        return false;
+
+    for (const Task &task : m_tasks) {
+        for (const WindowInfo &w : task.windows) {
+            if (activeOnly && !w.isActive)
+                continue;
+            if (w.isMinimized)
+                continue;
+            if (w.geometry.intersects(dockRect))
+                return true;
+        }
+    }
+    return false;
 }
 
 void HyprlandTasksModel::refresh()

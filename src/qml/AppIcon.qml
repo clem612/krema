@@ -1026,16 +1026,20 @@ Item {
         // --- ABSOLUTE GROUNDING (Rule 1 Sync) ---
         // We anchor the indicators directly to the panel edge of the delegate.
         // This ensures they NEVER move vertically during the zoom wave.
-        anchors.horizontalCenter: !DockView.isVertical ? parent.horizontalCenter : undefined
-        anchors.verticalCenter: DockView.isVertical ? parent.verticalCenter : undefined
-        anchors.top: DockView.edge === 0 ? parent.top : undefined
-        anchors.bottom: DockView.edge === 1 ? parent.bottom : undefined
-        anchors.left: DockView.edge === 2 ? parent.left : undefined
-        anchors.right: DockView.edge === 3 ? parent.right : undefined
-        anchors.topMargin: DockView.edge === 0 ? _unitPanelFloor : 0
-        anchors.bottomMargin: DockView.edge === 1 ? _unitPanelFloor : 0
-        anchors.leftMargin: DockView.edge === 2 ? _unitPanelFloor : 0
-        anchors.rightMargin: DockView.edge === 3 ? _unitPanelFloor : 0
+        x: {
+            if (DockView.isVertical) {
+                if (DockView.edge === 2) return _unitPanelFloor
+                if (DockView.edge === 3) return parent.width - width - _unitPanelFloor
+            }
+            return (parent.width - width) / 2
+        }
+        y: {
+            if (!DockView.isVertical) {
+                if (DockView.edge === 0) return _unitPanelFloor
+                if (DockView.edge === 1) return parent.height - height - _unitPanelFloor
+            }
+            return (parent.height - height) / 2
+        }
 
         Repeater {
             // Show dots based on window count (max 3)
@@ -1049,10 +1053,13 @@ Item {
 
             Rectangle {
                 // --- THE ACTIVE DASH LOGIC ---
+                readonly property int activeDotIndex: dockItem.model.ActiveChildIndex !== undefined ? Math.min(dockItem.model.ActiveChildIndex, 2) : -1
+                readonly property bool isThisDotActive: dockItem.model.IsActive && (activeDotIndex === index || (activeDotIndex === -1 && index === 0))
+
                 // If the dock is horizontal, stretch width when active.
-                width: DockView.isVertical ? _unitIndicator : (dockItem.model.IsActive ? Math.round(iconSize * 0.35) : _unitIndicator)
+                width: DockView.isVertical ? _unitIndicator : (isThisDotActive ? Math.round(iconSize * 0.35) : _unitIndicator)
                 // If the dock is vertical, stretch height when active.
-                height: DockView.isVertical ? (dockItem.model.IsActive ? Math.round(iconSize * 0.35) : _unitIndicator) : _unitIndicator
+                height: DockView.isVertical ? (isThisDotActive ? Math.round(iconSize * 0.35) : _unitIndicator) : _unitIndicator
                 // Keep the pill shape completely round at the ends
                 radius: _unitIndicator / 2
                 color: (dockItem._showAttentionAnim && dockItem._attentionType === 5) ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.textColor

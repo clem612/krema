@@ -149,7 +149,7 @@ QQC2.ScrollView {
                                { icon: "view-hidden", label: i18n("Transparent"), value: 1 },
                                { icon: "format-fill-color", label: i18n("Solid"), value: 2 },
                                { icon: "view-glass", label: i18n("Acrylic"), value: 3 },
-                               { icon: "window-duplicate", label: i18n("Mica"), value: 4 }
+                               { icon: "window-duplicate", label: i18n("Accent Tint"), value: 4 }
                            ]
                            delegate: QQC2.Button {
                                id: bgBtn
@@ -184,69 +184,128 @@ QQC2.ScrollView {
            }
        }
 
-       // --- PILLAR 2: COLOR & OPACITY ---
-       ColumnLayout {
-           Layout.fillWidth: true
-           spacing: 8
-           visible: DockSettings.backgroundStyle !== 1 && DockSettings.backgroundStyle !== 4 // Hide for Transparent and Mica
-           
-           QQC2.Label { 
-               text: i18n("Color & Opacity")
-               color: theme.textDim
-               font.bold: true
-               font.letterSpacing: 1.1
-               font.pixelSize: 12
-               Layout.leftMargin: 8
-           }
-           
-           KremaCard {
-               KremaSwitch {
-                   Layout.fillWidth: true
-                   text: i18n("Use System Accent Color")
-                   checked: DockSettings.useSystemColor
-                   onToggled: { DockSettings.useSystemColor = checked; DockSettings.save(); }
-               }
+        // --- PILLAR 2: COLOR & OPACITY ---
+        // Visibility rules per style:
+        // System Adaptive (0): Opacity slider only
+        // Transparent (1): No controls
+        // Solid (2): Color picker + opacity slider
+        // Acrylic (3): Tint color + tint opacity
+        // Accent Tint (4): Opacity slider only (accent color)
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 8
+            visible: DockSettings.backgroundStyle !== 1 // Hide entirely for Transparent
+            
+            QQC2.Label { 
+                text: DockSettings.backgroundStyle === 4 ? i18n("Tint Intensity") : i18n("Color & Opacity")
+                color: theme.textDim
+                font.bold: true
+                font.letterSpacing: 1.1
+                font.pixelSize: 12
+                Layout.leftMargin: 8
+            }
+            
+            KremaCard {
+                // USE SYSTEM COLOR SWITCH — only for Solid (2) and Acrylic (3)
+                KremaSwitch {
+                    Layout.fillWidth: true
+                    text: i18n("Use System Accent Color")
+                    checked: DockSettings.useSystemColor
+                    visible: DockSettings.backgroundStyle === 2 || DockSettings.backgroundStyle === 3
+                    onToggled: { DockSettings.useSystemColor = checked; DockSettings.save(); }
+                }
 
-               Rectangle { 
-                   Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A"
-                   visible: !DockSettings.useSystemColor 
-               }
+                Rectangle { 
+                    Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A"
+                    visible: !DockSettings.useSystemColor && (DockSettings.backgroundStyle === 2 || DockSettings.backgroundStyle === 3)
+                }
 
-               RowLayout {
-                   Layout.fillWidth: true
-                   visible: !DockSettings.useSystemColor
-                   QQC2.Label { Layout.fillWidth: true; text: i18n("Custom Tint Color"); color: theme.text; font.bold: true }
-                   Rectangle {
-                       width: 48; height: 28; radius: 6
-                       color: DockSettings.tintColor
-                       border.color: "#333133"; border.width: 1
-                       MouseArea { 
-                           anchors.fill: parent; cursorShape: Qt.PointingHandCursor
-                           onClicked: colorPickerPopup.open() 
-                       }
-                   }
-               }
+                // CUSTOM COLOR PICKER — only for Solid (2) and Acrylic (3) when not using system color
+                RowLayout {
+                    Layout.fillWidth: true
+                    visible: !DockSettings.useSystemColor && (DockSettings.backgroundStyle === 2 || DockSettings.backgroundStyle === 3)
+                    QQC2.Label { Layout.fillWidth: true; text: i18n("Custom Tint Color"); color: theme.text; font.bold: true }
+                    Rectangle {
+                        width: 48; height: 28; radius: 6
+                        color: DockSettings.tintColor
+                        border.color: "#333133"; border.width: 1
+                        MouseArea { 
+                            anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                            onClicked: colorPickerPopup.open() 
+                        }
+                    }
+                }
 
-               Rectangle { 
-                   Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A"
-               }
+                Rectangle { 
+                    Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A"
+                    visible: DockSettings.backgroundStyle !== 1
+                }
 
-               ColumnLayout {
-                   Layout.fillWidth: true
-                   RowLayout {
-                       QQC2.Label { Layout.fillWidth: true; text: i18n("Background Opacity"); color: theme.text; font.bold: true }
-                       QQC2.Label { text: Math.round(opacitySlider.value * 100) + "%"; color: theme.textDim; font.bold: true }
-                   }
-                   QQC2.Slider {
-                       id: opacitySlider
-                       Layout.fillWidth: true
-                       from: 0.0; to: 1.0; stepSize: 0.05
-                       value: DockSettings.backgroundOpacity
-                       onMoved: { DockSettings.backgroundOpacity = value; DockSettings.save(); }
-                   }
-               }
-           }
-       }
+                // OPACITY SLIDER — visible for all styles except Transparent (1)
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    visible: DockSettings.backgroundStyle !== 1
+                    RowLayout {
+                        QQC2.Label { 
+                            Layout.fillWidth: true
+                            text: DockSettings.backgroundStyle === 4 ? i18n("Accent Intensity") : i18n("Background Opacity")
+                            color: theme.text; font.bold: true 
+                        }
+                        QQC2.Label { text: Math.round(opacitySlider.value * 100) + "%"; color: theme.textDim; font.bold: true }
+                    }
+                    QQC2.Slider {
+                        id: opacitySlider
+                        Layout.fillWidth: true
+                        from: 0.3; to: 1.0; stepSize: 0.05
+                        value: DockSettings.backgroundOpacity
+                        onMoved: { DockSettings.backgroundOpacity = value; DockSettings.save(); }
+                    }
+                }
+            }
+        }
+
+        // --- PILLAR 3: RIM LIGHT ---
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 8
+
+            QQC2.Label {
+                text: i18n("Edge Highlight")
+                color: theme.textDim
+                font.bold: true; font.letterSpacing: 1.1; font.pixelSize: 12
+                Layout.leftMargin: 8
+            }
+
+            KremaCard {
+                KremaSwitch {
+                    Layout.fillWidth: true
+                    text: i18n("Rim Light")
+                    checked: DockSettings.rimLightEnabled
+                    onToggled: { DockSettings.rimLightEnabled = checked; DockSettings.save(); }
+                }
+                QQC2.Label {
+                    text: i18n("Adds a subtle glowing border to visually separate the panel from the wallpaper.")
+                    color: theme.textDim; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true
+                }
+
+                Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A"; visible: DockSettings.rimLightEnabled }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    visible: DockSettings.rimLightEnabled
+                    RowLayout {
+                        QQC2.Label { Layout.fillWidth: true; text: i18n("Intensity"); color: theme.text; font.bold: true }
+                        QQC2.Label { text: Math.round(rimLightSlider.value * 100) + "%"; color: theme.textDim; font.bold: true }
+                    }
+                    QQC2.Slider {
+                        id: rimLightSlider; Layout.fillWidth: true
+                        from: 0.05; to: 0.5; stepSize: 0.05
+                        value: DockSettings.rimLightOpacity
+                        onMoved: { DockSettings.rimLightOpacity = value; DockSettings.save(); }
+                    }
+                }
+            }
+        }
 
        // --- CUSTOM COLOR PICKER POPUP ---
        QQC2.Popup {

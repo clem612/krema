@@ -3,6 +3,7 @@
 
 #include "dockmodel.h"
 #include "hyprlandtasksmodel.h"
+#include "kdetasksproxymodel.h"
 #include "utils/identitymanager.h"
 
 #include <taskmanager/abstracttasksmodel.h>
@@ -158,6 +159,9 @@ DockModel::DockModel(QObject *parent)
 
         m_kdeTasksModel->componentComplete();
 
+        m_kdeTasksProxyModel = std::make_unique<KdeTasksProxyModel>(this);
+        m_kdeTasksProxyModel->setSourceModel(m_kdeTasksModel.get());
+
         connect(m_virtualDesktopInfo.get(), &TaskManager::VirtualDesktopInfo::currentDesktopChanged, this, [this]() {
             m_kdeTasksModel->setVirtualDesktop(m_virtualDesktopInfo->currentDesktop());
             Q_EMIT currentDesktopChanged();
@@ -180,7 +184,7 @@ DockModel::~DockModel() = default;
 
 QAbstractItemModel *DockModel::tasksModel() const
 {
-    return m_isHyprland ? static_cast<QAbstractItemModel *>(m_hyprTasksModel.get()) : static_cast<QAbstractItemModel *>(m_kdeTasksModel.get());
+    return m_isHyprland ? static_cast<QAbstractItemModel *>(m_hyprTasksModel.get()) : static_cast<QAbstractItemModel *>(m_kdeTasksProxyModel.get());
 }
 
 TaskManager::TasksModel *DockModel::kdeTasksModel() const

@@ -95,8 +95,84 @@ QPixmap TaskIconProvider::requestPixmap(const QString &id, QSize *size, const QS
         icon = QIcon::fromTheme(iconName);
     }
 
+    QFile dbgFile(u"/tmp/krema_icon_debug.txt"_s);
+    if (dbgFile.open(QIODevice::Append | QIODevice::Text)) {
+        QTextStream out(&dbgFile);
+        out << "=== REQUEST: " << id << " ===\n";
+        out << "originalId: " << originalId << "\n";
+        out << "iconName: " << iconName << "\n";
+        out << "STAGE 2 fromTheme name: " << icon.name() << " isNull: " << icon.isNull() << " sizesEmpty: " << icon.availableSizes().isEmpty() << "\n";
+    }
+
+    // 2.5. STAGE 2.5: Flatpak Direct Extractor
+    // Notice we added icon.name().isEmpty() to the bypass list!
+    if (icon.isNull() || icon.availableSizes().isEmpty() || icon.name().isEmpty() || icon.name() == u"image-missing"_s || icon.name() == u"unknown"_s
+        || icon.name() == u"wayland"_s || icon.name() != iconName) {
+        if (dbgFile.isOpen()) {
+            QTextStream(&dbgFile) << "-> ENTERED STAGE 2.5\n";
+        }
+        QStringList flatpakBases = {QDir::homePath() + u"/.local/share/flatpak/exports/share/icons/hicolor/"_s,
+                                    u"/var/lib/flatpak/exports/share/icons/hicolor/"_s};
+        QStringList sizes = {u"512x512/apps/"_s, u"256x256/apps/"_s, u"128x128/apps/"_s, u"64x64/apps/"_s, u"48x48/apps/"_s, u"scalable/apps/"_s};
+
+        QString normalizedId = originalId;
+        normalizedId = normalizedId.replace(u'_', u'-').replace(u' ', u'-').toLower();
+
+        for (const QString &base : flatpakBases) {
+            for (const QString &size : sizes) {
+                QString pngPath = base + size + originalId + u".png"_s;
+                if (QFile::exists(pngPath)) {
+                    icon = QIcon(pngPath);
+                    if (dbgFile.isOpen()) {
+                        QTextStream(&dbgFile) << "-> FOUND EXACT PNG: " << pngPath << "\n";
+                    }
+                    break;
+                }
+                QString svgPath = base + size + originalId + u".svg"_s;
+                if (QFile::exists(svgPath)) {
+                    icon = QIcon(svgPath);
+                    if (dbgFile.isOpen()) {
+                        QTextStream(&dbgFile) << "-> FOUND EXACT SVG: " << svgPath << "\n";
+                    }
+                    break;
+                }
+
+                // Fallback: Suffix matching for short Wayland classes
+                QDir appDir(base + size);
+                if (appDir.exists()) {
+                    QStringList filters = {u"*.png"_s, u"*.svg"_s};
+                    QStringList matches = appDir.entryList(filters, QDir::Files);
+                    for (const QString &match : matches) {
+                        QString normalizedMatch = match;
+                        normalizedMatch = normalizedMatch.replace(u'_', u'-').replace(u' ', u'-').toLower();
+
+                        QString strippedMatch = normalizedMatch;
+                        strippedMatch = strippedMatch.replace(u'-', u""_s);
+                        QString strippedId = normalizedId;
+                        strippedId = strippedId.replace(u'-', u""_s);
+
+                        if (normalizedMatch == normalizedId + u".png"_s || normalizedMatch == normalizedId + u".svg"_s
+                            || normalizedMatch.endsWith(u"."_s + normalizedId + u".png"_s) || normalizedMatch.endsWith(u"."_s + normalizedId + u".svg"_s)
+                            || strippedMatch.endsWith(u"."_s + strippedId + u".png"_s) || strippedMatch.endsWith(u"."_s + strippedId + u".svg"_s)) {
+                            QString finalPath = appDir.absoluteFilePath(match);
+                            icon = QIcon(finalPath);
+                            if (dbgFile.isOpen()) {
+                                QTextStream(&dbgFile) << "-> FOUND SUFFIX MATCH: " << finalPath << "\n";
+                            }
+                            break;
+                        }
+                    }
+                }
+                if (!icon.isNull())
+                    break;
+            }
+            if (!icon.isNull())
+                break;
+        }
+    }
+
     // 3. STAGE 3: Desktop File Bridge
-    if (icon.isNull() || icon.availableSizes().isEmpty()) {
+    if (icon.isNull()) {
         QString desktopFile = iconName + u".desktop"_s;
         QStringList paths = QStandardPaths::locateAll(QStandardPaths::ApplicationsLocation, desktopFile);
         if (!paths.isEmpty()) {
@@ -120,7 +196,7 @@ QPixmap TaskIconProvider::requestPixmap(const QString &id, QSize *size, const QS
     }
 
     // 4. FINAL FALLBACK: Only log if we really found nothing AND we're debugging
-    if (icon.isNull() || icon.availableSizes().isEmpty()) {
+    if (icon.isNull()) {
         if (isDebug) {
             qDebug() << "\x1b[31m[ICON FAIL]\x1b[0m No source found for:" << originalId;
         }

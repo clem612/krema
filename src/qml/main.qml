@@ -167,7 +167,7 @@ Item {
             let isVisible = DockVisibility.dockVisible
             let triggerDepth = 2
 
-            let iconSize = DockSettings.iconSize
+            let iconSize = DockView.screenSettings.iconSize
             let spacing = DockSettings.iconSpacing
             let slotSize = iconSize + spacing
             let totalUnscaled = (dockRepeater.count * slotSize) - spacing
@@ -322,7 +322,7 @@ Item {
     // This guarantees max zoom when cursor is dead-center on the visual icon,
     // unlike the old approach which used unzoomed grid positions.
     function updateZoomFactors() {
-        let maxZoom = 1.0 + (DockSettings.maxZoomFactor - 1.0) * root._zoomIntensity
+        let maxZoom = 1.0 + (DockView.screenSettings.maxZoomFactor - 1.0) * root._zoomIntensity
         if (maxZoom <= 1.0 || dockRepeater.count === 0) {
             for (let i = 0; i < dockRepeater.count; i++) {
                 let item = dockRepeater.itemAt(i)
@@ -331,7 +331,7 @@ Item {
             return
         }
 
-        let sigma = DockSettings.iconSize * 1.2
+        let sigma = DockView.screenSettings.iconSize * 1.2
         let sigma2 = sigma * sigma
         let mPos = dockPanel.mouseX
 
@@ -523,7 +523,7 @@ Item {
 
     function traceHitTest(mX_abs, mY_abs) {
         let mPos = DockView.isVertical ? mY_abs : mX_abs
-        let iconSize = DockSettings.iconSize, spacing = DockSettings.iconSpacing, slot = iconSize + spacing
+        let iconSize = DockView.screenSettings.iconSize, spacing = DockSettings.iconSpacing, slot = iconSize + spacing
         let totalUnscaled = (dockRepeater.count * slot) - spacing
         let unscaledStart = (DockView.isVertical ? root.height : root.width) / 2 - (totalUnscaled / 2)
         for (let i = 0; i < dockRepeater.count; i++) {
@@ -575,10 +575,10 @@ Item {
         id: blueprintGhost
         visible: typeof DockVisibility !== "undefined" && DockVisibility.liveEditMode
         z: dockPanel.z - 1
-        width: (DockSettings.edge === 2 || DockSettings.edge === 3) ? 180 : parent.width
-        height: (DockSettings.edge === 2 || DockSettings.edge === 3) ? parent.height : 180
-        x: DockSettings.edge === 3 ? parent.width - width : 0
-        y: DockSettings.edge === 1 ? parent.height - height : 0
+        width: DockView.isVertical ? 180 : parent.width
+        height: DockView.isVertical ? parent.height : 180
+        x: DockView.edge === 3 ? parent.width - width : 0
+        y: DockView.edge === 1 ? parent.height - height : 0
         enabled: false
         Rectangle {
             anchors.fill: parent; color: "transparent"; border.color: Qt.rgba(1, 1, 1, 0.3); border.width: 1
@@ -609,7 +609,7 @@ Item {
             let floorUnits = sample ? sample._unitIconBaseOffset : 0
             
             // Current visual icon height = unzoomedSize * (1.0 + zoomAmount)
-            let currentIconHeight = DockSettings.iconSize * (1.0 + (DockSettings.maxZoomFactor - 1.0) * root._zoomIntensity)
+            let currentIconHeight = DockView.screenSettings.iconSize * (1.0 + (DockView.screenSettings.maxZoomFactor - 1.0) * root._zoomIntensity)
             
             return _screenFlooring + floorUnits + currentIconHeight
         }
@@ -621,7 +621,7 @@ Item {
             // --- Dynamic Overflow (Bug #7 Fix) ---
             // Calculate the actual visual overflow based on the kinetic zoom intensity.
             // This ensures the Wayland surface and Previews track the icons perfectly.
-            let maxPotentialZoom = (DockSettings.iconSize * (DockSettings.maxZoomFactor - 1.0))
+            let maxPotentialZoom = (DockView.screenSettings.iconSize * (DockView.screenSettings.maxZoomFactor - 1.0))
             let currentZoomOverflow = maxPotentialZoom * root._zoomIntensity
             
             let baseOverflow = Math.max(0, (DockView.isVertical ? dockRow.implicitWidth - width : dockRow.implicitHeight - height))
@@ -637,16 +637,18 @@ Item {
         property real _actualContentWidth: Math.max(dockRow.implicitWidth + 32, Kirigami.Units.gridUnit * 6)
         property real _actualContentHeight: Math.max(dockRow.implicitHeight + 32, Kirigami.Units.gridUnit * 6)
         
-        width: !DockView.isVertical ? _actualContentWidth : Math.min(DockSettings.panelHeight, dockRow.implicitWidth)
-        height: DockView.isVertical ? _actualContentHeight : Math.min(DockSettings.panelHeight, dockRow.implicitHeight)
-        radius: Math.min(DockSettings.cornerRadius, Math.min(width, height) / 2)
+        width: !DockView.isVertical ? _actualContentWidth : Math.min(DockView.screenSettings.panelHeight, dockRow.implicitWidth)
+        height: DockView.isVertical ? _actualContentHeight : Math.min(DockView.screenSettings.panelHeight, dockRow.implicitHeight)
+        radius: Math.min(DockView.screenSettings.cornerRadius, Math.min(width, height) / 2)
         color: {
-            let style = DockSettings.backgroundStyle
+            let style = DockView.screenSettings.backgroundStyle
             if (style === 3 || style === 4) return "transparent" // Acrylic or Mica (handled by shaders)
             if (style === 1) return "transparent" // Transparent
             let c = (style === 2 && !DockSettings.useSystemColor) ? Qt.color(DockSettings.tintColor) : DockView.backgroundColor
-            return Qt.rgba(c.r, c.g, c.b, DockSettings.backgroundOpacity)
+            return Qt.rgba(c.r, c.g, c.b, DockView.screenSettings.backgroundOpacity)
         }
+        border.color: DockSettings.rimLightEnabled ? Qt.rgba(1, 1, 1, DockSettings.rimLightOpacity) : "transparent"
+        border.width: DockSettings.rimLightEnabled ? 1 : 0
         x: DockView.isVertical ? _panelEdgePos : (parent.width - width) / 2
         y: DockView.isVertical ? (parent.height - height) / 2 : _panelEdgePos
         // --- Derived: _screenFlooring (External distance from screen edge to panel) ---
@@ -682,13 +684,13 @@ Item {
         }
 
         ShaderEffect {
-            id: acrylicShader; anchors.fill: parent; z: 0; visible: DockSettings.backgroundStyle === 3 || DockSettings.backgroundStyle === 4
+            id: acrylicShader; anchors.fill: parent; z: 0; visible: DockView.screenSettings.backgroundStyle === 3 || DockView.screenSettings.backgroundStyle === 4
             property color _activeTint: {
-                if (DockSettings.backgroundStyle === 4) return Kirigami.Theme.highlightColor // Mica uses accent
-                return (DockSettings.backgroundStyle === 3 && !DockSettings.useSystemColor) ? Qt.color(DockSettings.tintColor) : DockView.backgroundColor
+                if (DockView.screenSettings.backgroundStyle === 4) return Kirigami.Theme.highlightColor // Mica uses accent
+                return (DockView.screenSettings.backgroundStyle === 3 && !DockSettings.useSystemColor) ? Qt.color(DockSettings.tintColor) : DockView.backgroundColor
             }
-            property real tintR: _activeTint.r; property real tintG: _activeTint.g; property real tintB: _activeTint.b; property real tintOpacity: DockSettings.backgroundStyle === 4 ? 0.3 : DockSettings.backgroundOpacity
-            property real noiseStrength: DockSettings.backgroundStyle === 4 ? 0.05 : 0.02
+            property real tintR: _activeTint.r; property real tintG: _activeTint.g; property real tintB: _activeTint.b; property real tintOpacity: DockView.screenSettings.backgroundStyle === 4 ? 0.3 : DockView.screenSettings.backgroundOpacity
+            property real noiseStrength: DockView.screenSettings.backgroundStyle === 4 ? 0.05 : 0.02
             property real resX: width; property real resY: height; property real cornerRadius: dockPanel.radius
             fragmentShader: "qrc:/qml/shaders/acrylic_overlay.frag.qsb"
         }
@@ -714,8 +716,8 @@ Item {
 
             // Rule 15 & 16: Content dimensions account for dynamic expansion.
             // [STABILITY]: We use a stable base width to prevent startup "Identity Crisis" gaps.
-            readonly property real baseWidth: (dockRepeater.count === 0) ? 0 : (dockRepeater.count * (DockSettings.iconSize + baseSpacing)) - baseSpacing
-            readonly property real baseHeight: (dockRepeater.count === 0) ? 0 : (dockRepeater.count * (DockSettings.iconSize + baseSpacing)) - baseSpacing
+            readonly property real baseWidth: (dockRepeater.count === 0) ? 0 : (dockRepeater.count * (DockView.screenSettings.iconSize + baseSpacing)) - baseSpacing
+            readonly property real baseHeight: (dockRepeater.count === 0) ? 0 : (dockRepeater.count * (DockView.screenSettings.iconSize + baseSpacing)) - baseSpacing
 
             implicitWidth: {
                 let dummy = layoutTrigger
@@ -727,7 +729,7 @@ Item {
             }
             // FIX: Removed `itemAt(i)` loop which caused stale values and floating icons during resize!
             readonly property real _maxIconThickness: {
-                let size = DockSettings.iconSize
+                let size = DockView.screenSettings.iconSize
                 let floor = Math.max(4, Math.round(size * 0.25))
                 let ind = Math.max(2, Math.round(size * 0.10))
                 let gap = Math.max(2, Math.round(size * 0.125) + Math.round(size * 0.15 * (1.0 - DockSettings.indicatorOffset)))
@@ -794,8 +796,8 @@ Item {
                     z: (root.hoveredIndex === index) ? 1 : 0
                     isHovered: (root.hoveredIndex === index)
                     isKeyboardFocused: root.keyboardNavigating && root.hoveredIndex === index
-                    iconSize: DockSettings.iconSize
-                    maxZoomFactor: 1.0 + (DockSettings.maxZoomFactor - 1.0) * root._zoomIntensity
+                    iconSize: DockView.screenSettings.iconSize
+                    maxZoomFactor: 1.0 + (DockView.screenSettings.maxZoomFactor - 1.0) * root._zoomIntensity
 
                     spacing: DockSettings.iconSpacing
                     itemCenterX: virtualCenter
@@ -822,16 +824,16 @@ Item {
             }
             // Visible only if there are pinned apps followed by at least one unpinned app
             visible: boundaryIndex >= 0 && boundaryIndex < (DockModel.tasksModel.rowCount() - 1)
-            opacity: DockSettings.separatorOpacity
-            property real at: Math.max(1, Math.round(DockSettings.iconSize * 0.05))
-            property real al: Math.round(DockSettings.iconSize * 0.7)
+            opacity: DockView.screenSettings.separatorOpacity
+            property real at: Math.max(1, Math.round(DockView.screenSettings.iconSize * 0.05))
+            property real al: Math.round(DockView.screenSettings.iconSize * 0.7)
             width: Math.round(!DockView.isVertical ? at : al); height: Math.round(DockView.isVertical ? at : al)
             x: { 
                 let trigger = dockRow.layoutTrigger
                 if (!visible) return 0
                 if (root._zoomIntensity <= 0) {
-                    let slotSize = DockSettings.iconSize + dockRow.baseSpacing
-                    return Math.round(DockView.isVertical ? dockRow.x + (dockRow.implicitWidth - width) / 2 : dockRow.x + (boundaryIndex * slotSize) + DockSettings.iconSize + (dockRow.baseSpacing / 2) - (width / 2))
+                    let slotSize = DockView.screenSettings.iconSize + dockRow.baseSpacing
+                    return Math.round(DockView.isVertical ? dockRow.x + (dockRow.implicitWidth - width) / 2 : dockRow.x + (boundaryIndex * slotSize) + DockView.screenSettings.iconSize + (dockRow.baseSpacing / 2) - (width / 2))
                 }
                 let i = dockRepeater.itemAt(boundaryIndex)
                 let n = dockRepeater.itemAt(boundaryIndex + 1)
@@ -843,8 +845,8 @@ Item {
                 let trigger = dockRow.layoutTrigger
                 if (!visible) return 0
                 if (root._zoomIntensity <= 0) {
-                    let slotSize = DockSettings.iconSize + dockRow.baseSpacing
-                    return Math.round(DockView.isVertical ? dockRow.y + (boundaryIndex * slotSize) + DockSettings.iconSize + (dockRow.baseSpacing / 2) - (height / 2) : dockRow.y + (dockRow.implicitHeight - height) / 2)
+                    let slotSize = DockView.screenSettings.iconSize + dockRow.baseSpacing
+                    return Math.round(DockView.isVertical ? dockRow.y + (boundaryIndex * slotSize) + DockView.screenSettings.iconSize + (dockRow.baseSpacing / 2) - (height / 2) : dockRow.y + (dockRow.implicitHeight - height) / 2)
                 }
                 let i = dockRepeater.itemAt(boundaryIndex)
                 let n = dockRepeater.itemAt(boundaryIndex + 1)
@@ -853,10 +855,21 @@ Item {
                 return Math.round(DockView.isVertical ? dockRow.y + i.y + i.height + (g / 2) - (height / 2) : dockRow.y + (dockRow.implicitHeight - height) / 2)
             }
 
-            Rectangle { anchors.fill: parent; visible: DockSettings.separatorStyle === 0; color: "white"; radius: width/2 }
+            Rectangle { anchors.fill: parent; visible: DockView.screenSettings.separatorStyle === 0; color: Kirigami.Theme.textColor; radius: width/2 }
+            Rectangle {
+                anchors.fill: parent
+                visible: DockView.screenSettings.separatorStyle === 2
+                radius: width / 2
+                gradient: Gradient {
+                    orientation: DockView.isVertical ? Gradient.Horizontal : Gradient.Vertical
+                    GradientStop { position: 0.0; color: "transparent" }
+                    GradientStop { position: 0.5; color: Kirigami.Theme.textColor }
+                    GradientStop { position: 1.0; color: "transparent" }
+                }
+            }
             Grid {
-                anchors.centerIn: parent; visible: DockSettings.separatorStyle === 1; spacing: Math.max(2, Math.round(DockSettings.iconSize * 0.15)); rows: DockView.isVertical ? 1 : 3; columns: DockView.isVertical ? 3 : 1
-                Repeater { model: 3; Rectangle { width: Math.max(3, Math.round(DockSettings.iconSize * 0.12)); height: width; color: "white"; radius: width/2 } }
+                anchors.centerIn: parent; visible: DockView.screenSettings.separatorStyle === 1; spacing: Math.max(2, Math.round(DockView.screenSettings.iconSize * 0.15)); rows: DockView.isVertical ? 1 : 3; columns: DockView.isVertical ? 3 : 1
+                Repeater { model: 3; Rectangle { width: Math.max(3, Math.round(DockView.screenSettings.iconSize * 0.12)); height: width; color: "white"; radius: width/2 } }
             }
         }
 
@@ -878,14 +891,14 @@ Item {
     // --- Layer 5: Drag & Drop Ghost (Follows mouse during drag) ---
     Kirigami.Icon {
         id: dragGhost; Accessible.ignored: true; visible: root._dragActive && root._dragSourceIndex >= 0
-        width: DockSettings.iconSize; height: DockSettings.iconSize
+        width: DockView.screenSettings.iconSize; height: DockView.screenSettings.iconSize
         source: visible ? DockModel.iconData(root._dragSourceIndex) : ""
         x: root._dragCurrentX - width/2; y: root._dragCurrentY - height/2; opacity: 0.8; z: 200
     }
 
     Rectangle {
         id: dropIndicator; Accessible.ignored: true; visible: root._dragActive && root._dragTargetIndex >= 0 && root._dragTargetIndex !== root._dragSourceIndex
-        width: DockView.isVertical ? DockSettings.iconSize : 2; height: DockView.isVertical ? 2 : DockSettings.iconSize; color: Kirigami.Theme.highlightColor; radius: 1; z: 150
+        width: DockView.isVertical ? DockView.screenSettings.iconSize : 2; height: DockView.isVertical ? 2 : DockView.screenSettings.iconSize; color: Kirigami.Theme.highlightColor; radius: 1; z: 150
         x: { if(!visible||root._dragTargetIndex<0) return 0; if(DockView.isVertical) return dockPanel.x+dockRow.x; let t=dockRepeater.itemAt(root._dragTargetIndex); if(!t) return 0; let ix=dockPanel.x+dockRow.x+t.x; return root._dragTargetIndex>root._dragSourceIndex ? ix+t.width+DockSettings.iconSpacing/2-1 : ix-DockSettings.iconSpacing/2-1 }
         y: { if(!visible||root._dragTargetIndex<0) return 0; if(!DockView.isVertical) return dockPanel.y+dockRow.y; let t=dockRepeater.itemAt(root._dragTargetIndex); if(!t) return 0; let iy=dockPanel.y+dockRow.y+t.y; return root._dragTargetIndex>root._dragSourceIndex ? iy+t.height+DockSettings.iconSpacing/2-1 : iy-DockSettings.iconSpacing/2-1 }
     }
@@ -1005,8 +1018,8 @@ Item {
     // --- Layer 8: Settings Dialog Container (Configuration UI) ---
     Loader {
         id: settingsUnifiedLoader
-        x: { if(DockSettings.edge===2) return blueprintGhost.width; if(DockSettings.edge===3) return parent.width-blueprintGhost.width-width; return (parent.width-width)/2 }
-        y: { if(DockSettings.edge===0) return blueprintGhost.height; if(DockSettings.edge===1) return parent.height-blueprintGhost.height-height; return (parent.height-height)/2 }
+        x: { if(DockView.edge===2) return blueprintGhost.width; if(DockView.edge===3) return parent.width-blueprintGhost.width-width; return (parent.width-width)/2 }
+        y: { if(DockView.edge===0) return blueprintGhost.height; if(DockView.edge===1) return parent.height-blueprintGhost.height-height; return (parent.height-height)/2 }
         active: SettingsController ? SettingsController.visible : false; visible: active; source: active ? "qrc:/qml/SettingsDialog.qml" : ""
         Connections {
             target: SettingsController || null

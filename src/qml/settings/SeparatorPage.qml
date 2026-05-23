@@ -45,7 +45,8 @@ QQC2.ScrollView {
                        Repeater {
                            model: [
                                { icon: "list-add-separator", label: i18n("Classic"), value: 0 },
-                               { icon: "view-grid", label: i18n("Dots"), value: 1 }
+                               { icon: "view-grid", label: i18n("Dots"), value: 1 },
+                               { icon: "view-sort-descending", label: i18n("Gradient"), value: 2 }
                            ]
                            delegate: QQC2.Button {
                                id: sepBtn

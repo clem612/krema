@@ -46,6 +46,8 @@ add_library(krema_lib STATIC
 
     models/dockmodel.h
     models/dockmodel.cpp
+    models/kdetasksproxymodel.h
+    models/kdetasksproxymodel.cpp
     models/dockactions.h
     models/dockactions.cpp
     models/dockcontextmenu.h

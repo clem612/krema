@@ -14,6 +14,7 @@
 #include <taskmanager/tasksmodel.h>
 #include <taskmanager/virtualdesktopinfo.h>
 
+#include "models/hyprlandtasksmodel.h"
 #include "utils/debugmanager.h"
 #include <QProcessEnvironment>
 
@@ -355,8 +356,9 @@ void DockVisibilityController::updateRegionGeometry()
         p.panelHeight = m_panelHeight;
         p.edge = static_cast<int>(m_platform->edge());
 
+        m_dockScreenRect = computeDockScreenRect(p);
         if (m_overlapModel) {
-            m_overlapModel->setScreenGeometry(computeDockScreenRect(p));
+            m_overlapModel->setScreenGeometry(m_dockScreenRect);
         }
     }
 
@@ -365,15 +367,23 @@ void DockVisibilityController::updateRegionGeometry()
 
 bool DockVisibilityController::hasOverlappingWindow(bool activeOnly) const
 {
-    if (!m_overlapModel)
+    if (m_overlapModel) {
+        const int count = m_overlapModel->rowCount();
+        if (!activeOnly)
+            return count > 0;
+        for (int i = 0; i < count; ++i) {
+            if (m_overlapModel->index(i, 0).data(TaskManager::AbstractTasksModel::IsActive).toBool())
+                return true;
+        }
         return false;
-    const int count = m_overlapModel->rowCount();
-    if (!activeOnly)
-        return count > 0;
-    for (int i = 0; i < count; ++i) {
-        if (m_overlapModel->index(i, 0).data(TaskManager::AbstractTasksModel::IsActive).toBool())
-            return true;
     }
+
+    // Hyprland Fallback
+    auto *hyprModel = qobject_cast<HyprlandTasksModel *>(m_tasksModel);
+    if (hyprModel) {
+        return hyprModel->hasOverlappingWindow(m_dockScreenRect, activeOnly);
+    }
+
     return false;
 }
 

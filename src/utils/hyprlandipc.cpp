@@ -117,6 +117,22 @@ void HyprlandIpc::dispatch(const QString &cmd)
                 } else {
                     qCWarning(lcHyprIpc) << "Failed to connect to Hyprland IPC socket for fallback retry";
                 }
+            } else if (cmd.startsWith(QLatin1String("closewindow address:"))) {
+                QString address = cmd.mid(20);
+                QString luaCmd = QStringLiteral("hl.dsp.window.close({window=\"address:") + address + QStringLiteral("\"})");
+                qCInfo(lcHyprIpc) << "Retrying close dispatch with Lua syntax:" << luaCmd;
+
+                QLocalSocket retrySocket;
+                retrySocket.connectToServer(m_socketPath);
+                if (retrySocket.waitForConnected(100)) {
+                    retrySocket.write((QStringLiteral("/dispatch ") + luaCmd).toUtf8());
+                    retrySocket.flush();
+                    retrySocket.waitForReadyRead(100);
+                    QByteArray retryResponse = retrySocket.readAll().trimmed();
+                    qCInfo(lcHyprIpc) << "Lua fallback response:" << retryResponse;
+                } else {
+                    qCWarning(lcHyprIpc) << "Failed to connect to Hyprland IPC socket for fallback retry";
+                }
             }
         }
     }

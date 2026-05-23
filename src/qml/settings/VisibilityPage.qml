@@ -216,6 +216,9 @@ QQC2.ScrollView {
                                onClicked: {
                                    DockSettings.edge = modelData.value
                                    DockSettings.save()
+                                   if (typeof DockView !== "undefined" && DockView.screenSettings) {
+                                       DockView.screenSettings.clearOverride("Edge")
+                                   }
                                }
                            }
                        }

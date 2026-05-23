@@ -11,6 +11,7 @@ Q_LOGGING_CATEGORY(lcPreview, "krema.preview")
 Q_LOGGING_CATEGORY(lcModel, "krema.model")
 Q_LOGGING_CATEGORY(lcShell, "krema.shell")
 Q_LOGGING_CATEGORY(lcShader, "krema.shader")
+Q_LOGGING_CATEGORY(lcConfig, "krema.config")
 
 namespace krema
 {
@@ -46,6 +47,10 @@ const char *DebugManager::categoryName(Category cat)
         return "MODEL";
     case Shell:
         return "SHELL";
+    case Shader:
+        return "SHADER";
+    case Config:
+        return "CONFIG";
     default:
         return "UNKNOWN";
     }
@@ -78,6 +83,10 @@ const char *DebugManager::categoryColor(Category cat)
         return yellow;
     case Shell:
         return green;
+    case Shader:
+        return cyan;
+    case Config:
+        return magenta;
     default:
         return reset;
     }
@@ -114,6 +123,10 @@ void DebugManager::shell(const QString &msg)
 void DebugManager::shader(const QString &msg)
 {
     qCDebug(lcShader) << msg;
+}
+void DebugManager::config(const QString &msg)
+{
+    qCDebug(lcConfig) << msg;
 }
 
 } // namespace krema

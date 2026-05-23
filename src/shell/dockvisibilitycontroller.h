@@ -148,6 +148,8 @@ private:
     /// Layer-shell surfaces don't report screen position via QWindow::geometry(),
     /// so we compute it from screen geometry + edge + panel position.
     [[nodiscard]] QRect dockScreenRect() const;
+
+    QRect m_dockScreenRect;
     bool m_liveEditMode = false;
 
     DockPlatform::VisibilityMode m_mode = DockPlatform::VisibilityMode::AlwaysVisible;

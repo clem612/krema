@@ -5,6 +5,7 @@
 
 #include <KService>
 #include <QFileInfo>
+#include <QHash>
 
 namespace krema
 {
@@ -15,12 +16,19 @@ QString IdentityManager::normalizeAppId(const QString &appId)
         return {};
     }
 
+    // 0. Check cache for O(1) performance
+    static QHash<QString, QString> s_resolutionCache;
+    if (auto it = s_resolutionCache.constFind(appId); it != s_resolutionCache.constEnd()) {
+        return it.value();
+    }
+
     // 1. Lower-case and strip .desktop
     QString id = stripDesktopSuffix(appId).toLower();
 
     // 2. Apply hardcoded KDE bridge (fast path for common mismatches)
     QString bridged = applyKdeBridge(id);
     if (bridged != id) {
+        s_resolutionCache.insert(appId, bridged);
         return bridged;
     }
 
@@ -32,9 +40,31 @@ QString IdentityManager::normalizeAppId(const QString &appId)
     }
 
     if (service) {
-        return stripDesktopSuffix(service->storageId());
+        QString result = stripDesktopSuffix(service->storageId());
+        s_resolutionCache.insert(appId, result);
+        return result;
     }
 
+    // 4. Flatpak Reverse-DNS Resolver (Fallback for missing short IDs)
+    // Wayland window class might be short (e.g. 'stremio'), but Flatpak is 'com.stremio.Stremio'
+    KService::List all = KService::allServices();
+    for (const auto &srv : all) {
+        if (srv->property<QString>(QStringLiteral("StartupWMClass")).compare(id, Qt::CaseInsensitive) == 0) {
+            QString result = stripDesktopSuffix(srv->storageId());
+            s_resolutionCache.insert(appId, result);
+            return result;
+        }
+    }
+    for (const auto &srv : all) {
+        // Secondary: Match by reverse-DNS suffix (e.g. ends with .stremio.desktop)
+        if (srv->storageId().toLower().endsWith(QLatin1String(".") + id + QLatin1String(".desktop"))) {
+            QString result = stripDesktopSuffix(srv->storageId());
+            s_resolutionCache.insert(appId, result);
+            return result;
+        }
+    }
+
+    s_resolutionCache.insert(appId, id);
     return id;
 }
 

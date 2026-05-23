@@ -5,6 +5,8 @@
 
 #include "krema.h"
 
+#include "utils/debugmanager.h"
+
 #include <QLoggingCategory>
 
 Q_LOGGING_CATEGORY(lcScreenSettings, "krema.config.screen")
@@ -24,16 +26,28 @@ ScreenSettings::ScreenSettings(const QString &screenName, KremaSettings *fallbac
     // When a global setting changes and the per-screen group doesn't override it,
     // we re-emit our signal so the DockShell updates.
     connect(m_fallback, &KremaSettings::IconSizeChanged, this, [this]() {
-        if (!m_group.hasKey(QStringLiteral("IconSize")))
+        if (!m_group.hasKey(QStringLiteral("IconSize"))) {
             Q_EMIT iconSizeChanged();
+        } else {
+            qCWarning(lcConfig).nospace() << "DESYNC BLOCKED: Global 'IconSize' changed, but screen '" << m_screenName << "' is enforcing override '"
+                                          << m_group.readEntry(QStringLiteral("IconSize")) << "'. Update ignored.";
+        }
     });
     connect(m_fallback, &KremaSettings::EdgeChanged, this, [this]() {
-        if (!m_group.hasKey(QStringLiteral("Edge")))
+        if (!m_group.hasKey(QStringLiteral("Edge"))) {
             Q_EMIT edgeChanged();
+        } else {
+            qCWarning(lcConfig).nospace() << "DESYNC BLOCKED: Global 'Edge' changed, but screen '" << m_screenName << "' is enforcing override '"
+                                          << m_group.readEntry(QStringLiteral("Edge")) << "'. Update ignored.";
+        }
     });
     connect(m_fallback, &KremaSettings::VisibilityModeChanged, this, [this]() {
-        if (!m_group.hasKey(QStringLiteral("VisibilityMode")))
+        if (!m_group.hasKey(QStringLiteral("VisibilityMode"))) {
             Q_EMIT visibilityModeChanged();
+        } else {
+            qCWarning(lcConfig).nospace() << "DESYNC BLOCKED: Global 'VisibilityMode' changed, but screen '" << m_screenName
+                                          << "' is enforcing override. Update ignored.";
+        }
     });
     connect(m_fallback, &KremaSettings::BackgroundStyleChanged, this, [this]() {
         if (!m_group.hasKey(QStringLiteral("BackgroundStyle")))
@@ -259,7 +273,35 @@ void ScreenSettings::clearOverrides()
 
 void ScreenSettings::clearOverride(const QString &key)
 {
-    m_group.deleteEntry(key);
+    if (m_group.hasKey(key)) {
+        m_group.deleteEntry(key);
+        qCInfo(lcConfig).nospace() << "Override '" << key << "' cleared for screen '" << m_screenName << "'. Reverting to global fallback.";
+
+        if (key == QStringLiteral("IconSize"))
+            Q_EMIT iconSizeChanged();
+        else if (key == QStringLiteral("Edge"))
+            Q_EMIT edgeChanged();
+        else if (key == QStringLiteral("VisibilityMode"))
+            Q_EMIT visibilityModeChanged();
+        else if (key == QStringLiteral("BackgroundStyle"))
+            Q_EMIT backgroundStyleChanged();
+        else if (key == QStringLiteral("BackgroundOpacity"))
+            Q_EMIT backgroundOpacityChanged();
+        else if (key == QStringLiteral("MaxZoomFactor"))
+            Q_EMIT maxZoomFactorChanged();
+        else if (key == QStringLiteral("Floating"))
+            Q_EMIT floatingChanged();
+        else if (key == QStringLiteral("CornerRadius"))
+            Q_EMIT cornerRadiusChanged();
+        else if (key == QStringLiteral("PanelHeight"))
+            Q_EMIT panelHeightChanged();
+        else if (key == QStringLiteral("SeparatorStyle"))
+            Q_EMIT separatorStyleChanged();
+        else if (key == QStringLiteral("SeparatorOpacity"))
+            Q_EMIT separatorOpacityChanged();
+        else if (key == QStringLiteral("SeparatorWidth"))
+            Q_EMIT separatorWidthChanged();
+    }
 }
 
 void ScreenSettings::save()
@@ -273,8 +315,11 @@ template<typename T>
 T ScreenSettings::readWithFallback(const QString &key, T fallbackValue) const
 {
     if (m_group.hasKey(key)) {
-        return m_group.readEntry(key, fallbackValue);
+        T val = m_group.readEntry(key, fallbackValue);
+        qCDebug(lcConfig).nospace() << "Screen '" << m_screenName << "' resolving '" << key << "' -> OVERRIDE: " << val;
+        return val;
     }
+    qCDebug(lcConfig).nospace() << "Screen '" << m_screenName << "' resolving '" << key << "' -> GLOBAL FALLBACK: " << fallbackValue;
     return fallbackValue;
 }
 
@@ -282,6 +327,7 @@ template<typename T>
 void ScreenSettings::writeOverride(const QString &key, T value)
 {
     m_group.writeEntry(key, value);
+    qCInfo(lcConfig).nospace() << "Override '" << key << "' set to '" << value << "' for screen '" << m_screenName << "'.";
 }
 
 } // namespace krema

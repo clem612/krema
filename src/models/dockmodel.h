@@ -20,6 +20,7 @@ namespace krema
 {
 
 class HyprlandTasksModel;
+class KdeTasksProxyModel;
 
 /**
  * Central model for the dock's task manager section.
@@ -99,6 +100,7 @@ private:
     bool m_isHyprland = false;
     int m_virtualDesktopMode = 0;
     std::unique_ptr<TaskManager::TasksModel> m_kdeTasksModel;
+    std::unique_ptr<KdeTasksProxyModel> m_kdeTasksProxyModel;
     std::unique_ptr<HyprlandTasksModel> m_hyprTasksModel;
     std::shared_ptr<TaskManager::VirtualDesktopInfo> m_virtualDesktopInfo;
     std::shared_ptr<TaskManager::ActivityInfo> m_activityInfo;

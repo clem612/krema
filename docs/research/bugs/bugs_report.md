@@ -323,3 +323,17 @@ This bug was the result of two interconnected race conditions during the rapid `
 1. **QML Mathematical Loop (Fix 1):** Replaced the recursive `itemAt(i).x` layout logic with a stateless summation loop `sum += (iconSize * sc1) ...` that relies only on the universally bound `currentScale`, eliminating the `itemAt` evaluation race.
 2. **Wayland Debouncer (Fix 2):** Implemented a 150ms `QTimer` inside `DockShell` to coalesce slider dragging events, preventing the Wayland compositor from becoming flooded with `setSize` commands.
 3. **Stateless Thickness Evaluation (Fix 3):** Completely stripped the `itemAt(i)` loop from `dockRow._maxIconThickness`. It now calculates the theoretical thickness mathematically and reactively based directly on `DockSettings.iconSize`. This fixed the floating/clipping by ensuring the slot container `y` positions never evaluate with stale dimensions.
+
+---
+
+## 🟢 Bug 32: Auto Hide and Auto Dodge Failures
+**Date:** May 20, 2026
+**Status:** 🟢 Fixed
+**Description:** Auto hide and auto dodge mechanisms are failing to trigger correctly. 
+- On Hyprland, DodgeWindows appears to never hide the dock because overlap detection doesn't have a data source yet.
+- On multi-monitor setups, overlap detection calculates coordinates on the wrong screen (e.g., checking X=0 for a right-side monitor).
+
+## 🟢 Bug 33: Screen Edge Placement (Left/Right)
+**Date:** May 20, 2026
+**Status:** 🟢 Fixed
+**Description:** The dock behaves incorrectly when placed on the Left or Right screen edges. Investigating QML geometry, QWindow anchors, and Wayland LayerShell surface sizing to find the layout desync.
