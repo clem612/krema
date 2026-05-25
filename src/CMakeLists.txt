@@ -44,6 +44,8 @@ add_library(krema_lib STATIC
     style/backgroundstyle.h
     style/backgroundstyle.cpp
 
+    models/baseisland.h
+    models/baseisland.cpp
     models/dockmodel.h
     models/dockmodel.cpp
     models/kdetasksproxymodel.h

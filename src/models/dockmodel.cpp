@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krema Contributors
 
 #include "dockmodel.h"
+#include "baseisland.h"
 #include "hyprlandtasksmodel.h"
 #include "kdetasksproxymodel.h"
 #include "utils/identitymanager.h"
@@ -178,6 +179,8 @@ DockModel::DockModel(QObject *parent)
     connect(model, &QAbstractItemModel::rowsRemoved, this, [model]() {
         qCDebug(lcModel) << "Model rows after remove:" << model->rowCount();
     });
+
+    m_appIsland = std::make_unique<BaseIsland>(QStringLiteral("app-island"), model, this);
 }
 
 DockModel::~DockModel() = default;
@@ -185,6 +188,15 @@ DockModel::~DockModel() = default;
 QAbstractItemModel *DockModel::tasksModel() const
 {
     return m_isHyprland ? static_cast<QAbstractItemModel *>(m_hyprTasksModel.get()) : static_cast<QAbstractItemModel *>(m_kdeTasksProxyModel.get());
+}
+
+QVariantList DockModel::islandsVariant() const
+{
+    QVariantList list;
+    if (m_appIsland) {
+        list.append(QVariant::fromValue(static_cast<QObject *>(m_appIsland.get())));
+    }
+    return list;
 }
 
 TaskManager::TasksModel *DockModel::kdeTasksModel() const

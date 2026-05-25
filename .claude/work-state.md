@@ -44,11 +44,13 @@
 
 ## Active Tasks
 
-- [ ] **M3: 3-Tier Migration:** Migrate current 5-Unit Stack to Panel → Island → Item hierarchy.
+- [x] **M3: 3-Tier Migration:** Migrate current 5-Unit Stack to Panel → Island → Item hierarchy.
 - [ ] **M10 Kickoff:** Design recursive container logic for Widgets (Rule 15).
 
 ## Session History
 
+- **2026-05-25 (Session A):** Resolved **Active Indicator Desync** (Bug #29). Discovered that `KdeTasksProxyModel` filtered out `dataChanged` signals if `IsActive` wasn't explicitly provided in the role list, causing external window activations to fail to update the QML active dot index. Modified the proxy to unconditionally emit `ActiveChildIndexRole` for the parent whenever a child changes. Also implemented **8px internal padding** for `IslandModule` to create a premium spatial separation between the glass pill and the dock panel's external boundary.
+- **2026-05-25 (Session A):** Completed **M3: 3-Tier Migration**. Extracted QML Tier 1 (VisualPanel) and Tier 2 (IslandModule). Maintained Tier 3 (AppIcon) decoupling, ensuring visual overflow (Rule 6). Introduced `BaseIsland` to C++ `DockModel`. Implemented surgical QML alias forwarding (`_currentDockRepeater`) to preserve legacy Parabolic Zoom math while isolating structural tiers.
 - **2026-05-23 (Session B):** Applied the Surgical Bug-Fix Protocol to resolve **Bug #28**. Discovered that the user's `hyprland-lua-plugins` extension intercepts standard `/dispatch closewindow address:` IPC socket commands. Added a fallback branch in `HyprlandIpc` that intercepts the Lua error and dynamically rewrites the socket string to `hl.dsp.window.close()`, successfully restoring the "Close" context menu action.
 - **2026-05-23 (Session A):** Discovered that vector-based Flatpak icons (SVGs) were failing to render because they report an empty `availableSizes()` before rendering. Removed the strict check in the image bridge to pass SVGs successfully to QML.
 - **2026-05-23 (Session A):** Updated the **Flatpak Identity Resolver** with extreme fuzzy suffix matching. Stripped spaces and dashes completely to match edge cases like `"aim train"` vs `io.gitlab.aimtrain.aimtrain.svg`.

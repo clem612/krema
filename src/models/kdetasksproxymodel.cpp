@@ -65,16 +65,18 @@ QHash<int, QByteArray> KdeTasksProxyModel::roleNames() const
 
 void KdeTasksProxyModel::onSourceDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QList<int> &roles)
 {
-    if (roles.isEmpty() || roles.contains(TaskManager::AbstractTasksModel::IsActive)) {
-        // If a child's active state changes, we must notify QML that the parent's ActiveChildIndexRole changed
-        if (topLeft.parent().isValid()) {
-            QModelIndex parent = topLeft.parent();
-            QModelIndex proxyParent = mapFromSource(parent);
-            if (proxyParent.isValid()) {
-                Q_EMIT dataChanged(proxyParent, proxyParent, {ActiveChildIndexRole});
-            }
-        } else {
-            // It could be a top-level single window changing state
+    // Always notify the parent that ActiveChildIndex might have changed.
+    // The window manager might activate a window and trigger a dataChanged event
+    // without explicitly including TaskManager::AbstractTasksModel::IsActive in the roles list.
+    if (topLeft.parent().isValid()) {
+        QModelIndex parent = topLeft.parent();
+        QModelIndex proxyParent = mapFromSource(parent);
+        if (proxyParent.isValid()) {
+            Q_EMIT dataChanged(proxyParent, proxyParent, {ActiveChildIndexRole});
+        }
+    } else {
+        // If it's a top-level single window changing state
+        if (roles.isEmpty() || roles.contains(TaskManager::AbstractTasksModel::IsActive)) {
             QModelIndex proxyTop = mapFromSource(topLeft);
             QModelIndex proxyBottom = mapFromSource(bottomRight);
             if (proxyTop.isValid() && proxyBottom.isValid()) {

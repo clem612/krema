@@ -54,3 +54,19 @@ Add a Lua fallback branch inside `HyprlandIpc::dispatch` for `closewindow`. If t
 
 **Verification:**
 Tested the exact IPC fallback command natively via a Python socket script on a dummy application window. Confirmed the Lua dispatch correctly resolves and successfully closes the window without crashing the dock or Hyprland.
+
+## [2026-05-25] Bug #29: Active Indicator Fails to Update on External Window Focus
+
+**Status:** 🟢 Fixed
+
+**Symptoms:**
+When scrolling on an application icon in the dock, the active window indicator (dash/dot) updates correctly to reflect the cycled window. However, when clicking on a window externally (e.g., via the window manager or Alt+Tab), the indicator fails to update to reflect the newly active window instance.
+
+**Root Cause (Proxy Model DataChanged Filter):**
+`KdeTasksProxyModel::onSourceDataChanged` was designed to only emit an `ActiveChildIndexRole` update if `TaskManager::AbstractTasksModel::IsActive` was explicitly present in the `roles` list provided by the KDE backend. When a window is activated externally, the window manager sometimes emits a generic state change without explicitly populating the `roles` list with `IsActive`. As a result, the QML indicator was starved of data binding updates. 
+
+**The Proposal & Fix:**
+Modified `KdeTasksProxyModel::onSourceDataChanged` to unconditionally emit `dataChanged` for `ActiveChildIndexRole` against the parent application group whenever ANY child window emits a data change. Since computing `ActiveChildIndex` is computationally cheap, it guarantees the QML frontend is always perfectly synchronized with the true active window state, completely bypassing the backend's inconsistent role-list population.
+
+**Verification:**
+Verified that QML bindings for `activeDotIndex` now fire correctly regardless of whether the window was activated internally via `DockActions::cycleWindows` or externally via the window manager.

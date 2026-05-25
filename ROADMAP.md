@@ -18,7 +18,7 @@
 - [x] **M1.1: Visual Styles Protocol:** Implement the foundation for Adaptive, Tinted, Acrylic, and Mica backgrounds (compositor-agnostic shaders).
 - [x] **M2: Core Dock Shell (C++):** Implement base Wayland surface and Protocol Abstraction (`IProtocol`) supporting both KWin and Hyprland (via Layer-Shell).
 - [x] **M2.1: Universal Attention Engine:** Implement the four-level urgency system with cross-platform triggers (MPRIS, LibTaskManager/Hyprland IPC, Unity Entry) and Rule 16 animations.
-- [ ] **M3: 3-Tier Mathematical Engine:** Implement the recursive Panel -> Island -> Item hierarchy with Direct Recursive Repulsion and Proportional Gaps (Rules 1-10). `[CURRENT: 5-Unit Stack implemented — migration to 3-Tier pending]`
+- [x] **M3: 3-Tier Mathematical Engine:** Implement the recursive Panel -> Island -> Item hierarchy with Direct Recursive Repulsion and Proportional Gaps (Rules 1-10).
 - [ ] **M4: Rendering & Animation Pipeline:** Setup QRhi-based rendering pipeline with support for visual overflow (Rule 6) and integrated Easing/Animation primitives (Rule 16).
 - [x] **M5: Geometry Debugging:** Implement `--debug-geom` for real-time verification of all layout mandates.
 - [x] **M5.1: Task Manager & Pinning Engine:** Implement AppIsland logic using `ITaskProvider` abstraction (KWin/Plasma via LibTaskManager and Hyprland via IPC).

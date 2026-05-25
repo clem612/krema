@@ -12,12 +12,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Hyprland Support Foundation:** Introduced `HyprlandDockPlatform` to enable Krema to run on Hyprland sessions. This implementation uses standard layer-shell protocols for positioning while bypassing KWin-specific effects, ensuring architectural stability on non-KDE compositors.
 - **Dev-Autostart & Environment Injection:**
  Updated `justfile` to generate a development autostart entry (`~/.config/autostart/`) that synchronizes with the `just run` environment. Both the development launcher and autostart now inject `XDG_DATA_DIRS` and `QT_PLUGIN_PATH` into their `Exec` lines, ensuring local plugins and themes load correctly upon login.
+- **Island Internal Padding:** Introduced 8px internal padding to the IslandModule, completely decoupling the Island's glass pill border from the main Panel's external boundary to achieve a more premium spatial layout without breaking zoom logic.
 
 ### Fixed
 - **Preview Geometry Sync:** Resolved "Altitude Confusion" via Absolute Sync, ensuring window preview thumbnails and vertical offsets are perfectly synchronized with zoomed icons.
 - **Flatpak Vector Icon Rendering:** Removed strict available sizes checks that incorrectly discarded valid SVGs, enabling perfect rendering of Flatpak vector graphics.
 - **Fuzzy Flatpak Identity Resolver:** Updated the suffix matching algorithm to aggressively strip spaces and dashes, resolving edge cases where Wayland window classes (e.g., "aim train") mismatched their Flatpak identifiers.
 - **Lua IPC Interception Bypass:** Resolved Hyprland context menu "Close" failure by implementing a dynamic fallback that rewrites raw socket dispatches to `hl.dsp.window.close()` when the `hyprland-lua-plugins` extension is active.
+- **Active Indicator Desync:** Fixed an issue where the active window indicator failed to update when windows were focused externally (e.g. via Alt+Tab or window manager). The data model now guarantees a forced evaluation whenever a child's state changes.
 
 
 ## [0.8.0] - 2026-05-12

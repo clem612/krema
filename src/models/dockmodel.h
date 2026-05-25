@@ -21,6 +21,7 @@ namespace krema
 
 class HyprlandTasksModel;
 class KdeTasksProxyModel;
+class BaseIsland;
 
 /**
  * Central model for the dock's task manager section.
@@ -36,6 +37,7 @@ class DockModel : public QObject
     Q_PROPERTY(QStringList pinnedLaunchers READ pinnedLaunchers WRITE setPinnedLaunchers NOTIFY pinnedLaunchersChanged)
     Q_PROPERTY(int virtualDesktopMode READ virtualDesktopMode WRITE setVirtualDesktopMode NOTIFY virtualDesktopModeChanged)
     Q_PROPERTY(QVariant currentDesktop READ currentDesktop NOTIFY currentDesktopChanged)
+    Q_PROPERTY(QVariantList islandsVariant READ islandsVariant NOTIFY islandsChanged)
 
 public:
     Q_INVOKABLE QString iconName(int index) const;
@@ -55,6 +57,7 @@ public:
     void setVirtualDesktopMode(int mode);
 
     [[nodiscard]] QVariant currentDesktop() const;
+    [[nodiscard]] QVariantList islandsVariant() const;
 
     /// Check if the task at @p index is on the current virtual desktop.
     Q_INVOKABLE bool isOnCurrentDesktop(int index) const;
@@ -95,6 +98,7 @@ Q_SIGNALS:
     void pinnedLaunchersChanged();
     void virtualDesktopModeChanged();
     void currentDesktopChanged();
+    void islandsChanged();
 
 private:
     bool m_isHyprland = false;
@@ -104,6 +108,7 @@ private:
     std::unique_ptr<HyprlandTasksModel> m_hyprTasksModel;
     std::shared_ptr<TaskManager::VirtualDesktopInfo> m_virtualDesktopInfo;
     std::shared_ptr<TaskManager::ActivityInfo> m_activityInfo;
+    std::unique_ptr<BaseIsland> m_appIsland;
 };
 
 } // namespace krema

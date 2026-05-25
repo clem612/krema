@@ -6,6 +6,7 @@ import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
 import org.kde.taskmanager as TaskManager
 import com.bhyoo.krema 1.0
+import "components"
 
 /**
  * Main dock container.
@@ -27,6 +28,11 @@ Item {
     readonly property bool _debugHit: _debugAll || Qt.application.arguments.indexOf("--debug-hit") !== -1
     readonly property bool _debugZoom: _debugAll || Qt.application.arguments.indexOf("--debug-zoom") !== -1
     readonly property bool _debugNotif: _debugAll || Qt.application.arguments.indexOf("--debug-notif") !== -1
+
+    // --- Phase 2: Tier 2 Island Alias Functions ---
+    property var _currentDockRepeater: null
+    property int appIconCount: _currentDockRepeater ? _currentDockRepeater.count : 0
+    function getAppIcon(index) { return _currentDockRepeater ? _currentDockRepeater.itemAt(index) : null }
 
     // State Tracking: Monitor zoom slider changes
     Connections {
@@ -94,16 +100,16 @@ Item {
                     let targetIsPinned = DockModel.isPinned(root._dragTargetIndex);
                     let finalTarget = root._dragTargetIndex;
                     if (sourceIsPinned && !targetIsPinned) {
-                        for (let i = dockRepeater.count - 1; i >= 0; i--) {
+                        for (let i = appIconCount - 1; i >= 0; i--) {
                             if (DockModel.isPinned(i)) { finalTarget = i; break; }
                         }
                     } else if (!sourceIsPinned && targetIsPinned) {
-                        for (let i = 0; i < dockRepeater.count; i++) {
+                        for (let i = 0; i < appIconCount; i++) {
                             if (!DockModel.isPinned(i)) { finalTarget = i; break; }
                         }
                     }
                     if (finalTarget !== root._dragSourceIndex) {
-                        let item = dockRepeater.itemAt(root._dragSourceIndex);
+                        let item = getAppIcon(root._dragSourceIndex);
                         let name = item ? item.displayName : "";
                         DockActions.moveTask(root._dragSourceIndex, finalTarget);
                         Accessible.announce(i18n("Moved %1 to position %2", name, finalTarget + 1), Accessible.Polite);
@@ -142,7 +148,7 @@ Item {
         onWheel: function(wheel) {
             if (root.hoveredIndex < 0) return
             
-            let item = dockRepeater.itemAt(root.hoveredIndex)
+            let item = getAppIcon(root.hoveredIndex)
             if (!item || !item.model || !item.model.IsWindow) return
             
             if (_debugHit) {
@@ -170,14 +176,14 @@ Item {
             let iconSize = DockView.screenSettings.iconSize
             let spacing = DockSettings.iconSpacing
             let slotSize = iconSize + spacing
-            let totalUnscaled = (dockRepeater.count * slotSize) - spacing
+            let totalUnscaled = (appIconCount * slotSize) - spacing
             let centerPos = (DockView.isVertical ? root.height : root.width) / 2
             let unscaledStart = centerPos - (totalUnscaled / 2)
 
             // --- Interaction Orbit (Rule 3 & 17) ---
             // The orbit is anchored to the visual center of the icons, 
             // ensuring hit-testing matches visual pixels exactly.
-            let sample = dockRepeater.itemAt(0)
+            let sample = getAppIcon(0)
             let floorUnits = sample ? sample._unitIconBaseOffset : 0
             let unitCenter = floorUnits + (iconSize / 2)
             
@@ -236,8 +242,8 @@ Item {
             let hitIndex = -1;
             let mPos = DockView.isVertical ? mouse.y : mouse.x;
 
-            for (let i = 0; i < dockRepeater.count; i++) {
-                let item = dockRepeater.itemAt(i);
+            for (let i = 0; i < appIconCount; i++) {
+                let item = getAppIcon(i);
                 if (!item) continue;
 
                 let unscaledCenter = unscaledStart + (i * slotSize) + (iconSize / 2);
@@ -265,7 +271,7 @@ Item {
             if (hitIndex >= 0) {
                 if (root.hoveredIndex !== hitIndex) {
                     root.hoveredIndex = hitIndex;
-                    root.hoveredName = dockRepeater.itemAt(hitIndex).displayName;
+                    root.hoveredName = getAppIcon(hitIndex).displayName;
                     tooltipTimer.restart();
                 }
             } else {
@@ -323,9 +329,9 @@ Item {
     // unlike the old approach which used unzoomed grid positions.
     function updateZoomFactors() {
         let maxZoom = 1.0 + (DockView.screenSettings.maxZoomFactor - 1.0) * root._zoomIntensity
-        if (maxZoom <= 1.0 || dockRepeater.count === 0) {
-            for (let i = 0; i < dockRepeater.count; i++) {
-                let item = dockRepeater.itemAt(i)
+        if (maxZoom <= 1.0 || appIconCount === 0) {
+            for (let i = 0; i < appIconCount; i++) {
+                let item = getAppIcon(i)
                 if (item) item.zoomFactor = 1.0
             }
             return
@@ -335,8 +341,8 @@ Item {
         let sigma2 = sigma * sigma
         let mPos = dockPanel.mouseX
 
-        for (let i = 0; i < dockRepeater.count; i++) {
-            let item = dockRepeater.itemAt(i)
+        for (let i = 0; i < appIconCount; i++) {
+            let item = getAppIcon(i)
             if (!item) continue
 
             // Compute icon's actual visual center in root coordinates
@@ -362,9 +368,9 @@ Item {
         keyboardNavigating = true
         tooltipTimer.stop()
         tooltipItem.show = false
-        if (dockRepeater.count > 0) {
+        if (appIconCount > 0) {
             if (hoveredIndex < 0) hoveredIndex = 0
-            let item = dockRepeater.itemAt(hoveredIndex)
+            let item = getAppIcon(hoveredIndex)
             if (item) {
                 dockPanel.mouseX = item.itemCenterX
                 dockPanel.mouseY = dockRow.y + item.height / 2
@@ -395,15 +401,15 @@ Item {
 
     function navigateItem(delta) {
         keyboardNavigating = true
-        let count = dockRepeater.count
+        let count = appIconCount
         if (count === 0) return
         if (hoveredIndex < 0) {
             hoveredIndex = delta > 0 ? 0 : count - 1
         } else {
             hoveredIndex = Math.max(0, Math.min(count - 1, hoveredIndex + delta))
         }
-        hoveredName = dockRepeater.itemAt(hoveredIndex)?.displayName ?? ""
-        let item = dockRepeater.itemAt(hoveredIndex)
+        hoveredName = getAppIcon(hoveredIndex)?.displayName ?? ""
+        let item = getAppIcon(hoveredIndex)
         if (item) {
             dockPanel.mouseX = item.itemCenterX
             dockPanel.mouseY = dockRow.y + item.height / 2
@@ -449,7 +455,7 @@ Item {
             if (hoveredIndex >= 0) {
                 let idx = DockModel.tasksModel.index(hoveredIndex, 0)
                 if (DockModel.tasksModel.data(idx, TaskManager.AbstractTasksModel.IsWindow)) {
-                    let item = dockRepeater.itemAt(hoveredIndex)
+                    let item = getAppIcon(hoveredIndex)
                     if (item) {
                         let globalPos = item.mapToGlobal(0, 0)
                         PreviewController.showPreview(hoveredIndex, globalPos.x, globalPos.y, item.width, item.height)
@@ -488,8 +494,8 @@ Item {
     function computeDropIndex(globalMousePos) {
         let panelRel = globalMousePos - (DockView.isVertical ? dockPanel.y : dockPanel.x)
         let items = []
-        for (let i = 0; i < dockRepeater.count; i++) {
-            let item = dockRepeater.itemAt(i)
+        for (let i = 0; i < appIconCount; i++) {
+            let item = getAppIcon(i)
             if (item) items.push({ idx: i, cx: (DockView.isVertical ? item.y + item.height/2 : item.x + item.width/2) + (DockView.isVertical ? dockRow.y : dockRow.x) })
         }
         if (items.length === 0) return -1
@@ -502,8 +508,8 @@ Item {
     }
 
     function computeExternalDropIndex(dropX) {
-        for (let i = 0; i < dockRepeater.count; i++) {
-            let item = dockRepeater.itemAt(i)
+        for (let i = 0; i < appIconCount; i++) {
+            let item = getAppIcon(i)
             if (item && dropX >= dockRow.x + item.x && dropX <= dockRow.x + item.x + item.width) return i
         }
         return -1
@@ -524,10 +530,10 @@ Item {
     function traceHitTest(mX_abs, mY_abs) {
         let mPos = DockView.isVertical ? mY_abs : mX_abs
         let iconSize = DockView.screenSettings.iconSize, spacing = DockSettings.iconSpacing, slot = iconSize + spacing
-        let totalUnscaled = (dockRepeater.count * slot) - spacing
+        let totalUnscaled = (appIconCount * slot) - spacing
         let unscaledStart = (DockView.isVertical ? root.height : root.width) / 2 - (totalUnscaled / 2)
-        for (let i = 0; i < dockRepeater.count; i++) {
-            let item = dockRepeater.itemAt(i)
+        for (let i = 0; i < appIconCount; i++) {
+            let item = getAppIcon(i)
             if (!item) continue
             let unscaledCenter = unscaledStart + (i * slot) + (iconSize / 2)
             let zoomedSize = iconSize * item.currentScale
@@ -599,13 +605,13 @@ Item {
     }
 
     // --- Layer 0: Main Dock Panel (Visual container) ---
-    Rectangle {
+    VisualPanel {
         id: dockPanel
         visible: opacity > 0.01
 
         // --- Placement: visualIconTop (Absolute boundary used to align window previews) ---
         readonly property real visualIconTop: {
-            let sample = dockRepeater.itemAt(0)
+            let sample = getAppIcon(0)
             let floorUnits = sample ? sample._unitIconBaseOffset : 0
             
             // Current visual icon height = unzoomedSize * (1.0 + zoomAmount)
@@ -615,7 +621,7 @@ Item {
         }
         // --- Placement: currentVisualOverflow (Dynamic visual territory for surface sizing) ---
         property real currentVisualOverflow: {
-            let sample = dockRepeater.itemAt(0)
+            let sample = getAppIcon(0)
             let floorUnits = sample ? sample._unitIconBaseOffset : 0
             
             // --- Dynamic Overflow (Bug #7 Fix) ---
@@ -637,18 +643,10 @@ Item {
         property real _actualContentWidth: Math.max(dockRow.implicitWidth + 32, Kirigami.Units.gridUnit * 6)
         property real _actualContentHeight: Math.max(dockRow.implicitHeight + 32, Kirigami.Units.gridUnit * 6)
         
-        width: !DockView.isVertical ? _actualContentWidth : Math.min(DockView.screenSettings.panelHeight, dockRow.implicitWidth)
-        height: DockView.isVertical ? _actualContentHeight : Math.min(DockView.screenSettings.panelHeight, dockRow.implicitHeight)
+        width: !DockView.isVertical ? _actualContentWidth : (dockRow.implicitWidth + 16)
+        height: DockView.isVertical ? _actualContentHeight : (dockRow.implicitHeight + 16)
         radius: Math.min(DockView.screenSettings.cornerRadius, Math.min(width, height) / 2)
-        color: {
-            let style = DockView.screenSettings.backgroundStyle
-            if (style === 3 || style === 4) return "transparent" // Acrylic or Mica (handled by shaders)
-            if (style === 1) return "transparent" // Transparent
-            let c = (style === 2 && !DockSettings.useSystemColor) ? Qt.color(DockSettings.tintColor) : DockView.backgroundColor
-            return Qt.rgba(c.r, c.g, c.b, DockView.screenSettings.backgroundOpacity)
-        }
-        border.color: DockSettings.rimLightEnabled ? Qt.rgba(1, 1, 1, DockSettings.rimLightOpacity) : "transparent"
-        border.width: DockSettings.rimLightEnabled ? 1 : 0
+        
         x: DockView.isVertical ? _panelEdgePos : (parent.width - width) / 2
         y: DockView.isVertical ? (parent.height - height) / 2 : _panelEdgePos
         // --- Derived: _screenFlooring (External distance from screen edge to panel) ---
@@ -683,18 +681,6 @@ Item {
             }
         }
 
-        ShaderEffect {
-            id: acrylicShader; anchors.fill: parent; z: 0; visible: DockView.screenSettings.backgroundStyle === 3 || DockView.screenSettings.backgroundStyle === 4
-            property color _activeTint: {
-                if (DockView.screenSettings.backgroundStyle === 4) return Kirigami.Theme.highlightColor // Mica uses accent
-                return (DockView.screenSettings.backgroundStyle === 3 && !DockSettings.useSystemColor) ? Qt.color(DockSettings.tintColor) : DockView.backgroundColor
-            }
-            property real tintR: _activeTint.r; property real tintG: _activeTint.g; property real tintB: _activeTint.b; property real tintOpacity: DockView.screenSettings.backgroundStyle === 4 ? 0.3 : DockView.screenSettings.backgroundOpacity
-            property real noiseStrength: DockView.screenSettings.backgroundStyle === 4 ? 0.05 : 0.02
-            property real resX: width; property real resY: height; property real cornerRadius: dockPanel.radius
-            fragmentShader: "qrc:/qml/shaders/acrylic_overlay.frag.qsb"
-        }
-
         Component.onCompleted: Qt.callLater(function() {
             updateWaylandInputRegion()
             if (DockVisibility) DockVisibility.setContentDimensions(dockRow.implicitWidth, dockRow.implicitHeight)
@@ -709,23 +695,23 @@ Item {
             property int layoutTrigger: 0
 
             Connections {
-                target: dockRepeater
+                target: root._currentDockRepeater
                 function onItemAdded() { Qt.callLater(() => dockRow.layoutTrigger++) }
                 function onItemRemoved() { Qt.callLater(() => dockRow.layoutTrigger++) }
             }
 
             // Rule 15 & 16: Content dimensions account for dynamic expansion.
             // [STABILITY]: We use a stable base width to prevent startup "Identity Crisis" gaps.
-            readonly property real baseWidth: (dockRepeater.count === 0) ? 0 : (dockRepeater.count * (DockView.screenSettings.iconSize + baseSpacing)) - baseSpacing
-            readonly property real baseHeight: (dockRepeater.count === 0) ? 0 : (dockRepeater.count * (DockView.screenSettings.iconSize + baseSpacing)) - baseSpacing
+            readonly property real baseWidth: (appIconCount === 0) ? 0 : (appIconCount * (DockView.screenSettings.iconSize + baseSpacing)) - baseSpacing
+            readonly property real baseHeight: (appIconCount === 0) ? 0 : (appIconCount * (DockView.screenSettings.iconSize + baseSpacing)) - baseSpacing
 
             implicitWidth: {
                 let dummy = layoutTrigger
-                return DockView.isVertical ? _maxIconThickness : Math.max(baseWidth, (dockRepeater.count === 0 ? 0 : (dockRepeater.itemAt(dockRepeater.count-1)?.x + dockRepeater.itemAt(dockRepeater.count-1)?.width || 0)))
+                return DockView.isVertical ? _maxIconThickness : Math.max(baseWidth, (appIconCount === 0 ? 0 : (getAppIcon(appIconCount-1)?.x + getAppIcon(appIconCount-1)?.width || 0)))
             }
             implicitHeight: {
                 let dummy = layoutTrigger
-                return !DockView.isVertical ? _maxIconThickness : Math.max(baseHeight, (dockRepeater.count === 0 ? 0 : (dockRepeater.itemAt(dockRepeater.count-1)?.y + dockRepeater.itemAt(dockRepeater.count-1)?.height || 0)))
+                return !DockView.isVertical ? _maxIconThickness : Math.max(baseHeight, (appIconCount === 0 ? 0 : (getAppIcon(appIconCount-1)?.y + getAppIcon(appIconCount-1)?.height || 0)))
             }
             // FIX: Removed `itemAt(i)` loop which caused stale values and floating icons during resize!
             readonly property real _maxIconThickness: {
@@ -737,15 +723,25 @@ Item {
             }
             onImplicitWidthChanged: if (DockVisibility) DockVisibility.setContentDimensions(implicitWidth, implicitHeight)
             onImplicitHeightChanged: if (DockVisibility) DockVisibility.setContentDimensions(implicitWidth, implicitHeight)
-            x: DockView.isVertical ? ((DockView.edge === 2) ? 0 : (dockPanel.width - implicitWidth)) : (dockPanel.width - implicitWidth) / 2
-            y: !DockView.isVertical ? ((DockView.edge === 0) ? 0 : (dockPanel.height - implicitHeight)) : (dockPanel.height - implicitHeight) / 2
+            x: (dockPanel.width - implicitWidth) / 2
+            y: (dockPanel.height - implicitHeight) / 2
 
             Repeater {
-                id: dockRepeater; model: DockModel.tasksModel
+                id: islandRepeater
+                model: DockModel.islandsVariant
+                
+                IslandModule {
+                    id: currentIsland
+                    islandData: modelData
+
+                    Repeater {
+                        id: dockRepeater
+                        model: currentIsland.islandData.tasksModel
+                        Component.onCompleted: root._currentDockRepeater = dockRepeater
                 AppIcon {
                     // --- Interaction: virtualCenter (The mathematical center of a slot per Rule 3) ---
                     readonly property real virtualCenter: {
-                        let slot = iconSize + dockRow.baseSpacing, total = (dockRepeater.count * slot) - dockRow.baseSpacing
+                        let slot = iconSize + dockRow.baseSpacing, total = (appIconCount * slot) - dockRow.baseSpacing
                         let start = (DockView.isVertical ? root.height : root.width) / 2 - (total / 2)
                         return start + (index * slot) + (iconSize / 2)
                     }
@@ -766,8 +762,8 @@ Item {
                         
                         let sum = 0
                         for (let j = 0; j < index; j++) {
-                            let it1 = dockRepeater.itemAt(j)
-                            let it2 = dockRepeater.itemAt(j+1)
+                            let it1 = getAppIcon(j)
+                            let it2 = getAppIcon(j+1)
                             let sc1 = it1 ? it1.currentScale : 1.0
                             let sc2 = it2 ? it2.currentScale : 1.0
                             sum += (iconSize * sc1) + (dockRow.baseSpacing * (sc1 + sc2) / 2)
@@ -784,8 +780,8 @@ Item {
                         
                         let sum = 0
                         for (let j = 0; j < index; j++) {
-                            let it1 = dockRepeater.itemAt(j)
-                            let it2 = dockRepeater.itemAt(j+1)
+                            let it1 = getAppIcon(j)
+                            let it2 = getAppIcon(j+1)
                             let sc1 = it1 ? it1.currentScale : 1.0
                             let sc2 = it2 ? it2.currentScale : 1.0
                             sum += (iconSize * sc1) + (dockRow.baseSpacing * (sc1 + sc2) / 2)
@@ -805,6 +801,8 @@ Item {
                     isExternalDropTarget: externalDropArea.containsDrag && externalDropArea.dropTargetIndex === index
                 }
             }
+            } // End IslandModule
+            } // End islandRepeater
         }
 
         Item {
@@ -835,8 +833,8 @@ Item {
                     let slotSize = DockView.screenSettings.iconSize + dockRow.baseSpacing
                     return Math.round(DockView.isVertical ? dockRow.x + (dockRow.implicitWidth - width) / 2 : dockRow.x + (boundaryIndex * slotSize) + DockView.screenSettings.iconSize + (dockRow.baseSpacing / 2) - (width / 2))
                 }
-                let i = dockRepeater.itemAt(boundaryIndex)
-                let n = dockRepeater.itemAt(boundaryIndex + 1)
+                let i = getAppIcon(boundaryIndex)
+                let n = getAppIcon(boundaryIndex + 1)
                 if (!i || !n) return 0
                 let g = dockRow.baseSpacing * (i.currentScale + n.currentScale) / 2
                 return Math.round(DockView.isVertical ? dockRow.x + (dockRow.implicitWidth - width) / 2 : dockRow.x + i.x + i.width + (g / 2) - (width / 2))
@@ -848,8 +846,8 @@ Item {
                     let slotSize = DockView.screenSettings.iconSize + dockRow.baseSpacing
                     return Math.round(DockView.isVertical ? dockRow.y + (boundaryIndex * slotSize) + DockView.screenSettings.iconSize + (dockRow.baseSpacing / 2) - (height / 2) : dockRow.y + (dockRow.implicitHeight - height) / 2)
                 }
-                let i = dockRepeater.itemAt(boundaryIndex)
-                let n = dockRepeater.itemAt(boundaryIndex + 1)
+                let i = getAppIcon(boundaryIndex)
+                let n = getAppIcon(boundaryIndex + 1)
                 if (!i || !n) return 0
                 let g = dockRow.baseSpacing * (i.currentScale + n.currentScale) / 2
                 return Math.round(DockView.isVertical ? dockRow.y + i.y + i.height + (g / 2) - (height / 2) : dockRow.y + (dockRow.implicitHeight - height) / 2)
@@ -899,14 +897,14 @@ Item {
     Rectangle {
         id: dropIndicator; Accessible.ignored: true; visible: root._dragActive && root._dragTargetIndex >= 0 && root._dragTargetIndex !== root._dragSourceIndex
         width: DockView.isVertical ? DockView.screenSettings.iconSize : 2; height: DockView.isVertical ? 2 : DockView.screenSettings.iconSize; color: Kirigami.Theme.highlightColor; radius: 1; z: 150
-        x: { if(!visible||root._dragTargetIndex<0) return 0; if(DockView.isVertical) return dockPanel.x+dockRow.x; let t=dockRepeater.itemAt(root._dragTargetIndex); if(!t) return 0; let ix=dockPanel.x+dockRow.x+t.x; return root._dragTargetIndex>root._dragSourceIndex ? ix+t.width+DockSettings.iconSpacing/2-1 : ix-DockSettings.iconSpacing/2-1 }
-        y: { if(!visible||root._dragTargetIndex<0) return 0; if(!DockView.isVertical) return dockPanel.y+dockRow.y; let t=dockRepeater.itemAt(root._dragTargetIndex); if(!t) return 0; let iy=dockPanel.y+dockRow.y+t.y; return root._dragTargetIndex>root._dragSourceIndex ? iy+t.height+DockSettings.iconSpacing/2-1 : iy-DockSettings.iconSpacing/2-1 }
+        x: { if(!visible||root._dragTargetIndex<0) return 0; if(DockView.isVertical) return dockPanel.x+dockRow.x; let t=getAppIcon(root._dragTargetIndex); if(!t) return 0; let ix=dockPanel.x+dockRow.x+t.x; return root._dragTargetIndex>root._dragSourceIndex ? ix+t.width+DockSettings.iconSpacing/2-1 : ix-DockSettings.iconSpacing/2-1 }
+        y: { if(!visible||root._dragTargetIndex<0) return 0; if(!DockView.isVertical) return dockPanel.y+dockRow.y; let t=getAppIcon(root._dragTargetIndex); if(!t) return 0; let iy=dockPanel.y+dockRow.y+t.y; return root._dragTargetIndex>root._dragSourceIndex ? iy+t.height+DockSettings.iconSpacing/2-1 : iy-DockSettings.iconSpacing/2-1 }
     }
 
     Connections {
         target: DockActions
         function onTaskLaunching(index) {
-            let it = dockRepeater.itemAt(index); if(!it) return; root.announceLaunch(it.displayName)
+            let it = getAppIcon(index); if(!it) return; root.announceLaunch(it.displayName)
             if(it.model.IsWindow) it.manualLaunching = true
         }
     }
@@ -936,7 +934,7 @@ Item {
             return
         }
 
-        let it = dockRepeater.itemAt(root.hoveredIndex)
+        let it = getAppIcon(root.hoveredIndex)
         if (!it) {
             KremaDebug.preview("FAILED: Item at index " + root.hoveredIndex + " is NULL")
             return
@@ -958,7 +956,7 @@ Item {
     // Reactively follow the hovered icon's visual expansion.
     // This handles both mouse-driven zoom and kinetic animation cycles.
     Connections {
-        target: (root.hoveredIndex >= 0) ? dockRepeater.itemAt(root.hoveredIndex) : null
+        target: (root.hoveredIndex >= 0) ? getAppIcon(root.hoveredIndex) : null
         ignoreUnknownSignals: true
         function onVisualIconYChanged() { root.updatePreviewGeometry() }
         function onVisualIconXChanged() { root.updatePreviewGeometry() }
@@ -983,8 +981,8 @@ Item {
         // --- Absolute Sync: Tooltip Alignment (Rule 17) ---
         // Labels now track the VISUAL pixels of zoomed icons, not just the static grid slot.
         x: {
-            if (root.hoveredIndex < 0 || root.hoveredIndex >= dockRepeater.count) return 0
-            let it = dockRepeater.itemAt(root.hoveredIndex)
+            if (root.hoveredIndex < 0 || root.hoveredIndex >= appIconCount) return 0
+            let it = getAppIcon(root.hoveredIndex)
             if (!it) return 0
             let sp = Kirigami.Units.mediumSpacing
             
@@ -996,8 +994,8 @@ Item {
             return absX + vW/2 - width/2 // Top/Bottom: centered horizontally
         }
         y: {
-            if (root.hoveredIndex < 0 || root.hoveredIndex >= dockRepeater.count) return 0
-            let it = dockRepeater.itemAt(root.hoveredIndex)
+            if (root.hoveredIndex < 0 || root.hoveredIndex >= appIconCount) return 0
+            let it = getAppIcon(root.hoveredIndex)
             if (!it) return 0
             let sp = Kirigami.Units.mediumSpacing
             
