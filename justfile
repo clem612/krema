@@ -21,7 +21,7 @@ test:
 
 # Run with optional flags: e.g., just run "--debug-geom"
 run *args: build
-    XDG_DATA_DIRS="$HOME/.local/share:/usr/local/share:/usr/share${XDG_DATA_DIRS:+:${XDG_DATA_DIRS}}" QT_PLUGIN_PATH="/usr/lib/qt6/plugins${QT_PLUGIN_PATH:+:${QT_PLUGIN_PATH}}" ./build/dev/bin/krema {{args}}
+    XDG_DATA_DIRS="$HOME/.local/share:/usr/local/share:/usr/share${XDG_DATA_DIRS:+:${XDG_DATA_DIRS}}" QT_PLUGIN_PATH="/usr/lib/qt6/plugins${QT_PLUGIN_PATH:+:${QT_PLUGIN_PATH}}" kstart -- "$PWD/build/dev/bin/krema" {{args}}
 
 format:
     ninja -C build/dev clang-format
