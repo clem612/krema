@@ -17,7 +17,7 @@ Item {
     height: implicitHeight
 
     implicitWidth: DockView.isVertical ? parent.width : container.implicitWidth + 16
-    implicitHeight: DockView.isVertical ? container.implicitHeight + 16 : parent.height
+    implicitHeight: DockView.isVertical ? container.implicitHeight + 16 : container.implicitHeight
 
     x: DockView.isVertical ? 0 : -8
     y: DockView.isVertical ? -8 : 0

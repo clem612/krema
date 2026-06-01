@@ -722,15 +722,16 @@ Item {
             }
             onImplicitWidthChanged: if (DockVisibility) DockVisibility.setContentDimensions(implicitWidth, implicitHeight)
             onImplicitHeightChanged: if (DockVisibility) DockVisibility.setContentDimensions(implicitWidth, implicitHeight)
+            readonly property real _panelInternalMargin: 8
             x: {
                 if (DockView.isVertical) {
-                    return (dockPanel.width - implicitWidth) / 2
+                    return DockView.edge === 2 ? _panelInternalMargin : (dockPanel.width - implicitWidth - _panelInternalMargin)
                 }
                 return (dockPanel.width - implicitWidth) / 2
             }
             y: {
                 if (!DockView.isVertical) {
-                    return (dockPanel.height - implicitHeight) / 2
+                    return DockView.edge === 0 ? _panelInternalMargin : (dockPanel.height - implicitHeight - _panelInternalMargin)
                 }
                 return (dockPanel.height - implicitHeight) / 2
             }
