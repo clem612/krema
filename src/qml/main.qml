@@ -724,13 +724,13 @@ Item {
             onImplicitHeightChanged: if (DockVisibility) DockVisibility.setContentDimensions(implicitWidth, implicitHeight)
             x: {
                 if (DockView.isVertical) {
-                    return DockView.edge === 2 ? 0 : (dockPanel.width - implicitWidth)
+                    return (dockPanel.width - implicitWidth) / 2
                 }
                 return (dockPanel.width - implicitWidth) / 2
             }
             y: {
                 if (!DockView.isVertical) {
-                    return DockView.edge === 0 ? 0 : (dockPanel.height - implicitHeight)
+                    return (dockPanel.height - implicitHeight) / 2
                 }
                 return (dockPanel.height - implicitHeight) / 2
             }
