@@ -13,8 +13,8 @@ The dock is a recursive "Tree of Islands," managed across three alignment layers
 **Gravity Chain (Grounding Law):**
 The dock operates in two strictly isolated coordinate systems:
 - **The Outside World (Screen Flooring):** The Dock Panel anchors to the screen edge using `floating_offset`. This handles the physical distance from the screen to the exterior of the panel box.
-- **The Inside World (Dock Flooring):** The Icons and Indicators are anchored to the panel's interior using `dock_floor_padding` (the distance from the panel edge to the indicators).
-- **Geometric Gravity:** The internal layout container (`dockRow`) MUST be anchored flush to the panel's internal padding boundary (defined by `_panelInternalMargin`), rather than a strict 0px offset. This creates the "Framed Island" aesthetic while preserving the Gravity Chain: Screen -> Floating Gap -> Panel Edge -> Internal Margin -> Floor Padding -> Indicators -> Icon.
+- **The Inside World (Dock Flooring):** The internal layout container (`dockRow`) anchors to the interior edge of the Dock Panel.
+- **The Framed Island Mandate (Suspended Gravity):** To create the "Picture Frame" aesthetic (margins on all four sides of the Glass Pill) WITHOUT breaking Top-Down Reveal, `dockRow` MUST NEVER be vertically centered (`y: (height - implicitHeight) / 2` is STRICTLY FORBIDDEN). Instead, it MUST be anchored to the absolute floor using an invisible safety bumper (`_panelInternalMargin: 8`). This guarantees a permanent 8px bottom, left, and right frame. The top frame dynamically emerges when the panel thickness slider is increased.
 > `[LEGACY — 5-Unit Stack]` The current implementation uses a flat "5-Unit Stack" model (Floor Padding → Indicator → Gap → Icon → Ceiling Padding) within each Item. This will be migrated to the 3-Tier recursive model. Until migration is complete, the 5-Unit variables (`_unitPanelFloor`, `_unitIndicator`, `_unitIconIndicatorGap`) remain valid within Tier 3 (Item) scope.
 
 **2. The Indicator Modes & Geometry Constitution**
@@ -49,13 +49,13 @@ The zoom wave is mathematically decoupled from the pixel-perfect hover state.
 - **Vertical Limits:** The vertical scale of the zoom is bound by the icon's mathematical scale factor. The hitbox grows dynamically with the zoom scale but must continually obey the Pixel-Perfect Law.
 - **Global Toggle:** Parabolic Zoom is strictly restricted to **Icon-Only Mode**. In **Icon-Label Mode**, the zoom wave is globally locked OFF to preserve text readability and prevent layout jitter.
 
-**6. Island Overflow & Vertical Geometry**
+**6. Island Overflow & Vertical Geometry (Top-Down Reveal Mandate)**
 Panel thickness and Item content size are decoupled, utilizing the "Fixed Floor, Moving Ceiling" principle.
 - **Island Height:** An Island calculates its own vertical height based on its internal padding and Items.
-- **Island Overflow:** If the Island's height exceeds the Panel's thickness, the Island visually overflows the Panel boundary. Internal math remains relative to the Island's floor, preserving symmetry.
-- **The Moving Ceiling:** The panel's inner (free-facing) edge is the only part of the background that moves when height is adjusted. Resizing the panel is a "Top-Down Reveal" mechanism.
-- **Uncovering the Icon (Visual Overflow):** When the panel thickness is reduced, the "Ceiling" moves toward the "Floor". Because the icon is locked by Gravity (Rule 1) to the Fixed Floor, the shrinking ceiling simply *uncovers* the icon from the top, allowing it to visually overflow strictly toward the screen center.
-- **Absolute Zoom Independence:** The Zoom Scale variable (`maxZoomFactor`) and visual projection are strictly decoupled from physical Panel Thickness. The dock panel MUST NOT increase or decrease its thickness in response to zoom magnification. Icons zoom freely as visual projections and are permitted to overflow the panel boundary indefinitely without triggering a panel resize.
+- **The Clipping Ban (No Vertical Centering):** Because Wayland surfaces and panels anchor to the physical screen edge, `dockRow` MUST NEVER be vertically centered on the cross-axis. Centering forces icons to protrude *downward* as the panel shrinks, pushing them completely off the physical screen (The Clipping Bug).
+- **The Moving Ceiling:** The panel's inner (free-facing) edge is the only part of the background that moves when height is adjusted. Resizing the panel is a strict "Top-Down Reveal" mechanism.
+- **Uncovering the Icon (Visual Overflow):** When the panel thickness is reduced, the "Ceiling" moves toward the "Floor". Because the icon is locked by Gravity (Rule 1) to the Fixed Floor (plus the safety bumper), the shrinking ceiling simply *uncovers* the icon from the top. The icons protrude safely *upward* toward the center of the screen, completely avoiding edge-clipping.
+- **Absolute Zoom Independence:** The Zoom Scale variable (`maxZoomFactor`) and visual projection are strictly decoupled from physical Panel Thickness. Icons zoom freely as visual projections and are permitted to overflow the panel boundary indefinitely without triggering a panel resize.
 
 **7. Proportional Corner Radius & Dimensional Sync**
 - **Ratio-Based Radius:** Corner radius is stored as a `RadiusRatio`, not a fixed pixel value.
@@ -158,3 +158,8 @@ Application ordering within an `AppIsland` follows a strict deterministic logic:
 Complex components (System Tray, Plasma Widgets) MUST inherit the geometry of their parent Island.
 - **Constraint Isolation:** Internal widget layout changes must NOT propagate size fluctuations to the Panel without explicit re-validation of Rule 9 (Dynamic Repulsion).
 - **Interactive Consistency:** Tray icons and Widgets must adhere to Rule 3 (Hitbox Law) and Rule 4 (Symmetry).
+
+**21. The Glass Pill Binding Mandate (Tier 2 Wrapper)**
+The `IslandModule` (Tier 2 Glass Pill) serves as the visual background for groups of icons. Its geometry MUST be flawlessly synchronized with the icons it wraps.
+- **The Flatline Bug Ban:** An `IslandModule` MUST NEVER bind its `implicitHeight` or `height` to its `parent` (`dockRow`) if that parent relies on unbound or implicit dimensions. Doing so will cause the height to evaluate to `0px`, crushing the Glass Pill into a 2px flat horizontal line.
+- **Direct Container Binding:** The Glass Pill's dimensions must be strictly bound to the `implicitHeight` and `implicitWidth` of its internal `container` (which holds the icons). This guarantees the Glass Pill will always flawlessly encompass its contents, regardless of whether it is protruding outside the Tier 1 panel or safely encased within it.
