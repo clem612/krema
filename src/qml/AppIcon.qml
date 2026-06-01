@@ -1019,7 +1019,6 @@ Item {
     Flow {
         id: indicatorRow
 
-        height: _unitIndicator // Ensure fixed height for symmetry math
         flow: DockView.isVertical ? Flow.TopToBottom : Flow.LeftToRight
         spacing: Kirigami.Units.smallSpacing
         Accessible.ignored: true
@@ -1029,16 +1028,16 @@ Item {
         x: {
             if (DockView.isVertical) {
                 if (DockView.edge === 2) return _unitPanelFloor
-                if (DockView.edge === 3) return parent.width - width - _unitPanelFloor
+                if (DockView.edge === 3) return parent.width - implicitWidth - _unitPanelFloor
             }
-            return (parent.width - width) / 2
+            return (parent.width - implicitWidth) / 2
         }
         y: {
             if (!DockView.isVertical) {
                 if (DockView.edge === 0) return _unitPanelFloor
-                if (DockView.edge === 1) return parent.height - height - _unitPanelFloor
+                if (DockView.edge === 1) return parent.height - implicitHeight - _unitPanelFloor
             }
-            return (parent.height - height) / 2
+            return (parent.height - implicitHeight) / 2
         }
 
         Repeater {

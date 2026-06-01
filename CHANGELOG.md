@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Island Internal Padding:** Introduced 8px internal padding to the IslandModule, completely decoupling the Island's glass pill border from the main Panel's external boundary to achieve a more premium spatial layout without breaking zoom logic.
 
 ### Fixed
+- **Vertical Indicator Wrapping:** Resolved a major layout engine bug in vertical mode where active indicator dashes would artificially wrap horizontally into the icon's visual space due to an aggressive 3px constraint. The flow layout now accurately stacks indicators TopToBottom alongside the icon.
+- **Floating Dock on Wake:** Diagnosed and eliminated a Wayland stacking conflict where the dock's exclusive zone would snap on top of the Plasma taskbar instead of the screen edge after DPMS sleep or screen unlock. The application now safely performs a full `scheduleTopologyUpdate()` to enforce exact absolute anchors.
+- **Development Sandbox Restriction (Ghost Bug):** Patched `justfile` to inject `kstart` when spawning Krema in IDE terminal emulators, permanently bypassing the Plasma 6 security sandbox that was silently starving the dock of Wayland IPC window metrics during development.
 - **Preview Geometry Sync:** Resolved "Altitude Confusion" via Absolute Sync, ensuring window preview thumbnails and vertical offsets are perfectly synchronized with zoomed icons.
 - **Flatpak Vector Icon Rendering:** Removed strict available sizes checks that incorrectly discarded valid SVGs, enabling perfect rendering of Flatpak vector graphics.
 - **Fuzzy Flatpak Identity Resolver:** Updated the suffix matching algorithm to aggressively strip spaces and dashes, resolving edge cases where Wayland window classes (e.g., "aim train") mismatched their Flatpak identifiers.

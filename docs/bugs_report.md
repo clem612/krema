@@ -124,3 +124,19 @@ Removed the `hide()/show()` hack from `DockView`. Migrated the D-Bus `org.freede
 
 **Verification:**
 Verified via `WAYLAND_DEBUG=1` protocol logs that the `hide()/show()` cycle was transmitting correct anchors but losing the layout race condition. Verified empirically that full topology rebuilding restores the dock perfectly flush to the edge without floating gaps.
+
+## [2026-06-01] Bug #34: Vertical Indicator Wrapping (The Horizontal Dash Bug)
+
+**Status:** 🟢 Fixed
+
+**Symptoms:**
+In vertical mode, applications with multiple windows (like Firefox) had their active indicator dots drawn horizontally (left-to-right) instead of stacking vertically alongside the icon. This caused the indicators to bleed into the center of the dock and overlap the application icon itself.
+
+**Root Cause (QML Flow Binding Loop):**
+The `indicatorRow` in `AppIcon.qml` uses a `Flow` layout to arrange the dots. To enforce symmetry, its `height` property was explicitly bound to its own `implicitHeight` in vertical mode. However, when a `Flow` is set to `Flow.TopToBottom`, its implicit height depends on its layout, creating a binding loop that evaluated to `0px`. Because the `Flow` engine believed it had 0 vertical space, the moment it placed the first dot, it instantly "wrapped" to the next column (to the right) to place the second dot, forcing the vertical stack into a horizontal line.
+
+**The Proposal & Fix:**
+Removed the explicit `width` and `height` properties entirely from the `Flow` component. Let the layout engine naturally size the component. Updated the `x` and `y` geometric centering math to rely strictly on `implicitWidth` and `implicitHeight`. This broke the binding loop, allowing the `Flow` to correctly evaluate its true height and stack the dots vertically without wrapping.
+
+**Verification:**
+Rebuilt the QML cache and verified that the indicators now correctly form a clean vertical column beside the hovered and inactive icons in vertical layout mode without bleeding into the icon space.
