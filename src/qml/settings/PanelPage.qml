@@ -30,7 +30,8 @@ QQC2.ScrollView {
         readonly property real _dotHeight: Math.max(2, Math.round(DockSettings.iconSize * 0.10))
         readonly property real _indicatorGap: Math.max(2, Math.round(DockSettings.iconSize * 0.125) + Math.round(DockSettings.iconSize * 0.15 * (1.0 - DockSettings.indicatorOffset)))
         readonly property real _totalFloorUnit: _floorPadding + _dotHeight + _indicatorGap
-        readonly property real _maxEnv: DockSettings.iconSize + _totalFloorUnit + _floorPadding + 16
+        // + 16 for internal visual margin, + 12 for the new Framed Island internal panel padding
+        readonly property real _maxEnv: DockSettings.iconSize + _totalFloorUnit + _floorPadding + 16 + 12
 
         // --- SECTION 1: PHYSICAL GEOMETRY ---
         ColumnLayout {

@@ -643,6 +643,8 @@ Item {
         property real _actualContentWidth: Math.max(dockRow.implicitWidth + 32, Kirigami.Units.gridUnit * 6)
         property real _actualContentHeight: Math.max(dockRow.implicitHeight + 32, Kirigami.Units.gridUnit * 6)
         
+        readonly property real _panelInternalMargin: 6
+        
         width: !DockView.isVertical ? _actualContentWidth : DockView.screenSettings.panelHeight
         height: DockView.isVertical ? _actualContentHeight : DockView.screenSettings.panelHeight
         radius: Math.min(DockView.screenSettings.cornerRadius, Math.min(width, height) / 2)
@@ -724,13 +726,13 @@ Item {
             onImplicitHeightChanged: if (DockVisibility) DockVisibility.setContentDimensions(implicitWidth, implicitHeight)
             x: {
                 if (DockView.isVertical) {
-                    return DockView.edge === 2 ? 0 : (dockPanel.width - implicitWidth)
+                    return DockView.edge === 2 ? _panelInternalMargin : (dockPanel.width - implicitWidth - _panelInternalMargin)
                 }
                 return (dockPanel.width - implicitWidth) / 2
             }
             y: {
                 if (!DockView.isVertical) {
-                    return DockView.edge === 0 ? 0 : (dockPanel.height - implicitHeight)
+                    return DockView.edge === 0 ? _panelInternalMargin : (dockPanel.height - implicitHeight - _panelInternalMargin)
                 }
                 return (dockPanel.height - implicitHeight) / 2
             }

@@ -14,8 +14,7 @@ The dock is a recursive "Tree of Islands," managed across three alignment layers
 The dock operates in two strictly isolated coordinate systems:
 - **The Outside World (Screen Flooring):** The Dock Panel anchors to the screen edge using `floating_offset`. This handles the physical distance from the screen to the exterior of the panel box.
 - **The Inside World (Dock Flooring):** The Icons and Indicators are anchored to the panel's interior using `dock_floor_padding` (the distance from the panel edge to the indicators).
-- **Geometric Gravity:** The internal layout container (`dockRow`) MUST be anchored flush (0px offset) to the panel's screen-facing edge. The "Gravity Chain" is physical and unbreakable: Screen -> Floating Gap -> Panel Edge -> Floor Padding -> Indicators -> Icon.
-
+- **Geometric Gravity:** The internal layout container (`dockRow`) MUST be anchored flush to the panel's internal padding boundary (defined by `_panelInternalMargin`), rather than a strict 0px offset. This creates the "Framed Island" aesthetic while preserving the Gravity Chain: Screen -> Floating Gap -> Panel Edge -> Internal Margin -> Floor Padding -> Indicators -> Icon.
 > `[LEGACY — 5-Unit Stack]` The current implementation uses a flat "5-Unit Stack" model (Floor Padding → Indicator → Gap → Icon → Ceiling Padding) within each Item. This will be migrated to the 3-Tier recursive model. Until migration is complete, the 5-Unit variables (`_unitPanelFloor`, `_unitIndicator`, `_unitIconIndicatorGap`) remain valid within Tier 3 (Item) scope.
 
 **2. The Indicator Modes & Geometry Constitution**

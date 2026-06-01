@@ -19,8 +19,8 @@ Item {
     implicitWidth: DockView.isVertical ? parent.width : container.implicitWidth + 16
     implicitHeight: DockView.isVertical ? container.implicitHeight + 16 : parent.height
 
-    x: 0
-    y: 0
+    x: DockView.isVertical ? 0 : -8
+    y: DockView.isVertical ? -8 : 0
 
     Rectangle {
         anchors.fill: parent

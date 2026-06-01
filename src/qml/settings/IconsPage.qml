@@ -32,7 +32,8 @@ QQC2.ScrollView {
             let floorPad = Math.max(4, Math.round(size * 0.25))
             let dot = Math.max(2, Math.round(size * 0.10))
             let gap = Math.max(2, Math.round(size * 0.125) + Math.round(size * 0.15 * (1.0 - DockSettings.indicatorOffset)))
-            return size + floorPad + dot + gap + floorPad + 16
+            // + 16 for internal visual margin, + 12 for the new Framed Island internal panel padding
+            return size + floorPad + dot + gap + floorPad + 16 + 12
         }
         // --- SECTION 1: SIZING & GEOMETRY ---
         ColumnLayout {
