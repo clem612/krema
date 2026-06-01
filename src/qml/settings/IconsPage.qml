@@ -28,12 +28,11 @@ QQC2.ScrollView {
 
         // Slot Envelope Calculation (Rule 7)
         // Must match AppIcon.qml exactly.
-        function calculateMaxEnv(val) {
-            let ind = Math.max(2, Math.round(val * 0.10))
-            let gap = Math.max(2, Math.round(val * 0.125) + Math.round(val * 0.15 * (1.0 - DockSettings.indicatorOffset)))
-            let padding = Math.max(4, Math.round(val * 0.25)) * 2
-            let framing = 16 // Illusion of symmetry framing buffer
-            return val + padding + ind + gap + framing
+        function calculateMaxEnv(size) {
+            let floorPad = Math.max(4, Math.round(size * 0.25))
+            let dot = Math.max(2, Math.round(size * 0.10))
+            let gap = Math.max(2, Math.round(size * 0.125) + Math.round(size * 0.15 * (1.0 - DockSettings.indicatorOffset)))
+            return size + floorPad + dot + gap + floorPad + 16
         }
         // --- SECTION 1: SIZING & GEOMETRY ---
         ColumnLayout {
