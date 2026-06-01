@@ -643,10 +643,8 @@ Item {
         property real _actualContentWidth: Math.max(dockRow.implicitWidth + 32, Kirigami.Units.gridUnit * 6)
         property real _actualContentHeight: Math.max(dockRow.implicitHeight + 32, Kirigami.Units.gridUnit * 6)
         
-        readonly property real _panelInternalMargin: 6
-        
-        width: !DockView.isVertical ? _actualContentWidth : DockView.screenSettings.panelHeight
-        height: DockView.isVertical ? _actualContentHeight : DockView.screenSettings.panelHeight
+        width: !DockView.isVertical ? _actualContentWidth : Math.max(DockView.screenSettings.panelHeight, dockRow.implicitWidth + 16)
+        height: DockView.isVertical ? _actualContentHeight : Math.max(DockView.screenSettings.panelHeight, dockRow.implicitHeight + 16)
         radius: Math.min(DockView.screenSettings.cornerRadius, Math.min(width, height) / 2)
         
         x: DockView.isVertical ? _panelEdgePos : (parent.width - width) / 2
@@ -720,7 +718,7 @@ Item {
                 let floor = Math.max(4, Math.round(size * 0.25))
                 let ind = Math.max(2, Math.round(size * 0.10))
                 let gap = Math.max(2, Math.round(size * 0.125) + Math.round(size * 0.15 * (1.0 - DockSettings.indicatorOffset)))
-                return size + floor + ind + gap + floor + 16 // Rule 2: Ceiling mirrors floor (+ 16px internal visual margin)
+                return size + floor + ind + gap + floor // Rule 2: Ceiling mirrors floor
             }
             onImplicitWidthChanged: if (DockVisibility) DockVisibility.setContentDimensions(implicitWidth, implicitHeight)
             onImplicitHeightChanged: if (DockVisibility) DockVisibility.setContentDimensions(implicitWidth, implicitHeight)
