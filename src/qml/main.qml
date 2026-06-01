@@ -643,8 +643,8 @@ Item {
         property real _actualContentWidth: Math.max(dockRow.implicitWidth + 32, Kirigami.Units.gridUnit * 6)
         property real _actualContentHeight: Math.max(dockRow.implicitHeight + 32, Kirigami.Units.gridUnit * 6)
         
-        width: !DockView.isVertical ? _actualContentWidth : (dockRow.implicitWidth + 16)
-        height: DockView.isVertical ? _actualContentHeight : (dockRow.implicitHeight + 16)
+        width: !DockView.isVertical ? _actualContentWidth : DockView.screenSettings.panelHeight
+        height: DockView.isVertical ? _actualContentHeight : DockView.screenSettings.panelHeight
         radius: Math.min(DockView.screenSettings.cornerRadius, Math.min(width, height) / 2)
         
         x: DockView.isVertical ? _panelEdgePos : (parent.width - width) / 2
@@ -713,18 +713,27 @@ Item {
                 let dummy = layoutTrigger
                 return !DockView.isVertical ? _maxIconThickness : Math.max(baseHeight, (appIconCount === 0 ? 0 : (getAppIcon(appIconCount-1)?.y + getAppIcon(appIconCount-1)?.height || 0)))
             }
-            // FIX: Removed `itemAt(i)` loop which caused stale values and floating icons during resize!
             readonly property real _maxIconThickness: {
                 let size = DockView.screenSettings.iconSize
                 let floor = Math.max(4, Math.round(size * 0.25))
                 let ind = Math.max(2, Math.round(size * 0.10))
                 let gap = Math.max(2, Math.round(size * 0.125) + Math.round(size * 0.15 * (1.0 - DockSettings.indicatorOffset)))
-                return size + floor + ind + gap + floor // Rule 2: Ceiling mirrors floor
+                return size + floor + ind + gap + floor + 16 // Rule 2: Ceiling mirrors floor (+ 16px internal visual margin)
             }
             onImplicitWidthChanged: if (DockVisibility) DockVisibility.setContentDimensions(implicitWidth, implicitHeight)
             onImplicitHeightChanged: if (DockVisibility) DockVisibility.setContentDimensions(implicitWidth, implicitHeight)
-            x: (dockPanel.width - implicitWidth) / 2
-            y: (dockPanel.height - implicitHeight) / 2
+            x: {
+                if (DockView.isVertical) {
+                    return DockView.edge === 2 ? 0 : (dockPanel.width - implicitWidth)
+                }
+                return (dockPanel.width - implicitWidth) / 2
+            }
+            y: {
+                if (!DockView.isVertical) {
+                    return DockView.edge === 0 ? 0 : (dockPanel.height - implicitHeight)
+                }
+                return (dockPanel.height - implicitHeight) / 2
+            }
 
             Repeater {
                 id: islandRepeater

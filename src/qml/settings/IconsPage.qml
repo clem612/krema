@@ -32,7 +32,7 @@ QQC2.ScrollView {
             let floorPad = Math.max(4, Math.round(size * 0.25))
             let dot = Math.max(2, Math.round(size * 0.10))
             let gap = Math.max(2, Math.round(size * 0.125) + Math.round(size * 0.15 * (1.0 - DockSettings.indicatorOffset)))
-            return size + floorPad + dot + gap + floorPad
+            return size + floorPad + dot + gap + floorPad + 16
         }
         // --- SECTION 1: SIZING & GEOMETRY ---
         ColumnLayout {
