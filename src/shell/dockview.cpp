@@ -9,7 +9,6 @@
 #include "utils/surfacegeometry.h"
 #include <KIconLoader>
 #include <KLocalizedQmlContext>
-#include <QDBusConnection>
 #include <QLoggingCategory>
 #include <QPainterPath>
 #include <QQmlContext>
@@ -80,12 +79,6 @@ void DockView::initialize(QAbstractItemModel *tasksModel,
     if (screen())
         m_screenGeometryConnection = connect(screen(), &QScreen::geometryChanged, this, &DockView::handleScreenGeometryChanged);
 
-    QDBusConnection::sessionBus().connect(QStringLiteral("org.freedesktop.ScreenSaver"),
-                                          QStringLiteral("/ScreenSaver"),
-                                          QStringLiteral("org.freedesktop.ScreenSaver"),
-                                          QStringLiteral("ActiveChanged"),
-                                          this,
-                                          SLOT(handleScreenLockChanged(bool)));
     show();
 }
 
@@ -253,18 +246,6 @@ void DockView::handleScreenGeometryChanged()
         return;
     updateSize();
     applyBackgroundStyle();
-    if (m_visibilityController)
-        m_visibilityController->requestEvaluate();
-}
-
-void DockView::handleScreenLockChanged(bool active)
-{
-    if (active)
-        return;
-    hide();
-    updateSize();
-    applyBackgroundStyle();
-    show();
     if (m_visibilityController)
         m_visibilityController->requestEvaluate();
 }

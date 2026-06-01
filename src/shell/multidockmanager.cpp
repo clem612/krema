@@ -17,6 +17,7 @@
 #include <taskmanager/tasksmodel.h>
 
 #include <QCursor>
+#include <QDBusConnection>
 #include <QGuiApplication>
 #include <QScreen>
 
@@ -44,6 +45,14 @@ MultiDockManager::MultiDockManager(KremaSettings *settings, DockModel *model, No
     connect(qApp, &QGuiApplication::screenAdded, this, &MultiDockManager::onScreenAdded);
     connect(qApp, &QGuiApplication::screenRemoved, this, &MultiDockManager::onScreenRemoved);
     connect(qApp, &QGuiApplication::primaryScreenChanged, this, &MultiDockManager::onPrimaryScreenChanged);
+
+    // Monitor screen lock/unlock to rebuild topology after compositor surfaces are restored
+    QDBusConnection::sessionBus().connect(QStringLiteral("org.freedesktop.ScreenSaver"),
+                                          QStringLiteral("/ScreenSaver"),
+                                          QStringLiteral("org.freedesktop.ScreenSaver"),
+                                          QStringLiteral("ActiveChanged"),
+                                          this,
+                                          SLOT(onScreenLockChanged(bool)));
 }
 
 MultiDockManager::~MultiDockManager() = default;
@@ -372,6 +381,16 @@ void MultiDockManager::processTopologyUpdate()
 {
     qCDebug(lcShell) << "Processing topology update, mode:" << m_mode;
     applyMode();
+}
+
+void MultiDockManager::onScreenLockChanged(bool active)
+{
+    // When the screen unlocks, KWin may have destroyed or desynced our Wayland layer surfaces.
+    // We schedule a full topology update to cleanly rebuild the dock shells.
+    if (!active) {
+        qCInfo(lcShell) << "Screen unlocked. Triggering topology update to rebuild Wayland surfaces.";
+        scheduleTopologyUpdate();
+    }
 }
 
 } // namespace krema

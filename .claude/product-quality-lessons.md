@@ -19,3 +19,9 @@ This file contains the "burned-in" anti-patterns to prevent recurring mistakes.
 - **Observation:** Context menu "Close" buttons failed silently with no effect.
 - **Root Cause:** Users running the `hyprland-lua-plugins` extension have their raw IPC socket dispatches intercepted and overridden by the Lua interpreter, breaking commands like `closewindow address:` with errors like `expected a dispatcher (e.g. hl.dsp.window.close())`.
 - **Prevention Rule:** All hardcoded dispatch commands sent to the Hyprland IPC socket MUST include a fallback handler that dynamically catches Lua execution errors and rewrites the command using the `hl.dsp.*` syntax.
+
+## 2026-06-01: Wayland Layer Surface Lifecycle (The hide/show Anti-Pattern)
+- **Anti-Pattern:** Attempting to force KWin (or any Wayland compositor) to redraw or recover a `wlr_layer_surface` by calling `QWindow::hide()` and `QWindow::show()`.
+- **Observation:** The dock appears to "float" or "move up" from the edge of the screen after unlocking, even though logs show the correct `AnchorBottom` flag and `exclusive_zone` being requested.
+- **Root Cause:** When `hide()` and `show()` are executed while the compositor is waking up from DPMS sleep, the dock re-enters KWin's layer stacking order mid-evaluation. KWin evaluates the dock's exclusive zone *after* system panels, stacking the dock's reserved space *on top* of the other panels instead of flushing it against the true screen edge.
+- **Prevention Rule:** NEVER use `hide()/show()` to recover broken Wayland surfaces. If a layer surface is destroyed or desynced by the compositor, trigger a full application-level topology rebuild (e.g., `scheduleTopologyUpdate()`) to cleanly tear down and reconstruct the shell hierarchy from scratch. This guarantees the compositor calculates placement from a pristine, conflict-free state.

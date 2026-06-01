@@ -108,3 +108,19 @@ Modified the `justfile` build script so that `just run` executes `kstart -- $PWD
 
 **Verification:**
 Tested backward compatibility over 40 commits. Verified that this sandbox limitation existed independently of all recent code changes, confirming that the new QML proxy architecture is fundamentally stable and functional.
+
+## [2026-06-01] Bug #33: The "Floating Dock" Wayland Desync on Screen Unlock
+
+**Status:** 🟢 Fixed
+
+**Symptoms:**
+When unlocking the screen, the dock's placement becomes incorrect. It "moves up" from the bottom edge and floats towards the middle of the screen.
+
+**Root Cause (Wayland Stacking Desync):**
+The `DockView::handleScreenLockChanged` slot used a `hide()` and `show()` cycle to force KWin to recreate the Wayland layer surface after DPMS sleep. While the surface was successfully recreated with the correct `AnchorBottom` flag and `exclusive_zone`, sending these instructions while KWin was mid-wakeup caused a stacking conflict. KWin evaluated the dock's exclusive zone *after* other panels (like the Plasma taskbar), stacking Krema's reserved space on top of the other panels instead of against the absolute screen edge.
+
+**The Proposal & Fix:**
+Removed the `hide()/show()` hack from `DockView`. Migrated the D-Bus `org.freedesktop.ScreenSaver` listener into `MultiDockManager`. When the screen unlocks, it now triggers a full `scheduleTopologyUpdate()`. This safely tears down the entire dock shell and rebuilds it from scratch (identically to monitor hot-plugging), forcing KWin to recalculate the absolute edge placement from a clean state.
+
+**Verification:**
+Verified via `WAYLAND_DEBUG=1` protocol logs that the `hide()/show()` cycle was transmitting correct anchors but losing the layout race condition. Verified empirically that full topology rebuilding restores the dock perfectly flush to the edge without floating gaps.
