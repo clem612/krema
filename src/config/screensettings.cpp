@@ -85,6 +85,14 @@ ScreenSettings::ScreenSettings(const QString &screenName, KremaSettings *fallbac
         if (!m_group.hasKey(QStringLiteral("SeparatorWidth")))
             Q_EMIT separatorWidthChanged();
     });
+    connect(m_fallback, &KremaSettings::MaxLengthChanged, this, [this]() {
+        if (!m_group.hasKey(QStringLiteral("MaxLength")))
+            Q_EMIT maxLengthChanged();
+    });
+    connect(m_fallback, &KremaSettings::PanelLengthModeChanged, this, [this]() {
+        if (!m_group.hasKey(QStringLiteral("PanelLengthMode")))
+            Q_EMIT panelLengthModeChanged();
+    });
 }
 
 QString ScreenSettings::screenName() const
@@ -160,6 +168,16 @@ double ScreenSettings::separatorOpacity() const
 int ScreenSettings::separatorWidth() const
 {
     return readWithFallback(QStringLiteral("SeparatorWidth"), m_fallback->separatorWidth());
+}
+
+int ScreenSettings::maxLength() const
+{
+    return readWithFallback(QStringLiteral("MaxLength"), m_fallback->maxLength());
+}
+
+int ScreenSettings::panelLengthMode() const
+{
+    return readWithFallback(QStringLiteral("PanelLengthMode"), m_fallback->panelLengthMode());
 }
 
 QStringList ScreenSettings::pinnedLaunchers() const
@@ -250,6 +268,20 @@ void ScreenSettings::setSeparatorWidth(int width)
     Q_EMIT separatorWidthChanged();
 }
 
+void ScreenSettings::setMaxLength(int length)
+{
+    writeOverride(QStringLiteral("MaxLength"), length);
+    Q_EMIT maxLengthChanged();
+}
+
+void ScreenSettings::setPanelLengthMode(int mode)
+{
+    if (m_group.hasKey(QStringLiteral("PanelLengthMode")) && m_group.readEntry(QStringLiteral("PanelLengthMode"), 0) == mode)
+        return;
+    writeOverride(QStringLiteral("PanelLengthMode"), mode);
+    Q_EMIT panelLengthModeChanged();
+}
+
 void ScreenSettings::clearOverrides()
 {
     m_group.deleteGroup();
@@ -269,6 +301,8 @@ void ScreenSettings::clearOverrides()
     Q_EMIT separatorStyleChanged();
     Q_EMIT separatorOpacityChanged();
     Q_EMIT separatorWidthChanged();
+    Q_EMIT maxLengthChanged();
+    Q_EMIT panelLengthModeChanged();
 }
 
 void ScreenSettings::clearOverride(const QString &key)
@@ -301,6 +335,10 @@ void ScreenSettings::clearOverride(const QString &key)
             Q_EMIT separatorOpacityChanged();
         else if (key == QStringLiteral("SeparatorWidth"))
             Q_EMIT separatorWidthChanged();
+        else if (key == QStringLiteral("MaxLength"))
+            Q_EMIT maxLengthChanged();
+        else if (key == QStringLiteral("PanelLengthMode"))
+            Q_EMIT panelLengthModeChanged();
     }
 }
 

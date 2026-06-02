@@ -81,6 +81,53 @@ QQC2.ScrollView {
 
                 Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A" }
 
+                // MAXIMUM LENGTH
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    RowLayout {
+                        QQC2.Label { Layout.fillWidth: true; text: i18n("Maximum Dock Length"); color: theme.text; font.bold: true }
+                        QQC2.Label { text: maxLengthSlider.value + "%"; color: theme.textDim; font.bold: true }
+                    }
+                    QQC2.Slider {
+                        id: maxLengthSlider; Layout.fillWidth: true; 
+                        from: 10; to: 100; stepSize: 1; 
+                        value: DockSettings.maxLength; 
+                        onMoved: DockSettings.maxLength = value
+                        onPressedChanged: if (!pressed) DockSettings.save()
+                    }
+                    QQC2.Label { 
+                        text: i18n("In Adaptive mode, this is the maximum allowed width. In Span mode, this dictates the exact panel width (e.g. 100% = full screen)."); 
+                        color: theme.textDim; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true
+                    }
+                }
+
+                Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A" }
+
+                // PANEL LENGTH MODE
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    QQC2.Label { Layout.fillWidth: true; text: i18n("Panel Length Mode"); color: theme.text; font.bold: true }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        QQC2.RadioButton {
+                            text: i18n("Adaptive (Hugs Icons)")
+                            checked: DockSettings.panelLengthMode === 0
+                            onToggled: if (checked) { DockSettings.panelLengthMode = 0; DockSettings.save() }
+                        }
+                        QQC2.RadioButton {
+                            text: i18n("Span Screen (Fixed Width)")
+                            checked: DockSettings.panelLengthMode === 1
+                            onToggled: if (checked) { DockSettings.panelLengthMode = 1; DockSettings.save() }
+                        }
+                    }
+                    QQC2.Label { 
+                        text: i18n("Adaptive mode shrinks the panel background to wrap your icons. Span mode physically stretches the panel background across the screen like a standard taskbar."); 
+                        color: theme.textDim; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true
+                    }
+                }
+
+                Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A" }
+
                 // CORNER RADIUS
                 ColumnLayout {
                     Layout.fillWidth: true

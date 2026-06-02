@@ -42,6 +42,8 @@ class ScreenSettings : public QObject
     Q_PROPERTY(int separatorStyle READ separatorStyle WRITE setSeparatorStyle NOTIFY separatorStyleChanged)
     Q_PROPERTY(double separatorOpacity READ separatorOpacity WRITE setSeparatorOpacity NOTIFY separatorOpacityChanged)
     Q_PROPERTY(int separatorWidth READ separatorWidth WRITE setSeparatorWidth NOTIFY separatorWidthChanged)
+    Q_PROPERTY(int maxLength READ maxLength WRITE setMaxLength NOTIFY maxLengthChanged)
+    Q_PROPERTY(int panelLengthMode READ panelLengthMode WRITE setPanelLengthMode NOTIFY panelLengthModeChanged)
 
 public:
     explicit ScreenSettings(const QString &screenName, KremaSettings *fallback, QObject *parent = nullptr);
@@ -64,9 +66,10 @@ public:
     [[nodiscard]] int separatorStyle() const;
     [[nodiscard]] double separatorOpacity() const;
     [[nodiscard]] int separatorWidth() const;
+    [[nodiscard]] int maxLength() const;
+    [[nodiscard]] int panelLengthMode() const;
 
-    // --- Write per-screen overrides ---
-
+public Q_SLOTS:
     void setIconSize(int size);
     void setEdge(int edge);
     void setVisibilityMode(int mode);
@@ -75,24 +78,20 @@ public:
     void setMaxZoomFactor(double factor);
     void setFloating(bool floating);
     void setCornerRadius(int radius);
-    void setPanelHeight(int height);
     void setPinnedLaunchers(const QStringList &launchers);
+    void setPanelHeight(int height);
     void setSeparatorStyle(int style);
     void setSeparatorOpacity(double opacity);
     void setSeparatorWidth(int width);
+    void setMaxLength(int length);
+    void setPanelLengthMode(int mode);
 
-    /// Remove all per-screen overrides (revert to global defaults).
-    Q_INVOKABLE void clearOverrides();
-
-    /// Remove a specific per-screen override.
-    Q_INVOKABLE void clearOverride(const QString &key);
-
-    /// Save changes to disk.
-    Q_INVOKABLE void save();
+    void clearOverride(const QString &key);
+    void clearOverrides();
+    void save();
 
 Q_SIGNALS:
     void hasOverridesChanged();
-    // Per-property change signals (emitted when the effective value changes)
     void iconSizeChanged();
     void edgeChanged();
     void visibilityModeChanged();
@@ -100,12 +99,14 @@ Q_SIGNALS:
     void backgroundOpacityChanged();
     void maxZoomFactorChanged();
     void floatingChanged();
-    void panelHeightChanged();
     void cornerRadiusChanged();
     void pinnedLaunchersChanged();
+    void panelHeightChanged();
     void separatorStyleChanged();
     void separatorOpacityChanged();
     void separatorWidthChanged();
+    void maxLengthChanged();
+    void panelLengthModeChanged();
 
 private:
     /// Read a value from per-screen group, falling back to the global default.

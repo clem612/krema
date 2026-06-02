@@ -140,3 +140,35 @@ Removed the explicit `width` and `height` properties entirely from the `Flow` co
 
 **Verification:**
 Rebuilt the QML cache and verified that the indicators now correctly form a clean vertical column beside the hovered and inactive icons in vertical layout mode without bleeding into the icon space.
+
+## [2026-06-01] Bug #35: Adaptive Mode "Glitchy Scrolling" Paradox
+
+**Status:** 🟢 Fixed
+
+**Symptoms:**
+When configuring the dock length (e.g., 100% or 10%), the icons would glitch, scroll erratically, and clip vertically across the center of the dark panel, destroying the visual layout.
+
+**Root Cause (Adaptive Math Contradiction):**
+The QML logic for `dockPanel` attempted to physically shrink a `Flickable` scroll bounds to `maxAllowedWidth` (e.g., 160px for 10%), while simultaneously forcing the physical dark panel to wrap the massive `implicitWidth` of the icons (e.g., 312px). This created an impossible layout: a tiny, invisible clipping box sitting inside a massive dark panel, causing icons to clip sharply in mid-air.
+
+**The Proposal & Fix:**
+Reverted the entire "Scrolling Flickable" implementation and replaced it with a pure coordinate-driven `PanelLengthMode`. In "Span Screen" mode (`PanelLengthMode = 1`), the dock completely drops KWin limits and `clip: true`, physically drawing the dark panel to 100% of the screen. The icons naturally center themselves in the middle using `(dockPanel.width - implicitWidth) / 2`. 
+
+**Verification:**
+Verified empirically with `--debug-geom`. The dock flawlessly stretches edge-to-edge as a taskbar without squishing, scrolling, or clipping the icons.
+
+## [2026-06-01] Bug #36: The "Floating Frankenstein" Glass Pill
+
+**Status:** 🟢 Fixed
+
+**Symptoms:**
+When the `Panel Thickness` slider was lowered, the `IslandModule` Glass Pill (the translucent background highlight) appeared to detach and float 8px below the dark panel.
+
+**Root Cause (The "Phantom Bug" Revert):**
+I mistakenly assumed the Glass Pill's `anchors.fill: parent` was geometrically flawed and replaced it with a hardcoded `DockSettings.panelHeight` binding. However, the true root cause was that `dockRow` was originally vertically centered. When `dockRow` was anchored to the floor in a previous session, the Glass Pill naturally shifted into perfect alignment. By hardcoding its height, I broke its ability to wrap the protruding icons, creating a phantom bug.
+
+**The Proposal & Fix:**
+Restored `anchors.fill: parent` to the Glass Pill `Rectangle` in `IslandModule.qml`. Because the parent `dockRow` is mathematically anchored to the floor via `_panelInternalMargin`, the Glass Pill naturally and flawlessly stops exactly 8px above the bottom of the dark panel, wrapping the icons perfectly.
+
+**Verification:**
+Verified empirically with the user. The signature Krema-v2 highlight now wraps the icons and securely nests on the dark panel, never floating below it.

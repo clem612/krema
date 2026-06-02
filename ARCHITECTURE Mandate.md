@@ -162,4 +162,10 @@ Complex components (System Tray, Plasma Widgets) MUST inherit the geometry of th
 **21. The Glass Pill Binding Mandate (Tier 2 Wrapper)**
 The `IslandModule` (Tier 2 Glass Pill) serves as the visual background for groups of icons. Its geometry MUST be flawlessly synchronized with the icons it wraps.
 - **The Flatline Bug Ban:** An `IslandModule` MUST NEVER bind its `implicitHeight` or `height` to its `parent` (`dockRow`) if that parent relies on unbound or implicit dimensions. Doing so will cause the height to evaluate to `0px`, crushing the Glass Pill into a 2px flat horizontal line.
-- **Direct Container Binding:** The Glass Pill's dimensions must be strictly bound to the `implicitHeight` and `implicitWidth` of its internal `container` (which holds the icons). This guarantees the Glass Pill will always flawlessly encompass its contents, regardless of whether it is protruding outside the Tier 1 panel or safely encased within it.
+- **The Pure Anchors Law:** The Glass Pill `Rectangle` MUST exclusively use `anchors.fill: parent` (where parent is the `IslandModule` container). Because the parent `dockRow` is mathematically anchored to the floor (Rule 6), the Glass Pill will naturally wrap the protruding icons while permanently maintaining a flawless 8px bottom margin from the dark panel. Hardcoding its height to `DockSettings.panelHeight` is strictly forbidden, as it destroys the Pill's ability to wrap vertically protruding icons when the dark panel shrinks.
+
+**22. Panel Length Mode (The Native Span Rule)**
+The width of the physical dark panel is strictly dictated by the `PanelLengthMode`, completely independently of KWayland clipping constraints or scrolling boundaries.
+- **Adaptive Mode (0):** The panel physically wraps the icons, snapping to `dockRow.implicitWidth + 32`.
+- **Span Screen Mode (1):** The panel acts as a classic taskbar, stretching to a fixed percentage of the screen width (e.g., `root.width * (MaxLength / 100)`). The icons must be naturally centered within this vast space using pure coordinate math (`(dockPanel.width - implicitWidth) / 2`).
+- **The Anti-Scroll Ban:** Attempting to implement "Span Screen" by wrapping the dock in a `Flickable` and artificially capping the KWin boundary to 10% is mathematically disastrous and strictly forbidden. Span Screen must remain a pure, native coordinate centering layout.

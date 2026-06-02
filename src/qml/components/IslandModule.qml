@@ -25,6 +25,7 @@ Item {
     Rectangle {
         anchors.fill: parent
         // Rule 18: Island Glass - Premium Visual Separation
+        
         color: Qt.rgba(255, 255, 255, 0.05)
         border.color: Qt.rgba(255, 255, 255, 0.1)
         border.width: 1

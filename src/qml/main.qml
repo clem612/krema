@@ -640,8 +640,16 @@ Item {
         property real mouseX: -9999
         property real mouseY: -9999
         property bool mouseInside: dockMouseArea.containsMouse && !root._dragActive
-        property real _actualContentWidth: Math.max(dockRow.implicitWidth + 32, Kirigami.Units.gridUnit * 6)
-        property real _actualContentHeight: Math.max(dockRow.implicitHeight + 32, Kirigami.Units.gridUnit * 6)
+        property real _actualContentWidth: {
+            let baseW = Math.max(dockRow.implicitWidth + 32, Kirigami.Units.gridUnit * 6)
+            if (DockSettings.panelLengthMode === 1) return Math.max(baseW, (DockView.isVertical ? root.height : root.width) * (DockSettings.maxLength / 100.0))
+            return baseW
+        }
+        property real _actualContentHeight: {
+            let baseH = Math.max(dockRow.implicitHeight + 32, Kirigami.Units.gridUnit * 6)
+            if (DockSettings.panelLengthMode === 1) return Math.max(baseH, (DockView.isVertical ? root.width : root.height) * (DockSettings.maxLength / 100.0))
+            return baseH
+        }
         
         width: !DockView.isVertical ? _actualContentWidth : DockView.screenSettings.panelHeight
         height: DockView.isVertical ? _actualContentHeight : DockView.screenSettings.panelHeight
