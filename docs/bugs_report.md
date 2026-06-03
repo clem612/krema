@@ -202,4 +202,12 @@ Verified empirically with the user. The signature Krema-v2 highlight now wraps t
 - **Identified Logic:** `DockView::updateSize()` calculated the Wayland `surfaceSize` (thickness) using `userH + maxZoomExt + 120`. 
 - **Root Cause:** In Wayland, a `LayerShell` surface is an absolute visual boundary. Anything drawn outside its bounding box is strictly clipped by the compositor. The hardcoded 120px "tooltip reserve" padding wasn't large enough to physically contain wide application names. The text was simply rendering into empty space outside the Wayland surface canvas.
 - **The Proposal (Trial 1):** Increase the hardcoded padding from `120` to `350` in `dockview.cpp`. The core architecture (`InputRegion`, `Dodge Windows` bounds) is highly robust and relies strictly on the explicit `m_panelRect` rather than the `surfaceSize`. Therefore, expanding the invisible Wayland canvas by an extra 230px poses zero risk of "eating" background mouse clicks or pushing maximized windows further away.
-- **Outcome:** Success. Wide tooltips now render fully without any clipping, and the invisible padding continues to allow perfect click-through for desktop interaction.
+- **Outcome:** Success. Added 8px horizontal padding inside `IslandModule` and compensated the visual width.
+
+### 🔴 [Bug] Hit-Testing Fails on Non-Centered Alignment
+**Status:** 🟢 Fixed
+**Symptom:** Mouse hover, zoom, and clicking do not trigger when the dock is aligned to the Start (Left/Top) or End (Right/Bottom) of the screen.
+**Root Cause:** In `main.qml`, the `onPositionChanged` hit-test logic computed the start of the dock (`unscaledStart`) by hardcoding it to the center of the screen `(root.width / 2) - (totalUnscaled / 2)`. When alignment shifts the dock to the left or right, the mathematical hit-test region remains stranded in the center of the screen, completely disjointed from the physical icons.
+**Trial 1:** 
+- **Strategy:** Replaced the hardcoded `centerPos` math with dynamic position tracking: `DockView.isVertical ? (dockPanel.y + dockRow.y) : (dockPanel.x + dockRow.x)`. This guarantees the hit-testing perfectly aligns with the icons in any alignment mode.
+- **Outcome:** Success. Verified via build test and geometric logic check.

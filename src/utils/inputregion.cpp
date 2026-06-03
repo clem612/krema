@@ -9,6 +9,10 @@ namespace krema
 
 QRegion computeDockInputRegion(const InputRegionParams &p)
 {
+    if (p.panelWidth == 0 || p.panelHeight == 0) {
+        return QRegion();
+    }
+
     // 1. Create the Trigger Strip (The invisible 4px line that unhides the dock)
     QRegion triggerStrip;
     int ts = p.triggerStripHeight;

@@ -177,8 +177,10 @@ Item {
             let spacing = DockSettings.iconSpacing
             let slotSize = iconSize + spacing
             let totalUnscaled = (appIconCount * slotSize) - spacing
-            let centerPos = (DockView.isVertical ? root.height : root.width) / 2
-            let unscaledStart = centerPos - (totalUnscaled / 2)
+            
+            let unscaledStart = DockView.isVertical 
+                ? (dockPanel.y + dockRow.y) 
+                : (dockPanel.x + dockRow.x)
 
             // --- Interaction Orbit (Rule 3 & 17) ---
             // The orbit is anchored to the visual center of the icons, 
