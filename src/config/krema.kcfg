@@ -9,7 +9,7 @@
     <entry name="IconSize" type="Int">
       <label>Icon size in pixels</label>
       <default>48</default>
-      <min>24</min>
+      <min>12</min>
       <max>96</max>
     </entry>
 
@@ -33,6 +33,14 @@
       <min>0</min>
       <max>1</max>
     </entry>
+
+    <entry name="IslandMargin" type="Int">
+      <label>Symmetrical margin between the Glass Pill and the dock panel edges</label>
+      <default>8</default>
+      <min>0</min>
+      <max>20</max>
+    </entry>
+
 
     <entry name="IconSpacing" type="Int">
       <label>Spacing between icons</label>
@@ -87,6 +95,11 @@
     <entry name="VisibilityMode" type="Int">
       <label>Dock visibility mode (0=Always, 1=AutoHide, 2=Dodge)</label>
       <default>0</default>
+    </entry>
+
+    <entry name="AllowOverflow" type="Bool">
+      <label>Allow the dock panel to shrink smaller than the icons</label>
+      <default>false</default>
     </entry>
 
      <entry name="reserveSpace" type="Bool">

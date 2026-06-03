@@ -31,3 +31,15 @@ This file contains the "burned-in" anti-patterns to prevent recurring mistakes.
 - **Observation:** Ripping out `anchors.fill: parent` from `IslandModule` and replacing it with a hardcoded `DockSettings.panelHeight` binding.
 - **Root Cause:** A screenshot showed the Glass Pill floating below the dark panel (the "Floating Frankenstein" bug). I assumed the Glass Pill's `anchors.fill` was flawed. I completely forgot that I had *already* fixed the root cause in a previous session by anchoring the parent `dockRow` to the floor! My "fix" forced the Glass Pill to match the shrinking dark panel height, permanently breaking its core purpose (wrapping the protruding icons).
 - **Prevention Rule:** **Enforce Rule 8 & 11.** Before attempting to rewrite *any* geometric logic to fix a bug, you MUST pause and write out a formal Diagnostic Report. Explicitly prove the mathematical root cause. If the component is mathematically sound (like a pure `anchors.fill`), the bug is guaranteed to be in the parent layout or offset calculation. NEVER replace working logic with hardcoded pixel limits.
+
+## 2026-06-02: Duplicated Math Formulas (The Missing +16)
+- **Anti-Pattern:** Duplicating a mathematical formula in multiple places with subtle differences, then using the wrong version as a clamp.
+- **Observation:** The `calculateMaxEnv()` function (used for slider clamping) was missing the `+ 16` padding that the `_maxEnv` readonly property had. This allowed the panel to be 16px shorter than the actual glass pill, causing visual overflow.
+- **Root Cause:** The function was originally in `islandMarginLayout` (for a different purpose) and didn't include the `+16`. When it was promoted to a global clamp, the formula mismatch went unnoticed.
+- **Prevention Rule:** NEVER duplicate a sizing formula. If two properties or functions compute the same geometric value, extract it into a single shared function and reference it from both places. When moving a formula to a new scope, always diff it against the canonical version.
+
+## 2026-06-02: Proportional Slider Dead Zones
+- **Anti-Pattern:** Capping one value (panelHeight) when a proportionally-linked value (iconSize) hits its limit, creating a dead zone where the slider does nothing.
+- **Observation:** When iconSize hit 96, `panelHeight` was capped to `round(96 / ratio)`, making the slider unresponsive from that point to its maximum (200px).
+- **Root Cause:** The unified clamping logic `newPanelHeight = Math.min(newPanelHeight, Math.round(96 / parent.capturedRatio))` froze panelHeight at ~144px for a ratio of 0.667, even though the slider went to 200.
+- **Prevention Rule:** When two values scale proportionally, cap each independently at its own limit. Don't freeze the "free" value when the "linked" value hits its cap — growing the panel past proportional only adds safe padding, not overflow.

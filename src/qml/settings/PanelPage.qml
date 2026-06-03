@@ -30,7 +30,14 @@ QQC2.ScrollView {
         readonly property real _dotHeight: Math.max(2, Math.round(DockSettings.iconSize * 0.10))
         readonly property real _indicatorGap: Math.max(2, Math.round(DockSettings.iconSize * 0.125) + Math.round(DockSettings.iconSize * 0.15 * (1.0 - DockSettings.indicatorOffset)))
         readonly property real _totalFloorUnit: _floorPadding + _dotHeight + _indicatorGap
-        readonly property real _maxEnv: DockSettings.iconSize + _totalFloorUnit + _floorPadding + 16
+
+        // Glass Pill envelope calculator (used by sliders)
+        function calculateMaxEnv(size) {
+            let floor = Math.max(4, Math.round(size * 0.25))
+            let ind = Math.max(2, Math.round(size * 0.10))
+            let gap = Math.max(2, Math.round(size * 0.125) + Math.round(size * 0.15 * (1.0 - DockSettings.indicatorOffset)))
+            return size + floor + ind + gap + floor
+        }
 
         // --- SECTION 1: PHYSICAL GEOMETRY ---
         ColumnLayout {
@@ -45,39 +52,124 @@ QQC2.ScrollView {
             }
             
             KremaCard {
-                // PANEL THICKNESS
+                id: panelCard
+                // PANEL SIZE (Proportional Scaling)
                 ColumnLayout {
                     Layout.fillWidth: true
+                    
+                    // Ratio tracking: prevents the slider bounds from shifting while actively dragging
+                    property real capturedRatio: 0
+                    property real stableRatio: DockSettings.iconSize / DockSettings.panelHeight
+                    property real activeRatio: masterZoomSlider.pressed ? capturedRatio : stableRatio
+                    
                     RowLayout {
-                        QQC2.Label { Layout.fillWidth: true; text: i18n("Panel Thickness"); color: theme.text; font.bold: true }
-                        QQC2.Label { text: thicknessSlider.value + "px"; color: theme.textDim; font.bold: true }
+                        QQC2.Label { Layout.fillWidth: true; text: i18n("Panel Size"); color: theme.text; font.bold: true }
+                        QQC2.Label { text: masterZoomSlider.value + "px"; color: theme.textDim; font.bold: true }
                     }
                     QQC2.Slider {
-                        id: thicknessSlider; Layout.fillWidth: true; 
-                        // Rule 6: Math Always Wins. Max limit is IconSize + Floor Unit + Panel Ceiling.
-                        from: 10; to: Math.floor(panelLayout._maxEnv); stepSize: 2; 
-                        value: DockSettings.panelHeight; 
-                        onMoved: DockSettings.panelHeight = value
-                        onPressedChanged: if (!pressed) DockSettings.save()
+                        id: masterZoomSlider; Layout.fillWidth: true; 
+                        
+                        // dynamic ceiling: either 140px, or the panel height that hits 96px icons
+                        to: Math.min(140, Math.round(96 / parent.activeRatio))
+                        
+                        // dynamic floor: either 20px (or glass pill floor if no overflow), or the panel height that hits 12px icons
+                        from: {
+                            let lowestIconFloor = Math.round(12 / parent.activeRatio);
+                            let structuralFloor = DockSettings.allowOverflow ? 20 : panelLayout.calculateMaxEnv(12);
+                            return Math.max(structuralFloor, lowestIconFloor);
+                        }
+                        stepSize: 2; 
+                        value: DockSettings.panelHeight;
+                        
+                        onPressedChanged: {
+                            if (pressed) {
+                                parent.capturedRatio = parent.stableRatio;
+                            } else {
+                                DockSettings.save();
+                            }
+                        }
+                        
+                        onMoved: {
+                            let newPanelHeight = value;
+                            let newIconSize = Math.round(parent.capturedRatio * newPanelHeight);
+                            
+                            // Clamp iconSize to valid range
+                            if (newIconSize > 96) {
+                                newIconSize = 96;
+                            } else if (newIconSize < 12) {
+                                newIconSize = 12;
+                            }
+                            
+                            // Since from/to already encapsulate the structural and icon limits, 
+                            // we just apply them directly!
+                            DockSettings.iconSize = newIconSize;
+                            DockSettings.panelHeight = newPanelHeight;
+                        }
+                    }
+                    QQC2.Label { 
+                        text: i18n("Scales the entire dock (Panel + Glass Pill) proportionally."); 
+                        color: theme.textDim; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.leftMargin: 4
                     }
                 }
 
                 Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A" }
 
-                // DIMENSIONAL SYNC (Rule 7)
-                KremaSwitch {
+                // PANEL THICKNESS (FINE-TUNING)
+                ColumnLayout {
                     Layout.fillWidth: true
-                    text: i18n("Proportional Scaling Lock")
-                    checked: DockSettings.syncPanelThickness
-                    onToggled: {
-                        DockSettings.syncPanelThickness = checked
-                        DockSettings.save()
+                    
+                    RowLayout {
+                        QQC2.Label { Layout.fillWidth: true; text: i18n("Panel Thickness (Outer Edge)"); color: theme.text; font.bold: true }
+                        QQC2.Label { text: thicknessSlider.value + "px"; color: theme.textDim; font.bold: true }
+                    }
+                    QQC2.Slider {
+                        id: thicknessSlider; Layout.fillWidth: true; 
+                        // Dynamic floor: 20px when overflow allowed, glass pill height when not.
+                        from: DockSettings.allowOverflow ? 20 : Math.floor(panelLayout.calculateMaxEnv(DockSettings.iconSize)); to: 140; stepSize: 2; 
+                        value: DockSettings.panelHeight; 
+                        onMoved: {
+                            DockSettings.panelHeight = value;
+                        }
+                        onPressedChanged: if (!pressed) DockSettings.save()
+                    }
+                    QQC2.Label { 
+                        text: i18n("Strictly grows/shrinks the outer dark panel without scaling the Glass Pill inside."); 
+                        color: theme.textDim; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.leftMargin: 4
+                    }
+                    
+                    Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A"; Layout.topMargin: 4; Layout.bottomMargin: 4 }
+                    
+                    RowLayout {
+                        Layout.fillWidth: true
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 2
+                            QQC2.Label { text: i18n("Allow Visual Overflow"); color: theme.text; font.bold: true }
+                            QQC2.Label { 
+                                text: i18n("When enabled, the panel can shrink below the Glass Pill, letting icons protrude above the panel edge."); 
+                                color: theme.textDim; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true
+                            }
+                        }
+                        QQC2.Switch {
+                            checked: DockSettings.allowOverflow
+                            onToggled: {
+                                DockSettings.allowOverflow = checked;
+                                DockSettings.save();
+                                // If turning OFF and panel is currently overflowing, snap to glass pill floor
+                                if (!checked) {
+                                    let floor = Math.floor(panelLayout.calculateMaxEnv(DockSettings.iconSize));
+                                    if (DockSettings.panelHeight < floor) {
+                                        DockSettings.panelHeight = floor;
+                                        DockSettings.save();
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
-                QQC2.Label { 
-                    text: i18n("Automatically adjusts panel thickness when resizing icons to preserve the visual overflow ratio."); 
-                    color: theme.textDim; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.leftMargin: 32
-                }
+
+
+
 
                 Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A" }
 
@@ -90,10 +182,11 @@ QQC2.ScrollView {
                     }
                     QQC2.Slider {
                         id: maxLengthSlider; Layout.fillWidth: true; 
-                        from: 10; to: 100; stepSize: 1; 
+                        from: 10; to: DockSettings.floating ? 99 : 100; stepSize: 1; 
                         value: DockSettings.maxLength; 
                         onMoved: DockSettings.maxLength = value
                         onPressedChanged: if (!pressed) DockSettings.save()
+                        onToChanged: if (value > to) DockSettings.maxLength = to
                     }
                     QQC2.Label { 
                         text: i18n("In Adaptive mode, this is the maximum allowed width. In Span mode, this dictates the exact panel width (e.g. 100% = full screen)."); 

@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Dev-Autostart & Environment Injection:**
  Updated `justfile` to generate a development autostart entry (`~/.config/autostart/`) that synchronizes with the `just run` environment. Both the development launcher and autostart now inject `XDG_DATA_DIRS` and `QT_PLUGIN_PATH` into their `Exec` lines, ensuring local plugins and themes load correctly upon login.
 - **Island Internal Padding:** Introduced 8px internal padding to the IslandModule, completely decoupling the Island's glass pill border from the main Panel's external boundary to achieve a more premium spatial layout without breaking zoom logic.
+- **Span Screen Aesthetics:** Upgraded the "Span Screen" layout engine. The dock mathematically tracks screen width/height up to 100% when flush, but enforces a strict 99% cap when Floating Mode is active to preserve edge separation.
+- **Ultra-Thin Panel Configurations:** Lowered the absolute minimum configuration floor for `IconSize` from `24px` down to `12px`. Combined with fluid 0px margin clamps, users can now create ultra-minimalist docks that perfectly "hug" the inner elements.
+
+### Fixed
+- **Tooltip Wayland Clipping:** Expanded the Wayland Layer Shell invisible surface boundary by 230px. This completely resolves the issue where wide tooltips (like "System Settings") popping out from vertical docks were abruptly sliced off by the compositor canvas.
+- **Vertical Dock Length Mismatch:** Removed an inverted math check in `main.qml` that forced vertical docks to calculate their maximum 100% length limit against the screen's *width* instead of its height.
+- **Overflow State Persistence:** Elevated the `AllowOverflow` layout toggle into a permanent `krema.kcfg` setting. This stops the dock from defaulting to strict bounds on launch and silently deleting the user's custom tight-panel configurations.
 
 ### Fixed
 - **Vertical Indicator Wrapping:** Resolved a major layout engine bug in vertical mode where active indicator dashes would artificially wrap horizontally into the icon's visual space due to an aggressive 3px constraint. The flow layout now accurately stacks indicators TopToBottom alongside the icon.

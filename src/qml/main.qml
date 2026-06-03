@@ -642,12 +642,18 @@ Item {
         property bool mouseInside: dockMouseArea.containsMouse && !root._dragActive
         property real _actualContentWidth: {
             let baseW = Math.max(dockRow.implicitWidth + 32, Kirigami.Units.gridUnit * 6)
-            if (DockSettings.panelLengthMode === 1) return Math.max(baseW, (DockView.isVertical ? root.height : root.width) * (DockSettings.maxLength / 100.0))
+            if (DockSettings.panelLengthMode === 1) {
+                let effectiveMax = DockSettings.floating ? Math.min(99, DockSettings.maxLength) : DockSettings.maxLength;
+                return Math.max(baseW, root.width * (effectiveMax / 100.0))
+            }
             return baseW
         }
         property real _actualContentHeight: {
             let baseH = Math.max(dockRow.implicitHeight + 32, Kirigami.Units.gridUnit * 6)
-            if (DockSettings.panelLengthMode === 1) return Math.max(baseH, (DockView.isVertical ? root.width : root.height) * (DockSettings.maxLength / 100.0))
+            if (DockSettings.panelLengthMode === 1) {
+                let effectiveMax = DockSettings.floating ? Math.min(99, DockSettings.maxLength) : DockSettings.maxLength;
+                return Math.max(baseH, root.height * (effectiveMax / 100.0))
+            }
             return baseH
         }
         
@@ -730,7 +736,12 @@ Item {
             }
             onImplicitWidthChanged: if (DockVisibility) DockVisibility.setContentDimensions(implicitWidth, implicitHeight)
             onImplicitHeightChanged: if (DockVisibility) DockVisibility.setContentDimensions(implicitWidth, implicitHeight)
-            readonly property real _panelInternalMargin: 8
+            // Dynamic Compressing Bumper: Perfect vertical/horizontal symmetry when there's space,
+            // but allows shrinking down to 0 margin (hugging the glass pill) if the panel is scaled down.
+            readonly property real _panelInternalMargin: {
+                let emptySpace = DockView.isVertical ? (dockPanel.width - implicitWidth) : (dockPanel.height - implicitHeight);
+                return Math.max(0, emptySpace / 2);
+            }
             x: {
                 if (DockView.isVertical) {
                     return DockView.edge === 2 ? _panelInternalMargin : (dockPanel.width - implicitWidth - _panelInternalMargin)

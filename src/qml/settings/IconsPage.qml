@@ -49,66 +49,6 @@ QQC2.ScrollView {
             }
             
             KremaCard {
-                // ICON SIZE
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    RowLayout {
-                        QQC2.Label { Layout.fillWidth: true; text: i18n("Base Icon Size"); color: theme.text; font.bold: true }
-                        QQC2.Label { text: iconSizeSlider.value + "px"; color: theme.textDim; font.bold: true }
-                    }
-                    QQC2.Slider {
-                        id: iconSizeSlider; Layout.fillWidth: true; 
-                        from: 24; to: 96; stepSize: 4; 
-                        value: DockSettings.iconSize; 
-                        onMoved: updateIconSize(value)
-                        onPressedChanged: {
-                            if (!pressed) {
-                                updateIconSize(value)
-                                DockSettings.save()
-                            }
-                        }
-
-                        function updateIconSize(newVal) {
-                                 let oldIconSize = DockSettings.iconSize;
-                                 if (newVal === oldIconSize) return;
-
-                                 // Rule 7 Permanent Radius Sync: Capture current ratio before updating size
-                                 let radiusRatio = DockSettings.cornerRadius / oldIconSize;
-
-                                 if (DockSettings.syncPanelThickness) {
-                                     let oldMaxEnv = iconsLayout.calculateMaxEnv(oldIconSize);
-                                     let ratio = DockSettings.panelHeight / oldMaxEnv;
-                                     
-                                     DockSettings.iconSize = newVal;
-                                     
-                                     let newMaxEnv = iconsLayout.calculateMaxEnv(newVal);
-                                     let newThickness = Math.min(newMaxEnv, Math.round(ratio * newMaxEnv));
-                                     
-                                     DockSettings.panelHeight = newThickness;
-                                 } else {
-                                     DockSettings.iconSize = newVal;
-                                     // Proactive Clamp: If icon shrinks, the max envelope might shrink below current panelHeight
-                                     let currentMax = iconsLayout.calculateMaxEnv(newVal);
-                                     if (DockSettings.panelHeight > currentMax) {
-                                         DockSettings.panelHeight = currentMax;
-                                     }
-                                 }
-                                 
-                                 // Rule 7 Permanent Radius Sync: Apply the captured ratio to the new size
-                                 let newRadius = Math.round(radiusRatio * newVal);
-
-                                 // Proactive Clamp: Corner radius cannot exceed half of panel height (Rule 6)
-                                 let maxRadius = Math.floor(DockSettings.panelHeight / 2);
-                                 if (newRadius > maxRadius) {
-                                     newRadius = maxRadius;
-                                 }
-                                 DockSettings.cornerRadius = newRadius;
-                        }
-                    }
-                }
-
-                Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A" }
-
                 // ICON SPACING
                 ColumnLayout {
                     Layout.fillWidth: true

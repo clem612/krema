@@ -172,3 +172,34 @@ Restored `anchors.fill: parent` to the Glass Pill `Rectangle` in `IslandModule.q
 
 **Verification:**
 Verified empirically with the user. The signature Krema-v2 highlight now wraps the icons and securely nests on the dark panel, never floating below it.
+
+### [BUG #37] Visual Overflow State Resets on Dock Launch
+- **Status:** 🟢 Fixed
+- **Date:** 2026-06-02
+- **Symptoms:** The user reported that "when the dock launches it always fixed on this panel size regardless of whether the overflow is turned on or not." If the panel was set to a small thickness (e.g. 20px) with overflow enabled, restarting the dock caused it to spontaneously grow back to the minimum glass pill height (e.g. 41px).
+- **Identified Logic:** `PanelPage.qml` had `property bool allowOverflow: false`. The `from` value of the Panel Thickness slider was bound to `panelCard.allowOverflow ? 20 : Math.floor(...)`.
+- **Root Cause:** The `allowOverflow` toggle was a transient QML UI property and was not mapped to the permanent system configuration (`krema.kcfg`). Every time the dock launched or the settings window evaluated, it defaulted to `false`. The slider's `from` property immediately shifted to the strict glass pill floor (e.g., 41px), which auto-clamped the user's 20px setting back up to 41px in real-time, effectively deleting their configuration.
+- **The Proposal (Trial 1):** Add an explicit `AllowOverflow` entry to `krema.kcfg` so it becomes a first-class permanent setting, and bind the UI elements directly to `DockSettings.allowOverflow`.
+- **Outcome:** Success. The overflow state now persists perfectly across reboots, preventing the UI slider from accidentally clamping and deleting the user's tight panel configurations on launch.
+
+---
+
+### [BUG #38] Vertical Dock Max Length Calculates from Screen Width
+- **Status:** 🟢 Fixed
+- **Date:** 2026-06-03
+- **Symptoms:** When the dock was placed vertically (left or right edge) and set to "Span Screen" mode (`PanelLengthMode = 1`), it failed to stretch fully across the vertical edge.
+- **Identified Logic:** In `main.qml`, the length properties used an inverted ternary operator. `_actualContentHeight` (which drives the vertical dock's length) was multiplying `(DockView.isVertical ? root.width : root.height)`.
+- **Root Cause:** In Wayland Layer Shell, the surface `root` represents the screen edges the panel is anchored to. For a vertical panel anchored top-to-bottom, `root.height` naturally represents the screen height. However, the ternary operator `(DockView.isVertical ? root.width : root.height)` actively swapped this, forcing the vertical dock to measure its length against the screen's *width* instead of its height, causing incorrect clipping.
+- **The Proposal (Trial 1):** Remove the inverted ternary swaps entirely. `_actualContentWidth` (horizontal length) should unconditionally use `root.width`, and `_actualContentHeight` (vertical length) should unconditionally use `root.height`.
+- **Outcome:** Success. The vertical dock now accurately calculates its 100% or 99% length limits using the physical screen height.
+
+---
+
+### [BUG #39] Tooltips Clipped by Vertical Dock Surface Bounds
+- **Status:** 🟢 Fixed
+- **Date:** 2026-06-03
+- **Symptoms:** When the dock was placed vertically (e.g. on the right edge), wide tooltips like "System Settings" had their text abruptly sliced off on the side extending inward toward the center of the screen.
+- **Identified Logic:** `DockView::updateSize()` calculated the Wayland `surfaceSize` (thickness) using `userH + maxZoomExt + 120`. 
+- **Root Cause:** In Wayland, a `LayerShell` surface is an absolute visual boundary. Anything drawn outside its bounding box is strictly clipped by the compositor. The hardcoded 120px "tooltip reserve" padding wasn't large enough to physically contain wide application names. The text was simply rendering into empty space outside the Wayland surface canvas.
+- **The Proposal (Trial 1):** Increase the hardcoded padding from `120` to `350` in `dockview.cpp`. The core architecture (`InputRegion`, `Dodge Windows` bounds) is highly robust and relies strictly on the explicit `m_panelRect` rather than the `surfaceSize`. Therefore, expanding the invisible Wayland canvas by an extra 230px poses zero risk of "eating" background mouse clicks or pushing maximized windows further away.
+- **Outcome:** Success. Wide tooltips now render fully without any clipping, and the invisible padding continues to allow perfect click-through for desktop interaction.
