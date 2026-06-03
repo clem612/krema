@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **Dock Alignment Control:** Added a new alignment engine that allows positioning the dock at the Start (Left/Top), Center, or End (Right/Bottom) of the selected screen edge. The alignment strictly respects floating padding and corner radii to prevent edge bleeding.
 - **Flatpak Icon Extractor:** Implemented direct resolution of Flatpak application icons from `~/.local/share/flatpak` and `/var/lib/flatpak`. This allows native icon rendering on standalone window managers like Hyprland, bridging the gap when `XDG_DATA_DIRS` does not include flatpak export paths.
 - **Hyprland Support Foundation:** Introduced `HyprlandDockPlatform` to enable Krema to run on Hyprland sessions. This implementation uses standard layer-shell protocols for positioning while bypassing KWin-specific effects, ensuring architectural stability on non-KDE compositors.
 - **Dev-Autostart & Environment Injection:**

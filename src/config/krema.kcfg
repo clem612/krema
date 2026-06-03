@@ -92,6 +92,13 @@
       <default>true</default>
     </entry>
 
+    <entry name="Alignment" type="Int">
+      <label>Alignment of the dock along the screen edge (0: Center, 1: Left/Top, 2: Right/Bottom)</label>
+      <default>0</default>
+      <min>0</min>
+      <max>2</max>
+    </entry>
+
     <entry name="VisibilityMode" type="Int">
       <label>Dock visibility mode (0=Always, 1=AutoHide, 2=Dodge)</label>
       <default>0</default>

@@ -31,6 +31,7 @@ class ScreenSettings : public QObject
     Q_PROPERTY(bool hasOverrides READ hasOverrides NOTIFY hasOverridesChanged)
     Q_PROPERTY(int iconSize READ iconSize WRITE setIconSize NOTIFY iconSizeChanged)
     Q_PROPERTY(int edge READ edge WRITE setEdge NOTIFY edgeChanged)
+    Q_PROPERTY(int alignment READ alignment WRITE setAlignment NOTIFY alignmentChanged)
     Q_PROPERTY(int visibilityMode READ visibilityMode WRITE setVisibilityMode NOTIFY visibilityModeChanged)
     Q_PROPERTY(int backgroundStyle READ backgroundStyle WRITE setBackgroundStyle NOTIFY backgroundStyleChanged)
     Q_PROPERTY(double backgroundOpacity READ backgroundOpacity WRITE setBackgroundOpacity NOTIFY backgroundOpacityChanged)
@@ -55,6 +56,7 @@ public:
 
     [[nodiscard]] int iconSize() const;
     [[nodiscard]] int edge() const;
+    [[nodiscard]] int alignment() const;
     [[nodiscard]] int visibilityMode() const;
     [[nodiscard]] int backgroundStyle() const;
     [[nodiscard]] double backgroundOpacity() const;
@@ -72,6 +74,7 @@ public:
 public Q_SLOTS:
     void setIconSize(int size);
     void setEdge(int edge);
+    void setAlignment(int alignment);
     void setVisibilityMode(int mode);
     void setBackgroundStyle(int style);
     void setBackgroundOpacity(double opacity);
@@ -94,6 +97,7 @@ Q_SIGNALS:
     void hasOverridesChanged();
     void iconSizeChanged();
     void edgeChanged();
+    void alignmentChanged();
     void visibilityModeChanged();
     void backgroundStyleChanged();
     void backgroundOpacityChanged();

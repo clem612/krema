@@ -661,8 +661,16 @@ Item {
         height: DockView.isVertical ? _actualContentHeight : DockView.screenSettings.panelHeight
         radius: Math.min(DockView.screenSettings.cornerRadius, Math.min(width, height) / 2)
         
-        x: DockView.isVertical ? _panelEdgePos : (parent.width - width) / 2
-        y: DockView.isVertical ? (parent.height - height) / 2 : _panelEdgePos
+        property real _panelAlignmentPos: {
+            if (typeof DockView === "undefined" || typeof DockView.screenSettings === "undefined") return 0;
+            let align = DockView.screenSettings.alignment;
+            if (align === 1) return _screenFlooring;
+            if (align === 2) return DockView.isVertical ? (parent.height - height - _screenFlooring) : (parent.width - width - _screenFlooring);
+            return DockView.isVertical ? (parent.height - height) / 2 : (parent.width - width) / 2;
+        }
+        
+        x: DockView.isVertical ? _panelEdgePos : _panelAlignmentPos
+        y: DockView.isVertical ? _panelAlignmentPos : _panelEdgePos
         // --- Derived: _screenFlooring (External distance from screen edge to panel) ---
         readonly property real _screenFlooring: DockView.floatingPadding
 

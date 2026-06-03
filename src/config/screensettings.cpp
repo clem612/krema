@@ -41,6 +41,14 @@ ScreenSettings::ScreenSettings(const QString &screenName, KremaSettings *fallbac
                                           << m_group.readEntry(QStringLiteral("Edge")) << "'. Update ignored.";
         }
     });
+    connect(m_fallback, &KremaSettings::AlignmentChanged, this, [this]() {
+        if (!m_group.hasKey(QStringLiteral("Alignment"))) {
+            Q_EMIT alignmentChanged();
+        } else {
+            qCWarning(lcConfig).nospace() << "DESYNC BLOCKED: Global 'Alignment' changed, but screen '" << m_screenName << "' is enforcing override '"
+                                          << m_group.readEntry(QStringLiteral("Alignment")) << "'. Update ignored.";
+        }
+    });
     connect(m_fallback, &KremaSettings::VisibilityModeChanged, this, [this]() {
         if (!m_group.hasKey(QStringLiteral("VisibilityMode"))) {
             Q_EMIT visibilityModeChanged();
@@ -118,6 +126,11 @@ int ScreenSettings::iconSize() const
 int ScreenSettings::edge() const
 {
     return readWithFallback(QStringLiteral("Edge"), m_fallback->edge());
+}
+
+int ScreenSettings::alignment() const
+{
+    return readWithFallback(QStringLiteral("Alignment"), m_fallback->alignment());
 }
 
 int ScreenSettings::visibilityMode() const
@@ -200,6 +213,12 @@ void ScreenSettings::setEdge(int edge)
 {
     writeOverride(QStringLiteral("Edge"), edge);
     Q_EMIT edgeChanged();
+}
+
+void ScreenSettings::setAlignment(int alignment)
+{
+    writeOverride(QStringLiteral("Alignment"), alignment);
+    Q_EMIT alignmentChanged();
 }
 
 void ScreenSettings::setVisibilityMode(int mode)
@@ -290,6 +309,7 @@ void ScreenSettings::clearOverrides()
     // Re-emit all signals so DockShell picks up global defaults
     Q_EMIT iconSizeChanged();
     Q_EMIT edgeChanged();
+    Q_EMIT alignmentChanged();
     Q_EMIT visibilityModeChanged();
     Q_EMIT backgroundStyleChanged();
     Q_EMIT backgroundOpacityChanged();
@@ -315,6 +335,8 @@ void ScreenSettings::clearOverride(const QString &key)
             Q_EMIT iconSizeChanged();
         else if (key == QStringLiteral("Edge"))
             Q_EMIT edgeChanged();
+        else if (key == QStringLiteral("Alignment"))
+            Q_EMIT alignmentChanged();
         else if (key == QStringLiteral("VisibilityMode"))
             Q_EMIT visibilityModeChanged();
         else if (key == QStringLiteral("BackgroundStyle"))

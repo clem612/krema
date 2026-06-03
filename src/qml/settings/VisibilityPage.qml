@@ -224,6 +224,70 @@ QQC2.ScrollView {
                        }
                    }
                }
+
+               Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A" }
+
+               RowLayout {
+                   Layout.fillWidth: true
+                   ColumnLayout {
+                       Layout.fillWidth: true; spacing: 2
+                       QQC2.Label { text: i18n("Alignment"); color: theme.text; font.bold: true }
+                       QQC2.Label { 
+                           text: i18n("Position of the dock along the chosen screen edge."); 
+                           color: theme.textDim; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true 
+                       }
+                   }
+
+                   RowLayout {
+                       spacing: 4
+                       Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                       
+                       property bool isVertical: DockSettings.edge === 2 || DockSettings.edge === 3
+
+                       Repeater {
+                           model: [
+                               { icon: parent.isVertical ? "align-vertical-top-out-symbolic" : "align-horizontal-left-out-symbolic", label: parent.isVertical ? i18n("Top") : i18n("Left"), value: 1 },
+                               { icon: parent.isVertical ? "align-vertical-center-symbolic" : "align-horizontal-center-symbolic", label: i18n("Center"), value: 0 },
+                               { icon: parent.isVertical ? "align-vertical-bottom-out-symbolic" : "align-horizontal-right-out-symbolic", label: parent.isVertical ? i18n("Bottom") : i18n("Right"), value: 2 }
+                           ]
+
+                           delegate: QQC2.Button {
+                               id: alignBtn
+                               property bool isSelected: DockSettings.alignment === modelData.value
+                               leftPadding: 12; rightPadding: 12
+
+                               contentItem: RowLayout {
+                                   spacing: 8
+                                   Kirigami.Icon {
+                                       source: modelData.icon
+                                       color: alignBtn.isSelected ? theme.text : theme.textDim
+                                       implicitWidth: 16; implicitHeight: 16
+                                   }
+                                   QQC2.Label {
+                                       text: modelData.label
+                                       color: alignBtn.isSelected ? theme.text : theme.textDim
+                                       font.pointSize: 9; font.bold: alignBtn.isSelected
+                                   }
+                               }
+
+                               background: Rectangle {
+                                   implicitHeight: 34; radius: 8
+                                   color: alignBtn.isSelected ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.25) : (alignBtn.hovered ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.12) : "transparent")
+                                   border.color: alignBtn.isSelected ? theme.accent : "transparent"; border.width: 1
+                                   Behavior on color { ColorAnimation { duration: 150 } }
+                               }
+
+                               onClicked: {
+                                   DockSettings.alignment = modelData.value
+                                   DockSettings.save()
+                                   if (typeof DockView !== "undefined" && DockView.screenSettings) {
+                                       DockView.screenSettings.clearOverride("Alignment")
+                                   }
+                               }
+                           }
+                       }
+                   }
+               }
            }
        }
    }
