@@ -211,3 +211,31 @@ Verified empirically with the user. The signature Krema-v2 highlight now wraps t
 **Trial 1:** 
 - **Strategy:** Replaced the hardcoded `centerPos` math with dynamic position tracking: `DockView.isVertical ? (dockPanel.y + dockRow.y) : (dockPanel.x + dockRow.x)`. This guarantees the hit-testing perfectly aligns with the icons in any alignment mode.
 - **Outcome:** Success. Verified via build test and geometric logic check.
+
+### 🔴 [Bug] Hyprland Blur Artifact (Sharp Rectangle)
+**Status**: 🟢 Fixed
+**Symptom**:
+A sharp horizontal orange rectangle (or other wallpaper color) appears at the edge of the dock panel in Hyprland when `layerrule = blur` is active. This artifact only appears when the dock's `max length` exceeds 50%.
+**Root Cause**:
+The issue was caused by a perspective projection math bug in the shadow shader (`outer_shadow.frag`). 
+Because the shadow was calculated using a perspective projection (simulating a point light source), the width of the shadow expanded proportionally to the width of the dock panel.
+1. When the dock was small, the shadow's expansion fit inside its allocated 64px Qt Quick bounding box.
+2. When the dock's `max length` exceeded 50%, the perspective shadow expanded *beyond* 64px.
+3. Qt Quick physically chopped off the shadow at the 64px boundary, creating a straight, vertical cut-off line with `alpha > 0.0`.
+4. Hyprland's `ignorealpha 0.0` blurred this sharp cut-off, creating the visual artifact.
+**Proposal/Action**:
+Replaced the perspective projection math in `outer_shadow.frag` with an orthographic (directional light) projection. The shadow now perfectly matches the physical width of the dock panel and only shifts based on `lightX/Y`, ensuring it never expands beyond its fixed 64px bounding box regardless of the dock's length.
+- **Outcome:** 🟢 Fixed. Verified empirically by the user.
+
+### 🔴 [Bug] Invisible Click-Blocking Wall Over Dock
+**Status**: 🟢 Fixed
+**Symptom**:
+A massive invisible layer above the dock prevents the user from clicking on windows or text that are positioned behind or near the dock.
+**Root Cause**:
+The Wayland `InputRegion` (the compositor's physical click-interception area) had two major flaws:
+1. It statically added `p.margin` (64px) to its boundary. This margin is intended *only* for the soft drop shadow shader, but by adding it to the `InputRegion`, it created a 64px solid wall of invisible click-interception around the dock.
+2. `dockvisibilitycontroller.cpp` was forcing `params.hovered` to `true` whenever the dock was visible (`m_visible ? true : m_hovered`). This meant the `InputRegion` was permanently expanded to `zoomOverflowHeight` (to catch massive 2.0x zoomed icons) even when the user was nowhere near the dock.
+**Proposal/Action**:
+- Removed the `p.margin` from the `InputRegion` math in `inputregion.cpp` (shadows should never block clicks).
+- Made the `InputRegion` dynamically breathe with the QML `m_hovered` state. When not hovered, the overflow shrinks to a safe 24px (enough to catch unzoomed protruding icons). The instant the user hovers, it dynamically expands to `zoomOverflowHeight` to perfectly catch the massive zoomed icons. When the mouse leaves the orbit, it instantly shrinks back, freeing the desktop.
+- **Outcome:** 🟢 Fixed. Wayland input region now perfectly traces the unzoomed icons and only expands when actively interacting.

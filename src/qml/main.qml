@@ -248,12 +248,17 @@ Item {
                 let item = getAppIcon(i);
                 if (!item) continue;
 
-                let unscaledCenter = unscaledStart + (i * slotSize) + (iconSize / 2);
-                let zoomedSize = iconSize * item.currentScale;
-                let slotStart = unscaledCenter - (zoomedSize / 2);
-                let slotEnd = unscaledCenter + (zoomedSize / 2);
-
                 // Primary Axis Filter: Is the mouse within the visual width of this icon?
+                // By using the actual visual position (x/y) instead of an unscaled grid,
+                // the hitbox perfectly follows the icon as it shifts away during parabolic zoom.
+                let visualCenter = DockView.isVertical 
+                    ? (dockPanel.y + dockRow.y + item.y + (item.height / 2))
+                    : (dockPanel.x + dockRow.x + item.x + (item.width / 2));
+                
+                let zoomedSize = DockView.isVertical ? item.height : item.width;
+                let slotStart = visualCenter - (zoomedSize / 2);
+                let slotEnd = visualCenter + (zoomedSize / 2);
+
                 if (mPos >= slotStart - 5 && mPos <= slotEnd + 5) {
                     let localPos = item.iconImage.mapFromItem(dockMouseArea, mouse.x, mouse.y);
 
@@ -609,6 +614,7 @@ Item {
     // --- Layer 0: Main Dock Panel (Visual container) ---
     VisualPanel {
         id: dockPanel
+
         visible: opacity > 0.01
 
         // --- Placement: visualIconTop (Absolute boundary used to align window previews) ---
@@ -694,6 +700,9 @@ Item {
                 DockVisibility.setPanelRect(dockPanel.x, dockPanel.y, dockPanel.width, dockPanel.height)
                 DockVisibility.setZoomOverflowHeight(dockPanel.currentVisualOverflow)
             }
+            if (typeof _debugGeom !== "undefined" && _debugGeom) {
+                console.log("[GEOM_DOCK] dockPanel X: " + dockPanel.x + " Y: " + dockPanel.y + " W: " + dockPanel.width + " H: " + dockPanel.height)
+            }
         }
 
         onXChanged: updateWaylandInputRegion(); onYChanged: updateWaylandInputRegion()
@@ -716,6 +725,7 @@ Item {
 
         Item {
             id: dockRow; z: 2; readonly property real baseSpacing: DockSettings.iconSpacing
+            onXChanged: if (typeof _debugGeom !== "undefined" && _debugGeom) console.log("[GEOM_ROW] dockRow X: " + x + " Y: " + y + " W: " + implicitWidth + " H: " + implicitHeight)
             property int layoutTrigger: 0
 
             Connections {
@@ -756,12 +766,18 @@ Item {
                 if (DockView.isVertical) {
                     return DockView.edge === 2 ? _panelInternalMargin : (dockPanel.width - implicitWidth - _panelInternalMargin)
                 }
+                let align = typeof DockView !== "undefined" && DockView.screenSettings ? DockView.screenSettings.alignment : 0
+                if (align === 1) return _panelInternalMargin
+                if (align === 2) return dockPanel.width - implicitWidth - _panelInternalMargin
                 return (dockPanel.width - implicitWidth) / 2
             }
             y: {
                 if (!DockView.isVertical) {
                     return DockView.edge === 0 ? _panelInternalMargin : (dockPanel.height - implicitHeight - _panelInternalMargin)
                 }
+                let align = typeof DockView !== "undefined" && DockView.screenSettings ? DockView.screenSettings.alignment : 0
+                if (align === 1) return _panelInternalMargin
+                if (align === 2) return dockPanel.height - implicitHeight - _panelInternalMargin
                 return (dockPanel.height - implicitHeight) / 2
             }
 

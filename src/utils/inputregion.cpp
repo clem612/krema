@@ -41,29 +41,39 @@ QRegion computeDockInputRegion(const InputRegionParams &p)
 
     // 2. Add the Dock Hitbox (The "Hole" for the icons)
     if (p.visible) {
+        // FIX: The `p.margin` (64px) is exclusively for drawing the soft drop shadow.
+        // It must NOT be added to the input region, otherwise it creates a massive invisible click-blocking wall!
+        // Instead, we only use a small 5px buffer around the sides.
+        int horizontalBuffer = 5;
+
+        // FIX: Only expand the input region to `zoomOverflowHeight` if actively hovering.
+        // If not hovering, we only provide 24px of overflow (enough to catch the tops of unzoomed protruding icons).
+        // This dynamically frees the screen for background window clicks!
+        int overflow = p.hovered ? p.zoomOverflowHeight : 24;
+
         int x, y, w, h;
         if (p.edge <= 1) { // Horizontal (Top=0, Bottom=1)
-            x = std::max(0, p.panelX - p.margin);
-            w = p.panelWidth + 2 * p.margin;
+            x = std::max(0, p.panelX - horizontalBuffer);
+            w = p.panelWidth + 2 * horizontalBuffer;
 
             if (p.edge == 1) { // Bottom
-                // Rule 17 Compliance: Always cover the potential zoom area to 'catch' the mouse.
-                y = std::max(0, p.panelY - p.zoomOverflowHeight - p.margin);
+                // Rule 17 Compliance: Dynamically cover zoom area
+                y = std::max(0, p.panelY - overflow - horizontalBuffer);
                 h = p.surfaceHeight - y;
             } else { // Top
                 y = 0;
-                h = p.panelY + p.panelHeight + p.zoomOverflowHeight + p.margin;
+                h = p.panelY + p.panelHeight + overflow + horizontalBuffer;
             }
         } else { // Vertical (Left=2, Right=3)
-            y = std::max(0, p.panelY - p.margin);
-            h = p.panelHeight + 2 * p.margin;
+            y = std::max(0, p.panelY - horizontalBuffer);
+            h = p.panelHeight + 2 * horizontalBuffer;
 
             if (p.edge == 3) { // Right
-                x = std::max(0, p.panelX - p.zoomOverflowHeight - p.margin);
+                x = std::max(0, p.panelX - overflow - horizontalBuffer);
                 w = p.surfaceWidth - x;
             } else { // Left
                 x = 0;
-                w = p.panelX + p.panelWidth + p.zoomOverflowHeight + p.margin;
+                w = p.panelX + p.panelWidth + overflow + horizontalBuffer;
             }
         }
         finalRegion += QRect(x, y, w, h);

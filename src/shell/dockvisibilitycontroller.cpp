@@ -164,8 +164,16 @@ void DockVisibilityController::applyInputRegion()
     params.panelHeight = m_panelHeight;
     params.zoomOverflowHeight = m_zoomOverflowHeight;
     params.visible = m_visible;
-    params.hovered = m_visible ? true : m_hovered;
+    // FIX: Only pass hovered as true if actually hovering!
+    // The previous `m_visible ? true : m_hovered` forced the Wayland input region
+    // to be permanently expanded to max zoom bounds, creating an invisible click-blocking wall.
+    params.hovered = m_hovered;
     params.edge = static_cast<int>(m_platform->edge());
+
+    // FIX: Expand the input region margin to 64 to fully encompass the shadow bounding box.
+    // This allows the shader's smooth alpha clamp to reach 0.0 before the region cuts it off,
+    // preventing sharp blurred artifacts in Hyprland.
+    params.margin = 64;
 
     // 1. Create the base stencil for icons
     QRegion finalHitbox = computeDockInputRegion(params);
