@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Fuzzy Flatpak Identity Resolver:** Updated the suffix matching algorithm to aggressively strip spaces and dashes, resolving edge cases where Wayland window classes (e.g., "aim train") mismatched their Flatpak identifiers.
 - **Lua IPC Interception Bypass:** Resolved Hyprland context menu "Close" failure by implementing a dynamic fallback that rewrites raw socket dispatches to `hl.dsp.window.close()` when the `hyprland-lua-plugins` extension is active.
 - **Active Indicator Desync:** Fixed an issue where the active window indicator failed to update when windows were focused externally (e.g. via Alt+Tab or window manager). The data model now guarantees a forced evaluation whenever a child's state changes.
+- **Full-Surface Blur on Launch:** Fixed a startup blur bug where an empty `QRegion` passed to `KWindowEffects::enableBlurBehind` caused KWin to apply blur to the entire Wayland surface (500+ pixels tall), creating an oversized blurry block around the dock. Blur-using styles now defer until the panel geometry is reported by QML.
 
 
 ## [0.8.0] - 2026-05-12

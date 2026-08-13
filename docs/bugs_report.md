@@ -239,3 +239,14 @@ The Wayland `InputRegion` (the compositor's physical click-interception area) ha
 - Removed the `p.margin` from the `InputRegion` math in `inputregion.cpp` (shadows should never block clicks).
 - Made the `InputRegion` dynamically breathe with the QML `m_hovered` state. When not hovered, the overflow shrinks to a safe 24px (enough to catch unzoomed protruding icons). The instant the user hovers, it dynamically expands to `zoomOverflowHeight` to perfectly catch the massive zoomed icons. When the mouse leaves the orbit, it instantly shrinks back, freeing the desktop.
 - **Outcome:** 🟢 Fixed. Wayland input region now perfectly traces the unzoomed icons and only expands when actively interacting.
+
+---
+
+### [BUG #40] Full-Surface Blur on Dock Launch (Oversized Blurry Block)
+- **Status:** 🟢 Fixed
+- **Date:** 2026-08-13
+- **Symptoms:** When the dock launches, a massive blurry rectangular block appears covering the entire dock surface area (screen width × 500+ pixels tall), far exceeding the actual panel bounds. The blur area appears oversized and washed out.
+- **Identified Logic:** `DockView::applyBackgroundStyle()` in `dockview.cpp` builds a `visualRegion` from `m_visibilityController->panelRect()`. If the panel rect is invalid (empty), the `visualRegion` stays empty and is passed directly to `applyBackgroundToWindow()`.
+- **Root Cause:** `applyBackgroundStyle()` is called at startup (line 68 in `dockview.cpp`) and on `dockVisibleChanged` (line 66), both of which fire *before* the QML engine has rendered and reported its geometry via `setPanelRect()`. At this point, `panelRect()` returns `{0,0,0,0}`, so `visualRegion` is empty. Passing an empty `QRegion` to `KWindowEffects::enableBlurBehind(window, true, QRegion())` is standard KDE/Qt behavior for "apply blur to the ENTIRE window surface." Since the Wayland surface is massive (`surfaceSize = userH + maxZoomExt + 350`), the blur covers a huge rectangular area extending far beyond the dock.
+- **The Proposal (Trial 1):** Add a guard in `applyBackgroundStyle()` that defers blur-using styles when the visual region is empty. The correct blur is applied later when `panelRectChanged` fires (connected at `dockshell.cpp:159`). Non-blur styles (Tinted/Transparent) are unaffected.
+- **Outcome:** 🟢 Fixed. The dock now launches with a clean, precisely-bounded blur region matching only the visual panel area. Build verified.

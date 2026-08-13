@@ -15,6 +15,10 @@ void applyBackgroundToWindow(QWindow *window, BackgroundStyleType type, const QR
         return;
     }
 
+    if (qEnvironmentVariableIsSet("HYPRLAND_INSTANCE_SIGNATURE")) {
+        return;
+    }
+
     // Always remove previous effects first
     removeBackgroundFromWindow(window);
 
@@ -48,6 +52,9 @@ void removeBackgroundFromWindow(QWindow *window)
         return;
     }
 
+    if (qEnvironmentVariableIsSet("HYPRLAND_INSTANCE_SIGNATURE")) {
+        return;
+    }
     KWindowEffects::enableBlurBehind(window, false);
     KWindowEffects::enableBackgroundContrast(window, false);
 }

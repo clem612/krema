@@ -142,6 +142,13 @@ void DockView::applyBackgroundStyle()
         }
     }
 
+    // Guard: Never pass an empty region to blur-using styles.
+    // An empty QRegion tells KWin to blur the ENTIRE window surface,
+    // which causes the massive blurry block bug on startup (Bug #40).
+    if (visualRegion.isEmpty() && styleUsesBlur(type)) {
+        return;
+    }
+
     applyBackgroundToWindow(this, type, visualRegion);
     Q_EMIT backgroundColorChanged();
     Q_EMIT backgroundStyleTypeChanged();
