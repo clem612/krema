@@ -88,8 +88,9 @@ void HyprlandDockPlatform::setVisibilityMode(VisibilityMode mode)
         break;
     case VisibilityMode::AutoHide:
     case VisibilityMode::DodgeWindows:
-        // Hyprland handles -1 as "no exclusive zone" correctly for layer-shell
-        m_layerWindow->setExclusiveZone(-1);
+        // Respect other surfaces' exclusive zones (like shell panels)
+        // by setting to 0, which anchors to the usable area instead of absolute edge.
+        m_layerWindow->setExclusiveZone(0);
         break;
     }
 }

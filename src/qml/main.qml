@@ -180,7 +180,7 @@ Item {
             }
 
             let isVisible = DockVisibility.dockVisible
-            let triggerDepth = (typeof DockVisibility !== "undefined" && DockVisibility.hovered) ? 64 : 2
+            let triggerDepth = (typeof DockVisibility !== "undefined" && DockVisibility.hovered) ? 64 : 8
 
             let iconSize = DockView.screenSettings.iconSize
             let spacing = DockSettings.iconSpacing

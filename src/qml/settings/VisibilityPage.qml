@@ -149,7 +149,74 @@ QQC2.ScrollView {
                    checked: DockSettings.dodgeActiveOnly
                    onToggled: { DockSettings.dodgeActiveOnly = checked; DockSettings.save(); }
                }
-           }
+
+                Rectangle { 
+                    Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A"
+                    visible: DockSettings.visibilityMode !== 0
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    visible: DockSettings.visibilityMode !== 0
+                    ColumnLayout {
+                        Layout.fillWidth: true; spacing: 2
+                        QQC2.Label { text: i18n("Show Delay"); color: theme.text; font.bold: true }
+                        QQC2.Label { text: i18n("How long to wait before the dock appears (ms)."); color: theme.textDim; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                    }
+                    ColumnLayout {
+                        Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                        Layout.preferredWidth: 150
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Item { Layout.fillWidth: true }
+                            QQC2.Label { text: showDelaySlider.value + "ms"; color: theme.textDim; font.bold: true }
+                        }
+                        QQC2.Slider {
+                            id: showDelaySlider; Layout.fillWidth: true; 
+                            from: 0; to: 1000; stepSize: 50
+                            value: DockSettings.showDelay; 
+                            onMoved: DockSettings.showDelay = value
+                            onPressedChanged: {
+                                if (!pressed) {
+                                    DockSettings.showDelay = value;
+                                    DockSettings.save();
+                                }
+                            }
+                        }
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    visible: DockSettings.visibilityMode !== 0
+                    ColumnLayout {
+                        Layout.fillWidth: true; spacing: 2
+                        QQC2.Label { text: i18n("Hide Delay"); color: theme.text; font.bold: true }
+                        QQC2.Label { text: i18n("How long to wait before the dock disappears (ms)."); color: theme.textDim; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                    }
+                    ColumnLayout {
+                        Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                        Layout.preferredWidth: 150
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Item { Layout.fillWidth: true }
+                            QQC2.Label { text: hideDelaySlider.value + "ms"; color: theme.textDim; font.bold: true }
+                        }
+                        QQC2.Slider {
+                            id: hideDelaySlider; Layout.fillWidth: true; 
+                            from: 0; to: 2000; stepSize: 50
+                            value: DockSettings.hideDelay; 
+                            onMoved: DockSettings.hideDelay = value
+                            onPressedChanged: {
+                                if (!pressed) {
+                                    DockSettings.hideDelay = value;
+                                    DockSettings.save();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
        }
 
        ColumnLayout {

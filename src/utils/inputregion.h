@@ -19,7 +19,7 @@ struct InputRegionParams {
     int zoomOverflowHeight;
     bool visible;
     bool hovered;
-    int triggerStripHeight = 4;
+    int triggerStripHeight = 8;
     int margin = 4;
     int edge = 1; // 0=Top, 1=Bottom, 2=Left, 3=Right
 
