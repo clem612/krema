@@ -19,6 +19,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Island Internal Padding:** Introduced 8px internal padding to the IslandModule, completely decoupling the Island's glass pill border from the main Panel's external boundary to achieve a more premium spatial layout without breaking zoom logic.
 - **Span Screen Aesthetics:** Upgraded the "Span Screen" layout engine. The dock mathematically tracks screen width/height up to 100% when flush, but enforces a strict 99% cap when Floating Mode is active to preserve edge separation.
 - **Ultra-Thin Panel Configurations:** Lowered the absolute minimum configuration floor for `IconSize` from `24px` down to `12px`. Combined with fluid 0px margin clamps, users can now create ultra-minimalist docks that perfectly "hug" the inner elements.
+- Multi-monitor support with three modes: Primary Only, All Screens, and Follow Active Screen
+- Per-screen settings override: each monitor can have independent icon size, edge, visibility mode, background, and pinned launchers
+- Follow Active Screen mode with three trigger types: mouse position, active window focus, and composite
+- Virtual desktop filtering: show windows from current desktop only, or all desktops with dimmed icons for other desktops
+- Fedora (COPR), openSUSE (OBS), Debian, and Ubuntu packaging support
+- Compile-time LayerShellQt API detection for cross-distribution compatibility
+- OBS build targets for Fedora 44 and openSUSE Leap 16.0
+- Docker GUI runtime smoke images for installing externally built distro packages on isolated KWin virtual displays
+- Docker GUI smoke screenshots and Krema process readiness checks for package runtime validation
 
 ### Fixed
 - **Tooltip Wayland Clipping:** Expanded the Wayland Layer Shell invisible surface boundary by 230px. This completely resolves the issue where wide tooltips (like "System Settings") popping out from vertical docks were abruptly sliced off by the compositor canvas.
@@ -64,6 +73,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Preview Misalignment:** Synchronized vertical thumbnail offsets using the `visualIconTop` bridge, ensuring previews float at a consistent altitude regardless of zoom state.
 - **Settings UI Collision:** Resolved text overlaps in the configuration pages by implementing the **Safe Spacing Mandate (Rule 20)** and removing negative margins.
 - **Shadow Clipping:** Restored natural volumetric shadow fade by correctly binding geometry to SDF padding.
+- Build compatibility with LayerShellQt < 6.4 (Ubuntu 25.04, Debian 13)
+- Build compatibility with strict `QT_NO_CAST_FROM_ASCII` flag on non-Arch distributions
+- Fedora Rawhide OBS resolver preferences for current ICU and systemd packages
+- openSUSE Slowroll OBS support corrected to x86_64, matching upstream Slowroll architecture availability
+- openSUSE Leap 16.0 OBS compiler dependency aligned with Krema's GCC 13 minimum
+- openSUSE Docker GUI runtime images now include the `dbus-run-session` provider required by package smoke tests
+- Debian/Ubuntu and openSUSE runtime package dependency names in OBS packaging metadata so the package installs cleanly against current distribution repositories (release bumped to 0.7.0-2)
 
 ## [0.7.0] - 2026-03-28
 

@@ -55,6 +55,7 @@ ui_*.h
 *.jsc
 Makefile*
 *build-*
+!tests/docker/build-images.sh
 *.qm
 *.prl
 
@@ -222,6 +223,6 @@ build/
 *.swo
 
 .claude/worktrees
-
 .gemini/
 gha-creds-*.json
+.omo/

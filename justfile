@@ -39,6 +39,18 @@ obs-build-rpm distro="openSUSE_Tumbleweed" arch="x86_64":
 obs-build-deb distro="Debian_13" arch="x86_64":
     osc build {{distro}} {{arch}} packaging/obs/debian.control
 
+docker-runtime-images target="all":
+    tests/docker/build-images.sh {{target}}
+
+docker-runtime-update-digests target="all":
+    tests/docker/update-digests.sh {{target}}
+
+docker-runtime-publish target="all":
+    tests/docker/publish-images.sh {{target}}
+
+docker-runtime-smoke target package_dir:
+    tests/docker/run-smoke.sh {{target}} {{package_dir}}
+
 # Install .desktop files for development (KWin Wayland protocol access & autostart)
 # IMPORTANT: Exec= must be a plain path — no shell wrappers or escapes.
 # Broken Exec= lines cause kbuildsycoca6 to reject the file, which prevents
