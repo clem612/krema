@@ -43,6 +43,7 @@ class DockVisibilityController : public QObject
     Q_PROPERTY(bool interacting READ isInteracting NOTIFY interactingChanged)
     Q_PROPERTY(bool liveEditMode READ liveEditMode WRITE setLiveEditMode NOTIFY liveEditModeChanged)
     Q_PROPERTY(QRect panelRect READ panelRect NOTIFY panelRectChanged)
+    Q_PROPERTY(bool hovered READ isHovered NOTIFY hoveredChanged)
 
 public:
     void updateRegionGeometry();
@@ -57,6 +58,7 @@ public:
 
     [[nodiscard]] bool isDockVisible() const;
     bool isInteracting() const;
+    bool isHovered() const;
 
     [[nodiscard]] bool isLiveEditMode() const;
     void setLiveEditMode(bool edit);
@@ -118,6 +120,7 @@ Q_SIGNALS:
     void panelRectChanged();
     void interactingChanged();
     void liveEditModeChanged();
+    void hoveredChanged();
 
 private:
     // These are the "Storage Boxes" for the settings dimensions

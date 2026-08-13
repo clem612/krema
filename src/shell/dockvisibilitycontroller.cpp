@@ -71,12 +71,14 @@ DockVisibilityController::DockVisibilityController(DockPlatform *platform,
     m_showTimer.setSingleShot(true);
     m_showTimer.setInterval(200);
     connect(&m_showTimer, &QTimer::timeout, this, [this]() {
+        qDebug() << "[DOCKVISIBILITY] Show timer EXPIRED! Calling setVisible(true)";
         setVisible(true);
     });
 
     m_hideTimer.setSingleShot(true);
     m_hideTimer.setInterval(400);
     connect(&m_hideTimer, &QTimer::timeout, this, [this]() {
+        qDebug() << "[DOCKVISIBILITY] Hide timer EXPIRED! Calling evaluateVisibility()";
         evaluateVisibility();
     });
 
@@ -96,6 +98,11 @@ bool DockVisibilityController::isDockVisible() const
 int DockVisibilityController::mode() const
 {
     return static_cast<int>(m_mode);
+}
+
+bool DockVisibilityController::isHovered() const
+{
+    return m_hovered;
 }
 
 void DockVisibilityController::setMode(int mode)
@@ -127,16 +134,20 @@ void DockVisibilityController::toggleVisibility()
 
 void DockVisibilityController::setHovered(bool hovered)
 {
+    qDebug() << "[DOCKVISIBILITY] setHovered:" << hovered << "current m_hovered:" << m_hovered;
     if (m_hovered == hovered)
         return;
     m_hovered = hovered;
+    Q_EMIT hoveredChanged();
     if (m_interactingCount == 0 || hovered)
         applyInputRegion();
     if (hovered) {
+        qDebug() << "[DOCKVISIBILITY] Starting show timer";
         m_hideTimer.stop();
         if (!m_visible)
             m_showTimer.start();
     } else {
+        qDebug() << "[DOCKVISIBILITY] Stopping show timer";
         m_showTimer.stop();
         if (m_interactingCount > 0)
             return;

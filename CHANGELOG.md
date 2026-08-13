@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- Fixed an interaction bug where normal mouse twitches would cancel the dock's un-hide timer in AutoHide mode, making the dock incredibly difficult to trigger. The QML hover region now dynamically expands alongside the Wayland input region to preserve hover hysteresis.
+
 ### Added
 - **Dock Alignment Control:** Added a new alignment engine that allows positioning the dock at the Start (Left/Top), Center, or End (Right/Bottom) of the selected screen edge. The alignment strictly respects floating padding and corner radii to prevent edge bleeding.
 - **Flatpak Icon Extractor:** Implemented direct resolution of Flatpak application icons from `~/.local/share/flatpak` and `/var/lib/flatpak`. This allows native icon rendering on standalone window managers like Hyprland, bridging the gap when `XDG_DATA_DIRS` does not include flatpak export paths.

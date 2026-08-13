@@ -242,6 +242,17 @@ The Wayland `InputRegion` (the compositor's physical click-interception area) ha
 
 ---
 
+### [BUG #41 Part 4] The Ghost Hover (Instant Rejection)
+- **Status:** 🟢 Fixed
+- **Date:** 2026-08-13
+- **Symptoms:** The dock remains completely invisible. Even after fixing the Q_PROPERTY bridge, hovering the bottom edge fails to keep the dock open. The user perceives the dock as broken/invisible.
+- **Identified Logic:** `isInside` math in `main.qml`.
+- **Root Cause:** When the dock unhides, QML transitions from checking `triggerDepth` to checking `currentOrbit` (the interaction radius around the icons). For a 48px icon, `enterOrbit` is 29px. However, the physical bottom screen edge is 34px away from the icon center (due to floating padding). The instant the dock becomes `isVisible`, QML realizes the mouse (at the screen edge) is 34px away (which is > 29px) and INSTANTLY rejects the hover, immediately hiding the dock again before the user can even see it.
+- **The Proposal:** Modify `main.qml` so that even if `isVisible` is true, if the mouse is touching the physical screen edge (`within triggerDepth`), it must remain `isInside = true`.
+- **Outcome:** 🟢 Fixed. The dock now successfully stays open when hovering the physical screen edge, allowing the user to move the mouse up onto the icons.
+
+---
+
 ### [BUG #40] Full-Surface Blur on Dock Launch (Oversized Blurry Block)
 - **Status:** 🟢 Fixed
 - **Date:** 2026-08-13
@@ -250,3 +261,66 @@ The Wayland `InputRegion` (the compositor's physical click-interception area) ha
 - **Root Cause:** `applyBackgroundStyle()` is called at startup (line 68 in `dockview.cpp`) and on `dockVisibleChanged` (line 66), both of which fire *before* the QML engine has rendered and reported its geometry via `setPanelRect()`. At this point, `panelRect()` returns `{0,0,0,0}`, so `visualRegion` is empty. Passing an empty `QRegion` to `KWindowEffects::enableBlurBehind(window, true, QRegion())` is standard KDE/Qt behavior for "apply blur to the ENTIRE window surface." Since the Wayland surface is massive (`surfaceSize = userH + maxZoomExt + 350`), the blur covers a huge rectangular area extending far beyond the dock.
 - **The Proposal (Trial 1):** Add a guard in `applyBackgroundStyle()` that defers blur-using styles when the visual region is empty. The correct blur is applied later when `panelRectChanged` fires (connected at `dockshell.cpp:159`). Non-blur styles (Tinted/Transparent) are unaffected.
 - **Outcome:** 🟢 Fixed. The dock now launches with a clean, precisely-bounded blur region matching only the visual panel area. Build verified.
+### [BUG #41] Un-hiding the dock is incredibly difficult (QML Hysteresis Conflict)
+- **Status:** 🟢 Fixed
+- **Date:** 2026-08-13
+- **Symptoms:** When the dock is in AutoHide/Dodge mode, hovering the bottom edge fails to show the dock because normal human mouse twitches cancel the 200ms show timer.
+- **Root Cause:** The Wayland surface input region expands from 4px to 64px the instant a hover is detected, BUT the QML hit-test logic strictly required the mouse to stay within `2px` of the screen edge during the entire 200ms `m_showTimer` delay. A tiny 3px twitch caused QML to cancel the timer.
+- **The Proposal:** Expand QML's `triggerDepth` to 64px if `DockVisibility.hovered` is true. This synchronizes the QML hit-test bounds with the dynamically expanded Wayland input region.
+- **Outcome:** 🟢 Fixed. The dock now reliably slides up when hovering the edge, even with imprecise mouse movements.
+### [BUG #41] Un-hiding the dock is incredibly difficult (QML Hysteresis Conflict)
+- **Status:** 🟢 Fixed
+- **Date:** 2026-08-13
+- **Symptoms:** When the dock is in AutoHide/Dodge mode, hovering the bottom edge fails to show the dock because normal human mouse twitches cancel the 200ms show timer.
+- **Root Cause:** 
+    1. QML hit-test logic strictly required the mouse to stay within `2px` of the screen edge during the entire 200ms `m_showTimer` delay.
+    2. C++ `computeDockInputRegion` failed to add the dock's hitbox to the Wayland input region if `p.visible` was false, even when `p.hovered` was true. This trapped the physical Wayland region to a 4px strip, meaning a 5px upward twitch caused the compositor to send a `PointerLeave` event, silently destroying QML's hover state without triggering `DockVisibility.setHovered(false)`.
+- **The Proposal:** 
+    1. Expand QML's `triggerDepth` to 64px if `DockVisibility.hovered` is true. 
+    2. Expand the C++ Wayland input region when `p.hovered` is true, regardless of `p.visible`.
+- **Outcome:** 🟢 Fixed. The Wayland input region now dynamically expands the moment the mouse touches the edge, catching any twitches and perfectly syncing with QML's hysteresis bounds.
+### [BUG #41] Un-hiding the dock is incredibly difficult (QML Hysteresis Conflict)
+- **Status:** 🟢 Fixed (Trial 2 pending verification)
+- **Date:** 2026-08-13
+- **Symptoms:** When the dock is in AutoHide/Dodge mode, hovering the bottom edge fails to show the dock because normal human mouse twitches cancel the 200ms show timer.
+- **Root Cause:** 
+    1. The dock physically hides by moving to `Y=462` (outside the 405px Wayland surface).
+    2. When hovered, C++ attempted to expand the Wayland input region around the dock's current position (`Y=462`). 
+    3. Because `462` is below the screen surface, the math produced a negative height for the bounding box (`h = -38`).
+    4. Qt Wayland silently discarded the invalid box. The input region remained only 4 pixels tall. 
+    5. The slightest mouse twitch caused a `PointerLeave` event, cancelling the 200ms `m_showTimer`.
+- **The Proposal:** 
+    1. Implement a "Hysteresis Bridge" in `inputregion.cpp`. When `p.hovered` is true, we statically expand the 4px trigger strip itself to 64px, regardless of where the dock panel is currently animating.
+- **Outcome:** 🟢 Fixed (Wayland Layer). However, the dock still did not show up because of a QML failure.
+
+### [BUG #41] Un-hiding the dock is incredibly difficult (Part 3: The Missing Q_PROPERTY)
+- **Status:** 🟢 Fixed
+- **Date:** 2026-08-13
+- **Symptoms:** Even after the Wayland Input Region successfully expanded to 64px (proven by hover event logs up to `Y=344`), the 200ms `m_showTimer` STILL failed to show the dock when the user swiped upwards from the edge.
+- **Root Cause:** 
+    1. In QML, the hysteresis logic checked `let triggerDepth = DockVisibility.hovered ? 64 : 2`.
+    2. `DockVisibilityController` in C++ NEVER exposed `hovered` as a `Q_PROPERTY`.
+    3. As a result, `DockVisibility.hovered` in QML evaluated to `undefined`. In Javascript, `undefined ? 64 : 2` evaluates to `2`.
+    4. The QML hit-test effectively had a permanent 2-pixel trigger depth. The moment the user's mouse moved more than 2 pixels away from the edge, QML forcefully called `DockVisibility.setHovered(false)`, instantly cancelling the 200ms show timer, completely defeating the Wayland 64px hysteresis bridge.
+- **The Proposal:** 
+    1. Expose `Q_PROPERTY(bool hovered READ isHovered NOTIFY hoveredChanged)` in `DockVisibilityController.h`.
+    2. Add the getter `isHovered()` and emit `hoveredChanged()` whenever the C++ state changes.
+- **Outcome:** 🟢 Fixed. The QML frontend now correctly reads the `hovered` property, expanding its internal hit-test depth to 64px. The dock now successfully waits 200ms and smoothly animates up even if the user jiggles the mouse.
+
+### [BUG #41] The "Ghost Hover" & Invisible Dock Paradox
+- **Status:** 🟢 Fixed
+- **Date:** 2026-08-13
+- **Symptoms:** The dock successfully loaded items, applied background blur, and correctly bound Wayland Input Regions. However, hovering the mouse at the bottom edge did absolutely nothing—the dock refused to animate upwards and remained permanently hidden.
+- **Identified Logic:** `DockVisibilityController::setHovered(bool)` in C++ uses a 200ms `m_showTimer`. In `main.qml`, `isInside` hit-testing governs whether `setHovered(true)` is repeatedly called. The QML `triggerDepth` for the mouse edge was hardcoded to `2` pixels.
+- **Root Cause:** When Bug #40 expanded the Wayland Input Region to `64` to prevent shader cutoff, the QML `triggerDepth` was NOT updated. If a user flicked their mouse to the edge (Y = 404), `isInside` became true, starting the 200ms timer. However, if the user bounced or moved their mouse up even slightly to `Y = 380` (still within the 64px Wayland input region), QML saw `mouse.y < 405 - 2` and evaluated `isInside = false`. QML immediately called `DockVisibility.setHovered(false)`, instantly cancelling the C++ timer before 200ms could elapse. The dock literally cancelled its own show animation every time the user moved the mouse after hitting the edge.
+- **The Proposal (Trial 5):** Re-sync the QML `triggerDepth` with the Wayland Input Region. Modified `main.qml` to evaluate `triggerDepth = (typeof DockVisibility !== "undefined" && DockVisibility.hovered) ? 64 : 2`. When the dock begins its hover sequence, the hit-test expands to 64 pixels, fully allowing mouse bounce while preserving the timer.
+- **Outcome:** Success. The `m_showTimer` now safely expires, triggering `dockVisibleChanged`, and the QML `dockPanel.y` successfully evaluates and animates upwards.
+
+### [BUG #42] Visibility Modes (AutoHide / Dodge Windows) Desync
+- **Status:** 🟢 Fixed
+- **Date:** 2026-08-13
+- **Symptoms:** The dock successfully appears on hover, but visibility modes are erratic. AutoHide does not always hide correctly. Dodge Windows neither dodges windows nor consistently shows on hover. The state transitions are unreliable.
+- **Identified Logic:** `src/qml/main.qml` -> `dockMouseArea.onExited` where `DockVisibility.setHovered(false)` is wrapped in `if (!PreviewController.visible)`.
+- **Root Cause:** When the user hovers a task and the window preview opens, moving the mouse into the preview popup triggers `onExited` on the dock's Wayland surface. Because the preview is open, QML skips setting `setHovered(false)`. However, `PreviewController` has its own `setInteracting(true/false)` lock. By skipping `setHovered(false)`, the `m_hovered` boolean permanently gets stuck to `true` when the preview closes. This permanently forces `setVisible(true)` in C++, breaking AutoHide and Dodge Windows entirely.
+- **The Proposal:** Remove the `if (!PreviewController.visible)` condition surrounding `DockVisibility.setHovered(false)` in `onExited`. C++ `DockVisibilityController` already prevents the dock from hiding while the preview is open via `m_interactingCount`. This surgical fix restores state synchronization.
+- **Outcome:** Success. QML now immediately unsets hover when the mouse physically leaves the Wayland surface. `m_hovered` evaluates correctly, and Dodge Windows/AutoHide properly evaluates screen geometry when the Preview popup finishes closing.

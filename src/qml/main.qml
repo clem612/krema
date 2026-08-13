@@ -24,7 +24,18 @@ Item {
 
     // --- DEBUG PROTOCOL (Rule 12) ---
     readonly property bool _debugAll: Qt.application.arguments.indexOf("--debug-all") !== -1
-    readonly property bool _debugGeom: _debugAll || Qt.application.arguments.indexOf("--debug-geom") !== -1
+    readonly property bool _debugConfig: KremaDebug.configEnabled
+    readonly property bool _debugGeom: KremaDebug.geomEnabled
+
+    Timer {
+        running: true
+        interval: 3000
+        onTriggered: {
+            console.log("[TEST] Timer triggered! Simulating edge hover.")
+            if (typeof DockVisibility !== "undefined") DockVisibility.setHovered(true)
+        }
+    }
+
     readonly property bool _debugHit: _debugAll || Qt.application.arguments.indexOf("--debug-hit") !== -1
     readonly property bool _debugZoom: _debugAll || Qt.application.arguments.indexOf("--debug-zoom") !== -1
     readonly property bool _debugNotif: _debugAll || Qt.application.arguments.indexOf("--debug-notif") !== -1
@@ -78,9 +89,7 @@ Item {
                 root._dragTargetIndex = -1
                 dragHoldTimer.stop()
             }
-            if (!PreviewController.visible) {
-                DockVisibility.setHovered(false)
-            }
+            DockVisibility.setHovered(false)
         }
 
         onPressed: function(mouse) {
@@ -171,7 +180,7 @@ Item {
             }
 
             let isVisible = DockVisibility.dockVisible
-            let triggerDepth = 2
+            let triggerDepth = (typeof DockVisibility !== "undefined" && DockVisibility.hovered) ? 64 : 2
 
             let iconSize = DockView.screenSettings.iconSize
             let spacing = DockSettings.iconSpacing
@@ -212,12 +221,16 @@ Item {
             let secondaryAxisDist = Math.abs((DockView.isVertical ? mouse.x : mouse.y) - secondaryAxisCenter)
             let isInside = isVisible && (secondaryAxisDist <= currentOrbit)
 
-            if (!isVisible) {
+            // FIX: The Ghost Hover Bug (Bug #41 Part 4)
+            // Even if the dock is visible, if the mouse is touching the physical screen edge
+            // (within triggerDepth), it MUST remain inside. Otherwise, the small orbit radius
+            // rejects the mouse and instantly hides the dock before the user can move up.
+            if (!isVisible || !isInside) {
                 switch (DockView.edge) {
-                    case 0: isInside = (mouse.y <= triggerDepth); break
-                    case 1: isInside = (mouse.y >= root.height - triggerDepth); break
-                    case 2: isInside = (mouse.x <= triggerDepth); break
-                    case 3: isInside = (mouse.x >= root.width - triggerDepth); break
+                    case 0: isInside = isInside || (mouse.y <= triggerDepth); break
+                    case 1: isInside = isInside || (mouse.y >= root.height - triggerDepth); break
+                    case 2: isInside = isInside || (mouse.x <= triggerDepth); break
+                    case 3: isInside = isInside || (mouse.x >= root.width - triggerDepth); break
                 }
             }
 

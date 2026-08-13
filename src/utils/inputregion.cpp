@@ -17,6 +17,14 @@ QRegion computeDockInputRegion(const InputRegionParams &p)
     QRegion triggerStrip;
     int ts = p.triggerStripHeight;
 
+    // Rule 17 Compliance: The "Hysteresis Bridge"
+    // If the dock is hovered, we expand the trigger strip to 64px.
+    // This creates a solid block of Wayland input region to catch rapid mouse twitches,
+    // ensuring the mouse doesn't fall out of the region while the dock is hidden or animating up.
+    if (p.hovered) {
+        ts = std::max(ts, 64);
+    }
+
     switch (p.edge) {
     case 0: // Top
         triggerStrip = QRegion(0, 0, p.surfaceWidth, ts);
@@ -32,15 +40,15 @@ QRegion computeDockInputRegion(const InputRegionParams &p)
         break;
     }
 
-    // If dock is hidden and settings are closed, only the trigger line is active
-    if (!p.visible && !p.settingsVisible) {
+    // If dock is hidden, not hovered, and settings are closed, only the trigger line is active
+    if (!p.visible && !p.hovered && !p.settingsVisible) {
         return triggerStrip;
     }
 
     QRegion finalRegion = triggerStrip;
 
     // 2. Add the Dock Hitbox (The "Hole" for the icons)
-    if (p.visible) {
+    if (p.visible || p.hovered) {
         // FIX: The `p.margin` (64px) is exclusively for drawing the soft drop shadow.
         // It must NOT be added to the input region, otherwise it creates a massive invisible click-blocking wall!
         // Instead, we only use a small 5px buffer around the sides.
