@@ -41,6 +41,13 @@
       <max>20</max>
     </entry>
 
+    <entry name="IslandCornerRadius" type="Int">
+      <label>Corner radius of island backgrounds (0 for fully rounded pill)</label>
+      <default>0</default>
+      <min>0</min>
+      <max>32</max>
+    </entry>
+
 
     <entry name="IconSpacing" type="Int">
       <label>Spacing between icons</label>

@@ -28,15 +28,12 @@ Item {
 
     Rectangle {
         id: bgRect
-        anchors.centerIn: parent
-        // Margin from top/bottom to match the pill look
-        width: parent.width - Kirigami.Units.smallSpacing * 2
-        height: parent.height - Kirigami.Units.smallSpacing * 2
+        anchors.fill: parent
         
-        radius: height / 2
+        radius: DockSettings.islandCornerRadius === 0 ? Math.min(width, height) / 2 : DockSettings.islandCornerRadius
         
-        color: Qt.rgba(1, 1, 1, 0.05)
-        border.color: Qt.rgba(1, 1, 1, 0.1)
+        color: Qt.rgba(255, 255, 255, 0.05)
+        border.color: Qt.rgba(255, 255, 255, 0.1)
         border.width: 1
         
         RowLayout {

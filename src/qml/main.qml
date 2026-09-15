@@ -881,10 +881,10 @@ Item {
         MediaChip {
             id: mediaChip
             z: 2
-            x: !DockView.isVertical ? (dockRow.x + dockRow.implicitWidth + dockRow.baseSpacing) : dockRow.x
-            y: DockView.isVertical ? (dockRow.y + dockRow.implicitHeight + dockRow.baseSpacing) : dockRow.y
-            width: visible ? (DockView.isVertical ? dockRow.implicitWidth : 180) : 0
-            height: visible ? (!DockView.isVertical ? dockRow.implicitHeight : 180) : 0
+            x: !DockView.isVertical ? (dockRow.x + dockRow.implicitWidth + dockRow.baseSpacing + DockSettings.islandMargin) : dockRow.x
+            y: DockView.isVertical ? (dockRow.y + dockRow.implicitHeight + dockRow.baseSpacing + DockSettings.islandMargin) : dockRow.y
+            width: visible ? (DockView.isVertical ? dockRow.implicitWidth : 180 + (DockSettings.islandMargin * 2)) : 0
+            height: visible ? (!DockView.isVertical ? dockRow.implicitHeight : 180 + (DockSettings.islandMargin * 2)) : 0
         }
 
 

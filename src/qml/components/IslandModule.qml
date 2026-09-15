@@ -16,11 +16,11 @@ Item {
     width: implicitWidth
     height: implicitHeight
 
-    implicitWidth: DockView.isVertical ? parent.width : container.implicitWidth + 16
-    implicitHeight: DockView.isVertical ? container.implicitHeight + 16 : container.implicitHeight
+    implicitWidth: DockView.isVertical ? parent.width : container.implicitWidth + (DockSettings.islandMargin * 2)
+    implicitHeight: DockView.isVertical ? container.implicitHeight + (DockSettings.islandMargin * 2) : container.implicitHeight
 
-    x: DockView.isVertical ? 0 : -8
-    y: DockView.isVertical ? -8 : 0
+    x: DockView.isVertical ? 0 : -DockSettings.islandMargin
+    y: DockView.isVertical ? -DockSettings.islandMargin : 0
 
     Rectangle {
         anchors.fill: parent
@@ -29,14 +29,14 @@ Item {
         color: Qt.rgba(255, 255, 255, 0.05)
         border.color: Qt.rgba(255, 255, 255, 0.1)
         border.width: 1
-        radius: Math.min(width, height) / 2
+        radius: DockSettings.islandCornerRadius === 0 ? Math.min(width, height) / 2 : DockSettings.islandCornerRadius
         visible: container.children.length > 0
     }
 
     Item {
         id: container
-        x: DockView.isVertical ? 0 : 8
-        y: DockView.isVertical ? 8 : 0
+        x: DockView.isVertical ? 0 : DockSettings.islandMargin
+        y: DockView.isVertical ? DockSettings.islandMargin : 0
         implicitWidth: childrenRect.width
         implicitHeight: childrenRect.height
     }
