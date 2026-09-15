@@ -62,7 +62,7 @@ Item {
                 Rectangle {
                     id: maskRect
                     anchors.fill: parent
-                    radius: Math.max(0, bgRect.radius - bgRect.currentMargin)
+                    radius: bgRect.radius
                     color: "white"
                     visible: false
                     layer.enabled: true

@@ -5,7 +5,7 @@
 
 ## Active Task
 - **Thumbnail Corner Radius Linking:** The user requested the album art thumbnail corner radius to match the Glass Pill Island corner radius.
-- **Fix Implemented:** Bound `maskRect.radius` inside `MediaChip.qml` to mathematically calculate `Math.max(0, bgRect.radius - bgRect.currentMargin)` so the inner radius stays perfectly concentric with the parent pill shape.
+- **Fix Implemented:** Re-bound `maskRect.radius` inside `MediaChip.qml` to literally equal `bgRect.radius` as directly requested by the user.
 
 ## Next Steps
 - Awaiting User Approval to commit.
