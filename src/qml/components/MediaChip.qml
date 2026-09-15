@@ -3,6 +3,7 @@
 
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Effects
 import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
 import com.bhyoo.krema 1.0
@@ -44,27 +45,51 @@ Item {
             spacing: 6
             
             // Album Art
-            Rectangle {
+            Item {
                 width: parent.height - 8
                 height: width
-                radius: width / 2
-                color: Qt.rgba(1, 1, 1, 0.1)
-                clip: true
                 
+                // 1. The Mask (Solid white, rounded corners)
+                Rectangle {
+                    id: maskRect
+                    anchors.fill: parent
+                    radius: Kirigami.Units.smallSpacing
+                    color: "white"
+                    visible: false
+                    layer.enabled: true
+                }
+                
+                // 2. The Image (Masked by the Rectangle)
                 Image {
+                    id: albumImage
                     anchors.fill: parent
                     source: Mpris.albumArtUrl
                     fillMode: Image.PreserveAspectCrop
+                    visible: false 
+                }
+                
+                MultiEffect {
+                    anchors.fill: albumImage
+                    source: albumImage
+                    maskEnabled: true
+                    maskSource: maskRect
                     visible: Mpris.albumArtUrl !== ""
                 }
                 
-                Kirigami.Icon {
-                    anchors.centerIn: parent
-                    width: parent.width * 0.6
-                    height: parent.height * 0.6
-                    source: "media-playback-start"
+                // 3. The Placeholder (Shown when no image)
+                Rectangle {
+                    anchors.fill: parent
+                    radius: Kirigami.Units.smallSpacing
+                    color: Qt.rgba(1, 1, 1, 0.1)
                     visible: Mpris.albumArtUrl === ""
-                    color: Kirigami.Theme.textColor
+                    
+                    Kirigami.Icon {
+                        anchors.centerIn: parent
+                        width: parent.width * 0.6
+                        height: parent.height * 0.6
+                        source: "media-playback-start"
+                        color: Kirigami.Theme.textColor
+                    }
                 }
             }
             
