@@ -62,7 +62,7 @@ Item {
                 Rectangle {
                     id: maskRect
                     anchors.fill: parent
-                    radius: Kirigami.Units.smallSpacing * (bgRect.contentHeight / 32)
+                    radius: Math.max(0, bgRect.radius - bgRect.currentMargin)
                     color: "white"
                     visible: false
                     layer.enabled: true
