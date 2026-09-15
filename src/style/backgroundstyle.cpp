@@ -5,6 +5,11 @@
 
 #include <KColorScheme>
 #include <KWindowEffects>
+#include <QDir>
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QStandardPaths>
 
 namespace krema
 {
@@ -59,13 +64,65 @@ void removeBackgroundFromWindow(QWindow *window)
     KWindowEffects::enableBackgroundContrast(window, false);
 }
 
-QColor computeBackgroundColor(BackgroundStyleType type, const QString &tintColorHex, qreal opacity, bool useAccentColor, bool useSystemColor)
+QColor getWallpaperColor(bool useAccentColor)
+{
+    // Check Ryoku shell first (matugen)
+    QString ryokuPath = QDir::homePath() + QStringLiteral("/.cache/ryoku/colors.json");
+    if (QFile::exists(ryokuPath)) {
+        QFile file(ryokuPath);
+        if (file.open(QIODevice::ReadOnly)) {
+            QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+            QJsonObject obj = doc.object();
+            if (useAccentColor && obj.contains(QStringLiteral("primary"))) {
+                return QColor(obj[QStringLiteral("primary")].toString());
+            } else if (obj.contains(QStringLiteral("surfaceContainer"))) {
+                return QColor(obj[QStringLiteral("surfaceContainer")].toString());
+            } else if (obj.contains(QStringLiteral("background"))) {
+                return QColor(obj[QStringLiteral("background")].toString());
+            }
+        }
+    }
+
+    // Check pywal
+    QString walPath = QDir::homePath() + QStringLiteral("/.cache/wal/colors.json");
+    if (QFile::exists(walPath)) {
+        QFile file(walPath);
+        if (file.open(QIODevice::ReadOnly)) {
+            QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+            QJsonObject obj = doc.object();
+            if (useAccentColor && obj.contains(QStringLiteral("colors")) && obj[QStringLiteral("colors")].isObject()) {
+                QJsonObject colors = obj[QStringLiteral("colors")].toObject();
+                if (colors.contains(QStringLiteral("color2"))) {
+                    return QColor(colors[QStringLiteral("color2")].toString());
+                }
+            }
+            if (obj.contains(QStringLiteral("special")) && obj[QStringLiteral("special")].isObject()) {
+                QJsonObject special = obj[QStringLiteral("special")].toObject();
+                if (special.contains(QStringLiteral("background"))) {
+                    return QColor(special[QStringLiteral("background")].toString());
+                }
+            }
+        }
+    }
+    return QColor();
+}
+
+QColor
+computeBackgroundColor(BackgroundStyleType type, const QString &tintColorHex, qreal opacity, bool useAccentColor, bool useSystemColor, bool useWallpaperColor)
 {
     if (type == BackgroundStyleType::Transparent) {
         return Qt::transparent;
     }
 
     QColor color;
+    if (useWallpaperColor) {
+        color = getWallpaperColor(useAccentColor);
+    }
+
+    if (color.isValid()) {
+        color.setAlphaF(static_cast<float>(opacity));
+        return color;
+    }
 
     switch (type) {
     case BackgroundStyleType::PanelInherit:

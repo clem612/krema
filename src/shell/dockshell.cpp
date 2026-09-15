@@ -154,6 +154,7 @@ void DockShell::connectSettingsSignals()
     connect(s, &KremaSettings::configChanged, this, []() { /* Saved via Application */ });
     connect(s, &KremaSettings::UseAccentColorChanged, m_view.get(), &DockView::applyBackgroundStyle);
     connect(s, &KremaSettings::UseSystemColorChanged, m_view.get(), &DockView::applyBackgroundStyle);
+    connect(s, &KremaSettings::UseWallpaperColorChanged, m_view.get(), &DockView::applyBackgroundStyle);
 
     // Re-apply blur region when panel geometry or corner radius changes
     connect(m_view->visibilityController(), &DockVisibilityController::panelRectChanged, m_view.get(), &DockView::applyBackgroundStyle);

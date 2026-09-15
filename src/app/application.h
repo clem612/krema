@@ -16,6 +16,7 @@ namespace krema
 class DockModel;
 class MultiDockManager;
 class NotificationTracker;
+class MprisController;
 
 class Application : public QApplication
 {
@@ -33,6 +34,7 @@ private:
     std::unique_ptr<KremaSettings> m_settings;
     std::unique_ptr<DockModel> m_dockModel;
     std::unique_ptr<NotificationTracker> m_notificationTracker;
+    std::unique_ptr<MprisController> m_mprisController;
     std::unique_ptr<MultiDockManager> m_dockManager;
     KActionCollection *m_actionCollection = nullptr;
 };

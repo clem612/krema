@@ -10,6 +10,7 @@
 #include "shell/dockshell.h"
 #include "shell/dockview.h"
 #include "shell/dockvisibilitycontroller.h"
+#include "shell/mpriscontroller.h"
 #include "shell/multidockmanager.h"
 #include "utils/debugmanager.h"
 
@@ -192,6 +193,7 @@ int Application::run()
     m_dockModel->setPinnedLaunchers(m_settings->pinnedLaunchers());
 
     m_notificationTracker = std::make_unique<NotificationTracker>();
+    m_mprisController = std::make_unique<MprisController>();
 
     // Register global QML singletons
     qmlRegisterSingletonInstance("com.bhyoo.krema", 1, 0, "KremaDebug", dm);
@@ -210,6 +212,12 @@ int Application::run()
     qmlRegisterSingletonType<NotificationTracker>("com.bhyoo.krema", 1, 0, "NotificationTracker", [tracker](QQmlEngine *, QJSEngine *) -> QObject * {
         QQmlEngine::setObjectOwnership(tracker, QQmlEngine::CppOwnership);
         return tracker;
+    });
+
+    auto *mpris = m_mprisController.get();
+    qmlRegisterSingletonType<MprisController>("com.bhyoo.krema", 1, 0, "Mpris", [mpris](QQmlEngine *, QJSEngine *) -> QObject * {
+        QQmlEngine::setObjectOwnership(mpris, QQmlEngine::CppOwnership);
+        return mpris;
     });
 
     // Create and initialize the multi-dock manager (creates DockShell(s) based on monitor mode)

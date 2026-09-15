@@ -324,3 +324,16 @@ The Wayland `InputRegion` (the compositor's physical click-interception area) ha
 - **Root Cause:** When the user hovers a task and the window preview opens, moving the mouse into the preview popup triggers `onExited` on the dock's Wayland surface. Because the preview is open, QML skips setting `setHovered(false)`. However, `PreviewController` has its own `setInteracting(true/false)` lock. By skipping `setHovered(false)`, the `m_hovered` boolean permanently gets stuck to `true` when the preview closes. This permanently forces `setVisible(true)` in C++, breaking AutoHide and Dodge Windows entirely.
 - **The Proposal:** Remove the `if (!PreviewController.visible)` condition surrounding `DockVisibility.setHovered(false)` in `onExited`. C++ `DockVisibilityController` already prevents the dock from hiding while the preview is open via `m_interactingCount`. This surgical fix restores state synchronization.
 - **Outcome:** Success. QML now immediately unsets hover when the mouse physically leaves the Wayland surface. `m_hovered` evaluates correctly, and Dodge Windows/AutoHide properly evaluates screen geometry when the Preview popup finishes closing.
+
+### [BUG] Media Chip Shows "No Media" Despite Active Playback
+* **Status**: 🟢 Fixed
+* **Identified Logic**: `src/shell/mpriscontroller.cpp` - `updatePlayers()` and `onPropertiesChanged()`.
+* **Root Cause**: 
+  1. `updatePlayers()` was blindly binding to the *first* MPRIS service it found in the D-Bus registry (e.g., a paused/idle Chromium instance) instead of the service that was actually `Playing`.
+  2. The `Metadata` map in Qt D-Bus returns an inner `a{sv}` variant (specifically a `QDBusArgument`), which our code failed to unwrap properly when emitting properties.
+* **The Proposal**: 
+  1. Modify `updatePlayers()` to query `PlaybackStatus` for all registered MPRIS services and prioritize binding to the one whose status is `Playing`.
+  2. Use `qMetaTypeId<QDBusArgument>()` to safely unwrap the variant and extract `xesam:title`.
+* **Trials**:
+  - Trial 1 (Unwrapping Metadata): Successfully fixed missing titles for active players, but exposed the Chromium binding issue.
+  - Trial 2 (Priority Binding): Successfully bound to `ryotunes` and extracted "The Jester and The Queen" metadata.

@@ -206,24 +206,47 @@ QQC2.ScrollView {
             }
             
             KremaCard {
-                // USE SYSTEM COLOR SWITCH — only for Solid (2) and Acrylic (3)
-                KremaSwitch {
+                ColumnLayout {
                     Layout.fillWidth: true
-                    text: i18n("Use System Accent Color")
-                    checked: DockSettings.useSystemColor
+                    spacing: 4
                     visible: DockSettings.backgroundStyle === 2 || DockSettings.backgroundStyle === 3
-                    onToggled: { DockSettings.useSystemColor = checked; DockSettings.save(); }
+                    
+                    QQC2.Label { text: i18n("Tint Color Source"); color: theme.text; font.bold: true }
+                    
+                    QQC2.ComboBox {
+                        id: colorSourceCombo
+                        Layout.fillWidth: true
+                        model: [
+                            i18n("Custom Solid Color"),
+                            i18n("System Accent Color"),
+                            i18n("Wallpaper Color (Matugen/Pywal)")
+                        ]
+                        currentIndex: DockSettings.useWallpaperColor ? 2 : (DockSettings.useSystemColor ? 1 : 0)
+                        onActivated: {
+                            if (currentIndex === 0) {
+                                DockSettings.useWallpaperColor = false;
+                                DockSettings.useSystemColor = false;
+                            } else if (currentIndex === 1) {
+                                DockSettings.useWallpaperColor = false;
+                                DockSettings.useSystemColor = true;
+                            } else if (currentIndex === 2) {
+                                DockSettings.useWallpaperColor = true;
+                                DockSettings.useSystemColor = false;
+                            }
+                            DockSettings.save();
+                        }
+                    }
                 }
 
                 Rectangle { 
                     Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#2A282A"
-                    visible: !DockSettings.useSystemColor && (DockSettings.backgroundStyle === 2 || DockSettings.backgroundStyle === 3)
+                    visible: DockSettings.backgroundStyle === 2 || DockSettings.backgroundStyle === 3
                 }
 
                 // CUSTOM COLOR PICKER — only for Solid (2) and Acrylic (3) when not using system color
                 RowLayout {
                     Layout.fillWidth: true
-                    visible: !DockSettings.useSystemColor && (DockSettings.backgroundStyle === 2 || DockSettings.backgroundStyle === 3)
+                    visible: colorSourceCombo.currentIndex === 0 && (DockSettings.backgroundStyle === 2 || DockSettings.backgroundStyle === 3)
                     QQC2.Label { Layout.fillWidth: true; text: i18n("Custom Tint Color"); color: theme.text; font.bold: true }
                     Rectangle {
                         width: 48; height: 28; radius: 6

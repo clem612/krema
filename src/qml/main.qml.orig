@@ -24,18 +24,7 @@ Item {
 
     // --- DEBUG PROTOCOL (Rule 12) ---
     readonly property bool _debugAll: Qt.application.arguments.indexOf("--debug-all") !== -1
-    readonly property bool _debugConfig: KremaDebug.configEnabled
-    readonly property bool _debugGeom: KremaDebug.geomEnabled
-
-    Timer {
-        running: true
-        interval: 3000
-        onTriggered: {
-            console.log("[TEST] Timer triggered! Simulating edge hover.")
-            if (typeof DockVisibility !== "undefined") DockVisibility.setHovered(true)
-        }
-    }
-
+    readonly property bool _debugGeom: _debugAll || Qt.application.arguments.indexOf("--debug-geom") !== -1
     readonly property bool _debugHit: _debugAll || Qt.application.arguments.indexOf("--debug-hit") !== -1
     readonly property bool _debugZoom: _debugAll || Qt.application.arguments.indexOf("--debug-zoom") !== -1
     readonly property bool _debugNotif: _debugAll || Qt.application.arguments.indexOf("--debug-notif") !== -1
@@ -89,7 +78,9 @@ Item {
                 root._dragTargetIndex = -1
                 dragHoldTimer.stop()
             }
-            DockVisibility.setHovered(false)
+            if (!PreviewController.visible) {
+                DockVisibility.setHovered(false)
+            }
         }
 
         onPressed: function(mouse) {
@@ -180,7 +171,7 @@ Item {
             }
 
             let isVisible = DockVisibility.dockVisible
-            let triggerDepth = (typeof DockVisibility !== "undefined" && DockVisibility.hovered) ? 64 : 8
+            let triggerDepth = (typeof DockVisibility !== "undefined" && DockVisibility.hovered) ? 64 : 2
 
             let iconSize = DockView.screenSettings.iconSize
             let spacing = DockSettings.iconSpacing
@@ -662,8 +653,7 @@ Item {
         property real mouseY: -9999
         property bool mouseInside: dockMouseArea.containsMouse && !root._dragActive
         property real _actualContentWidth: {
-            let mediaW = (typeof mediaChip !== "undefined" && mediaChip.visible && !DockView.isVertical) ? mediaChip.width + dockRow.baseSpacing : 0
-            let baseW = Math.max(dockRow.implicitWidth + mediaW + 32, Kirigami.Units.gridUnit * 6)
+            let baseW = Math.max(dockRow.implicitWidth + 32, Kirigami.Units.gridUnit * 6)
             if (DockSettings.panelLengthMode === 1) {
                 let effectiveMax = DockSettings.floating ? Math.min(99, DockSettings.maxLength) : DockSettings.maxLength;
                 return Math.max(baseW, root.width * (effectiveMax / 100.0))
@@ -671,8 +661,7 @@ Item {
             return baseW
         }
         property real _actualContentHeight: {
-            let mediaH = (typeof mediaChip !== "undefined" && mediaChip.visible && DockView.isVertical) ? mediaChip.height + dockRow.baseSpacing : 0
-            let baseH = Math.max(dockRow.implicitHeight + mediaH + 32, Kirigami.Units.gridUnit * 6)
+            let baseH = Math.max(dockRow.implicitHeight + 32, Kirigami.Units.gridUnit * 6)
             if (DockSettings.panelLengthMode === 1) {
                 let effectiveMax = DockSettings.floating ? Math.min(99, DockSettings.maxLength) : DockSettings.maxLength;
                 return Math.max(baseH, root.height * (effectiveMax / 100.0))
@@ -782,22 +771,18 @@ Item {
                     return DockView.edge === 2 ? _panelInternalMargin : (dockPanel.width - implicitWidth - _panelInternalMargin)
                 }
                 let align = typeof DockView !== "undefined" && DockView.screenSettings ? DockView.screenSettings.alignment : 0
-                let mediaW = (typeof mediaChip !== "undefined" && mediaChip.visible && !DockView.isVertical) ? mediaChip.width + dockRow.baseSpacing : 0
-                let totalW = implicitWidth + mediaW
                 if (align === 1) return _panelInternalMargin
-                if (align === 2) return dockPanel.width - totalW - _panelInternalMargin
-                return (dockPanel.width - totalW) / 2
+                if (align === 2) return dockPanel.width - implicitWidth - _panelInternalMargin
+                return (dockPanel.width - implicitWidth) / 2
             }
             y: {
                 if (!DockView.isVertical) {
                     return DockView.edge === 0 ? _panelInternalMargin : (dockPanel.height - implicitHeight - _panelInternalMargin)
                 }
                 let align = typeof DockView !== "undefined" && DockView.screenSettings ? DockView.screenSettings.alignment : 0
-                let mediaH = (typeof mediaChip !== "undefined" && mediaChip.visible && DockView.isVertical) ? mediaChip.height + dockRow.baseSpacing : 0
-                let totalH = implicitHeight + mediaH
                 if (align === 1) return _panelInternalMargin
-                if (align === 2) return dockPanel.height - totalH - _panelInternalMargin
-                return (dockPanel.height - totalH) / 2
+                if (align === 2) return dockPanel.height - implicitHeight - _panelInternalMargin
+                return (dockPanel.height - implicitHeight) / 2
             }
 
             Repeater {
@@ -878,15 +863,6 @@ Item {
             } // End IslandModule
             } // End islandRepeater
         }
-        MediaChip {
-            id: mediaChip
-            z: 2
-            x: !DockView.isVertical ? (dockRow.x + dockRow.implicitWidth + dockRow.baseSpacing) : dockRow.x
-            y: DockView.isVertical ? (dockRow.y + dockRow.implicitHeight + dockRow.baseSpacing) : dockRow.y
-            width: visible ? (DockView.isVertical ? dockRow.implicitWidth : 180) : 0
-            height: visible ? (!DockView.isVertical ? dockRow.implicitHeight : 180) : 0
-        }
-
 
         Item {
             id: pinnedSeparator

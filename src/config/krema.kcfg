@@ -160,6 +160,11 @@
       <default>false</default>
     </entry>
 
+    <entry name="UseWallpaperColor" type="Bool">
+      <label>Use wallpaper extracted color for background</label>
+      <default>false</default>
+    </entry>
+
     <entry name="UseSystemColor" type="Bool">
       <label>Use system header color for Tinted style instead of custom tint color</label>
       <default>true</default>
@@ -284,6 +289,11 @@
       <default>0</default>
       <min>0</min>
       <max>2</max>
+    </entry>
+
+    <entry name="ShowMediaChip" type="Bool">
+      <label>Show Media Chip</label>
+      <default>true</default>
     </entry>
 
     <entry name="VirtualDesktopMode" type="Int">

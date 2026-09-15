@@ -15,7 +15,7 @@ Rectangle {
     // Default properties that can be bound from MainDock
     property int backgroundStyle: DockView.screenSettings.backgroundStyle
     property real backgroundOpacity: DockView.screenSettings.backgroundOpacity
-    property color activeTintColor: (backgroundStyle === 2 && !DockSettings.useSystemColor) ? Qt.color(DockSettings.tintColor) : DockView.backgroundColor
+    property color activeTintColor: (backgroundStyle === 2 && !DockSettings.useSystemColor && !DockSettings.useWallpaperColor) ? Qt.color(DockSettings.tintColor) : DockView.backgroundColor
     property bool rimLightEnabled: DockSettings.rimLightEnabled
     property real rimLightOpacity: DockSettings.rimLightOpacity
 

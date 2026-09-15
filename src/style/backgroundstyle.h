@@ -30,7 +30,12 @@ void removeBackgroundFromWindow(QWindow *window);
 /// @param opacity Base opacity (0.0–1.0)
 /// @param useAccentColor If true, use Selection (accent) color instead of Header color
 /// @param useSystemColor If true (Tinted), use system Header color instead of tintColorHex
-QColor computeBackgroundColor(BackgroundStyleType type, const QString &tintColorHex, qreal opacity, bool useAccentColor = false, bool useSystemColor = false);
+QColor computeBackgroundColor(BackgroundStyleType type,
+                              const QString &tintColorHex,
+                              qreal opacity,
+                              bool useAccentColor = false,
+                              bool useSystemColor = false,
+                              bool useWallpaperColor = false);
 
 /// Whether the given style uses blur behind.
 bool styleUsesBlur(BackgroundStyleType type);

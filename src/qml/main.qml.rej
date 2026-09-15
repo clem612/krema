@@ -1,0 +1,21 @@
+--- src/qml/main.qml
++++ src/qml/main.qml
+@@ -100,18 +100,6 @@
+         readonly property bool _debugConfig: KremaDebug.configEnabled
+         readonly property bool _debugGeom: KremaDebug.geomEnabled
+ 
+-        Timer {
+-            running: true
+-            interval: 2000
+-            onTriggered: {
+-                console.log("[TEST] Simulating hover to show dock!")
+-                // simulate hover inside the 64px region
+-                DockVisibility.setHovered(true)
+-                // We also need dockMouseArea.containsMouse = true so it doesn't instantly hide on mouseExit?
+-                // No, mouseExit only triggers on actual Wayland events.
+-            }
+-        }
+-
+         // ----------------------------------------------------
+         // Wayland Input Geometry / Hit-Testing (Bug #40)
+         // ----------------------------------------------------

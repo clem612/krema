@@ -33,6 +33,7 @@ add_library(krema_lib STATIC
     shell/dockvisibilitycontroller.cpp
     shell/previewcontroller.h
     shell/previewcontroller.cpp
+    shell/mpriscontroller.cpp
     shell/dockmodule.h
     shell/dockmodule.cpp
     shell/settingswindow.h

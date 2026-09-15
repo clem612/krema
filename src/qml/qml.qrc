@@ -9,6 +9,7 @@
         <file>components/KremaSwitch.qml</file>
         <file>components/VisualPanel.qml</file>
         <file>components/IslandModule.qml</file>
+        <file>components/MediaChip.qml</file>
         <file>settings/BehaviorPage.qml</file>
         <file>settings/PreviewPage.qml</file>
         <file>settings/IconsPage.qml</file>

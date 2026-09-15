@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+- **Fixed:** Media Chip will now prioritize the actively playing media player instead of binding to idle players (like background Chromium instances), fixing the "No Media" bug.
+
 
 ### Fixed
 - Fixed an interaction bug where normal mouse twitches would cancel the dock's un-hide timer in AutoHide mode, making the dock incredibly difficult to trigger. The QML hover region now dynamically expands alongside the Wayland input region to preserve hover hysteresis.

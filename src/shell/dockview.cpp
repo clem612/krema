@@ -85,7 +85,12 @@ void DockView::initialize(QAbstractItemModel *tasksModel,
 QColor DockView::backgroundColor() const
 {
     auto type = static_cast<BackgroundStyleType>(m_settings->backgroundStyle());
-    return computeBackgroundColor(type, m_settings->tintColor(), m_settings->backgroundOpacity(), m_settings->useAccentColor(), m_settings->useSystemColor());
+    return computeBackgroundColor(type,
+                                  m_settings->tintColor(),
+                                  m_settings->backgroundOpacity(),
+                                  m_settings->useAccentColor(),
+                                  m_settings->useSystemColor(),
+                                  m_settings->useWallpaperColor());
 }
 
 void DockView::updateSize()
