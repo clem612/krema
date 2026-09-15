@@ -4,8 +4,8 @@
 ⬅️ Feature: Ryoku Shell Integration (Media Chip) & Visual Polish
 
 ## Active Task
-- **Thumbnail Corner Radius Linking:** The user requested the album art thumbnail corner radius to match the Glass Pill Island corner radius.
-- **Fix Implemented:** Re-bound `maskRect.radius` inside `MediaChip.qml` to literally equal `bgRect.radius` as directly requested by the user.
+- **Media Chip Transport Controls:** The user noted the Media Chip lacked next/previous buttons.
+- **Fix Implemented:** Added `media-skip-backward` and `media-skip-forward` buttons flanking the play/pause button, wired to `Mpris.previous()` and `Mpris.next()`. The buttons scale to 80% of the play/pause button height to maintain visual hierarchy.
 
 ## Next Steps
 - Awaiting User Approval to commit.

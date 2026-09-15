@@ -369,4 +369,5 @@ The Wayland `InputRegion` (the compositor's physical click-interception area) ha
   4. Auto-hide the artist name sub-label when in `isCompact` mode to prevent vertical crowding.
   5. Migrated the hardcoded `180px` width to a dynamic `optimalWidth` that evaluates the layout's `implicitWidth`, allowing the chip to horizontally expand to fit long track names (up to 450px).
   6. Linked the album art mask radius directly to the island corner radius: `bgRect.radius` per user preference for literal linked values.
+  7. Injected Previous and Next transport controls alongside the Play/Pause button.
 * **Outcome**: Success. The Media Chip is now fully responsive, scaling gracefully in both height and width to perfectly wrap the text without cropping.
