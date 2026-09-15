@@ -10,6 +10,37 @@ import com.bhyoo.krema 1.0
 
 Item {
     id: root
+
+    HoverHandler {
+        id: hoverHandler
+        onHoveredChanged: {
+            if (hovered) {
+                popupTimer.start();
+            } else {
+                popupTimer.stop();
+                if (!mediaPopup.isHovered) {
+                    mediaPopup.close();
+                }
+            }
+        }
+    }
+    
+    Timer {
+        id: popupTimer
+        interval: 400
+        onTriggered: {
+            if (hoverHandler.hovered) {
+                mediaPopup.open();
+            }
+        }
+    }
+    
+    MediaPopup {
+        id: mediaPopup
+        chipHoverHandler: hoverHandler
+        y: -height - 10
+        x: (root.width - width) / 2
+    }
     
     // Only show if the setting is true AND there is a player
     visible: DockSettings.showMediaChip && Mpris.hasPlayer
