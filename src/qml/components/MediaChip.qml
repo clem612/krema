@@ -14,9 +14,15 @@ Item {
     // Only show if the setting is true AND there is a player
     visible: DockSettings.showMediaChip && Mpris.hasPlayer
     
+    
+    
+    // Calculate optimal width based on content
+    property real optimalWidth: Math.max(180, Math.min(450, (mainLayout ? mainLayout.implicitWidth + (bgRect.currentMargin * 2) : 180)))
+    
     // We bind the width so that the Wayland panel knows how wide it needs to be.
-    // Let's give it a fixed standard size when visible, to prevent jumping.
-    width: visible ? 180 : 0
+    width: visible ? (typeof DockView !== "undefined" && DockView.isVertical ? optimalWidth : optimalWidth) : 0
+
+
     height: parent.height
     
     // Clip contents so scrolling text doesn't bleed out
@@ -26,6 +32,7 @@ Item {
         NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
     }
 
+    
     Rectangle {
         id: bgRect
         anchors.fill: parent
@@ -36,27 +43,31 @@ Item {
         border.color: Qt.rgba(255, 255, 255, 0.1)
         border.width: 1
         
+        // Responsive metrics
+        property real currentMargin: Math.max(2, Math.min(6, root.height * 0.1))
+        property real contentHeight: root.height - (currentMargin * 2)
+        property bool isCompact: root.height < 36
+        
         RowLayout {
+            id: mainLayout
             anchors.fill: parent
-            anchors.margins: 4
-            spacing: 6
+            anchors.margins: bgRect.currentMargin
+            spacing: Math.max(4, root.height * 0.15)
             
             // Album Art
             Item {
-                width: parent.height - 8
-                height: width
+                Layout.preferredWidth: bgRect.contentHeight
+                Layout.preferredHeight: bgRect.contentHeight
                 
-                // 1. The Mask (Solid white, rounded corners)
                 Rectangle {
                     id: maskRect
                     anchors.fill: parent
-                    radius: Kirigami.Units.smallSpacing
+                    radius: Kirigami.Units.smallSpacing * (bgRect.contentHeight / 32)
                     color: "white"
                     visible: false
                     layer.enabled: true
                 }
                 
-                // 2. The Image (Masked by the Rectangle)
                 Image {
                     id: albumImage
                     anchors.fill: parent
@@ -73,10 +84,9 @@ Item {
                     visible: Mpris.albumArtUrl !== ""
                 }
                 
-                // 3. The Placeholder (Shown when no image)
                 Rectangle {
                     anchors.fill: parent
-                    radius: Kirigami.Units.smallSpacing
+                    radius: maskRect.radius
                     color: Qt.rgba(1, 1, 1, 0.1)
                     visible: Mpris.albumArtUrl === ""
                     
@@ -99,25 +109,26 @@ Item {
                 QQC2.Label {
                     Layout.fillWidth: true
                     text: Mpris.trackName !== "" ? Mpris.trackName : i18n("No Media")
-                    font.pixelSize: 12
+                    font.pixelSize: Math.max(9, bgRect.isCompact ? bgRect.contentHeight * 0.7 : bgRect.contentHeight * 0.4)
                     font.bold: true
                     color: Kirigami.Theme.textColor
                     elide: Text.ElideRight
+                    verticalAlignment: Text.AlignVCenter
                 }
                 QQC2.Label {
                     Layout.fillWidth: true
                     text: Mpris.artistName
-                    font.pixelSize: 10
+                    font.pixelSize: Math.max(8, bgRect.contentHeight * 0.3)
                     color: Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.7)
                     elide: Text.ElideRight
-                    visible: Mpris.artistName !== ""
+                    visible: !bgRect.isCompact && Mpris.artistName !== ""
                 }
             }
             
             // Play/Pause Button
             MouseArea {
-                Layout.preferredWidth: parent.height - 8
-                Layout.preferredHeight: parent.height - 8
+                Layout.preferredWidth: bgRect.contentHeight
+                Layout.preferredHeight: bgRect.contentHeight
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 
@@ -141,4 +152,5 @@ Item {
             }
         }
     }
+
 }

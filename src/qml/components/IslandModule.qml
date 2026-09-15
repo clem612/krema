@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krema Contributors
 
 import QtQuick
+import com.bhyoo.krema 1.0
 
 /**
  * @brief Tier 2: Logical Island.

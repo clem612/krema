@@ -663,7 +663,7 @@ Item {
         property bool mouseInside: dockMouseArea.containsMouse && !root._dragActive
         property real _actualContentWidth: {
             let mediaW = (typeof mediaChip !== "undefined" && mediaChip.visible && !DockView.isVertical) ? mediaChip.width + dockRow.baseSpacing : 0
-            let baseW = Math.max(dockRow.implicitWidth + mediaW + 32, Kirigami.Units.gridUnit * 6)
+            let baseW = Math.max(dockRow.childrenRect.width + mediaW + 32, Kirigami.Units.gridUnit * 6)
             if (DockSettings.panelLengthMode === 1) {
                 let effectiveMax = DockSettings.floating ? Math.min(99, DockSettings.maxLength) : DockSettings.maxLength;
                 return Math.max(baseW, root.width * (effectiveMax / 100.0))
@@ -672,7 +672,7 @@ Item {
         }
         property real _actualContentHeight: {
             let mediaH = (typeof mediaChip !== "undefined" && mediaChip.visible && DockView.isVertical) ? mediaChip.height + dockRow.baseSpacing : 0
-            let baseH = Math.max(dockRow.implicitHeight + mediaH + 32, Kirigami.Units.gridUnit * 6)
+            let baseH = Math.max(dockRow.childrenRect.height + mediaH + 32, Kirigami.Units.gridUnit * 6)
             if (DockSettings.panelLengthMode === 1) {
                 let effectiveMax = DockSettings.floating ? Math.min(99, DockSettings.maxLength) : DockSettings.maxLength;
                 return Math.max(baseH, root.height * (effectiveMax / 100.0))
@@ -783,7 +783,7 @@ Item {
                 }
                 let align = typeof DockView !== "undefined" && DockView.screenSettings ? DockView.screenSettings.alignment : 0
                 let mediaW = (typeof mediaChip !== "undefined" && mediaChip.visible && !DockView.isVertical) ? mediaChip.width + dockRow.baseSpacing : 0
-                let totalW = implicitWidth + mediaW
+                let totalW = childrenRect.width + mediaW
                 if (align === 1) return _panelInternalMargin
                 if (align === 2) return dockPanel.width - totalW - _panelInternalMargin
                 return (dockPanel.width - totalW) / 2
@@ -794,7 +794,7 @@ Item {
                 }
                 let align = typeof DockView !== "undefined" && DockView.screenSettings ? DockView.screenSettings.alignment : 0
                 let mediaH = (typeof mediaChip !== "undefined" && mediaChip.visible && DockView.isVertical) ? mediaChip.height + dockRow.baseSpacing : 0
-                let totalH = implicitHeight + mediaH
+                let totalH = childrenRect.height + mediaH
                 if (align === 1) return _panelInternalMargin
                 if (align === 2) return dockPanel.height - totalH - _panelInternalMargin
                 return (dockPanel.height - totalH) / 2
@@ -881,10 +881,10 @@ Item {
         MediaChip {
             id: mediaChip
             z: 2
-            x: !DockView.isVertical ? (dockRow.x + dockRow.implicitWidth + dockRow.baseSpacing + DockSettings.islandMargin) : dockRow.x
-            y: DockView.isVertical ? (dockRow.y + dockRow.implicitHeight + dockRow.baseSpacing + DockSettings.islandMargin) : dockRow.y
-            width: visible ? (DockView.isVertical ? dockRow.implicitWidth : 180 + (DockSettings.islandMargin * 2)) : 0
-            height: visible ? (!DockView.isVertical ? dockRow.implicitHeight : 180 + (DockSettings.islandMargin * 2)) : 0
+            x: !DockView.isVertical ? (dockRow.x + dockRow.childrenRect.x + dockRow.childrenRect.width + dockRow.baseSpacing) : dockRow.x
+            y: DockView.isVertical ? (dockRow.y + dockRow.childrenRect.y + dockRow.childrenRect.height + dockRow.baseSpacing) : dockRow.y
+            width: visible ? (DockView.isVertical ? dockRow.implicitWidth : mediaChip.optimalWidth) : 0
+            height: visible ? (!DockView.isVertical ? dockRow.implicitHeight : mediaChip.optimalWidth) : 0
         }
 
 

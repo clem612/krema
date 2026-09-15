@@ -337,3 +337,35 @@ The Wayland `InputRegion` (the compositor's physical click-interception area) ha
 * **Trials**:
   - Trial 1 (Unwrapping Metadata): Successfully fixed missing titles for active players, but exposed the Chromium binding issue.
   - Trial 2 (Priority Binding): Successfully bound to `ryotunes` and extracted "The Jester and The Queen" metadata.
+
+### [BUG] Island Background Pill Disappears (ReferenceError)
+* **Status**: 🟢 Fixed
+* **Date**: 2026-09-15
+* **Symptoms**: The subtle glass background behind grouped icons completely vanishes. Console logs show repeated `ReferenceError: DockSettings is not defined` inside `IslandModule.qml`.
+* **Identified Logic**: `src/qml/components/IslandModule.qml`
+* **Root Cause**: The component was attempting to evaluate `DockSettings.islandMargin` and `DockSettings.islandCornerRadius` for its visual dimensions and X/Y positioning, but lacked the `import com.bhyoo.krema 1.0` required to access the C++ singleton. When the bindings failed, QML fell back to `0`, causing the background to collapse.
+* **The Proposal**: Surgically inject the missing import at the top of the file.
+* **Outcome**: Success. The glass pills render perfectly and evaluate their margins correctly.
+
+### [BUG] Media Chip Overlaps the Last App Icon
+* **Status**: 🟢 Fixed
+* **Date**: 2026-09-15
+* **Symptoms**: The Media Chip's left edge overlaps the center of the terminal owl icon, breaking the visual layout.
+* **Identified Logic**: `src/qml/main.qml` - `dockRow.implicitWidth` and `mediaChip.x` positioning logic.
+* **Root Cause**: The dock's mathematical layout relied entirely on `dockRow.implicitWidth` (which calculates the distance up to the edge of the last *AppIcon*). However, `IslandModule` inherently expands *beyond* the final icon by `DockSettings.islandMargin`. Because the Wayland surface and `MediaChip.x` positioned themselves based on the raw icon width, they ignored the expanded background pill, crushing the layout inward and causing the Media Chip to bleed into the icon's visual space.
+* **The Proposal**: Refactor `_actualContentWidth`, `dockPanel.implicitWidth`, and `MediaChip.x` to use `dockRow.childrenRect.width`. `childrenRect` perfectly captures the true visual bounding box of the row (including all `IslandModule` offsets and dynamically expanding items), guaranteeing mathematical separation.
+* **Outcome**: Success. The Media Chip now positions itself exactly `baseSpacing` away from the visual right edge, completely eliminating the overlap.
+
+### [BUG] Media Chip Breaks Layout on Small Panels
+* **Status**: 🟢 Fixed
+* **Date**: 2026-09-15
+* **Symptoms**: When the dock panel is reduced to 24px height, the Media Chip text and margins clip/overflow vertically, breaking the layout. On very large panels, the text remains disproportionately small.
+* **Identified Logic**: `src/qml/components/MediaChip.qml` - Layout and sizing logic.
+* **Root Cause**: The component used hardcoded margins (`4px`), static pixel sizing for album art (`parent.height - 8`), and fixed text sizes (`12px` and `10px`). On a 24px panel, the remaining height was insufficient for two rows of fixed-size text, causing clipping.
+* **The Proposal**: Refactor `MediaChip.qml` to use fully dynamic geometry math:
+  1. Introduce dynamic `currentMargin` and `contentHeight` derived from `root.height`.
+  2. Implement an `isCompact` state threshold (height < 36px).
+  3. Use proportional font scaling (`Math.max(9, contentHeight * 0.7)`).
+  4. Auto-hide the artist name sub-label when in `isCompact` mode to prevent vertical crowding.
+  5. Migrated the hardcoded `180px` width to a dynamic `optimalWidth` that evaluates the layout's `implicitWidth`, allowing the chip to horizontally expand to fit long track names (up to 450px).
+* **Outcome**: Success. The Media Chip is now fully responsive, scaling gracefully in both height and width to perfectly wrap the text without cropping.
