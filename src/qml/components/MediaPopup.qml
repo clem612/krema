@@ -4,16 +4,17 @@ import QtQuick.Layouts
 import QtQuick.Effects
 import org.kde.kirigami as Kirigami
 
-QQC2.Popup {
+Item {
     id: popup
+    visible: false
     width: 320
-    height: 400
+    height: popupLayout.implicitHeight + 32
     
     // Transparent background, we will draw our own glass pill
-    background: Item {}
     
-    padding: 0
-    margins: 0
+    
+    
+    
     
 
     property QtObject chipHoverHandler
@@ -22,8 +23,8 @@ QQC2.Popup {
     HoverHandler {
         id: popupHoverHandler
         onHoveredChanged: {
-            if (!hovered && !chipHoverHandler.hovered) {
-                popup.close();
+            if (!hovered && chipHoverHandler && !chipHoverHandler.hovered) {
+                popup.visible = false;
             }
         }
     }
@@ -37,14 +38,17 @@ QQC2.Popup {
         border.width: 1
         
         ColumnLayout {
-            anchors.fill: parent
+            id: popupLayout
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
             anchors.margins: 16
             spacing: 12
             
             // Large Album Art
             Rectangle {
                 Layout.fillWidth: true
-                Layout.preferredHeight: width
+                implicitHeight: 320 - 32
                 radius: 8
                 color: Qt.rgba(1, 1, 1, 0.05)
                 

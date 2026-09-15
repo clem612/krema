@@ -110,8 +110,8 @@ void DockView::updateSize()
         int baseDim = isVertical() ? screenGeo.width() : screenGeo.height();
         surfaceSize = (baseDim / 4) - 90 + 800;
     } else {
-        // We use 350px to ensure long tooltips are never clipped by the Wayland surface boundaries.
-        surfaceSize = userH + maxZoomExt + 350;
+        // We use 600px to ensure long tooltips are never clipped by the Wayland surface boundaries.
+        surfaceSize = userH + maxZoomExt + 600;
     }
 
     surfaceSize += floatingPadding();
