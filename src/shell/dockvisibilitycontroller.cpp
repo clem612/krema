@@ -190,8 +190,13 @@ void DockVisibilityController::applyInputRegion()
     QRegion finalHitbox = computeDockInputRegion(params);
 
     // 2. Add the dynamic settings window hitbox
-    if (m_liveEditMode && m_settingsWidth > 0) {
+    if (m_settingsWidth > 0) {
         finalHitbox += QRect(m_settingsX, m_settingsY, m_settingsWidth, m_settingsHeight);
+    }
+
+    // 3. Add the media popup hitbox
+    if (m_popupWidth > 0) {
+        finalHitbox += QRect(m_popupX, m_popupY, m_popupWidth, m_popupHeight);
     }
 
     m_platform->setInputRegion(finalHitbox);
@@ -202,7 +207,7 @@ void DockVisibilityController::applyInputRegion()
     QRegion blurRegion;
     if (m_visible) {
         blurRegion += QRect(m_panelX, m_panelY, m_panelWidth, m_panelHeight);
-        if (m_liveEditMode && m_settingsWidth > 0) {
+        if (m_settingsWidth > 0) {
             blurRegion += QRect(m_settingsX, m_settingsY, m_settingsWidth, m_settingsHeight);
         }
     }
@@ -215,6 +220,15 @@ void DockVisibilityController::setSettingsRect(qreal x, qreal y, qreal width, qr
     m_settingsY = static_cast<int>(y);
     m_settingsWidth = static_cast<int>(width);
     m_settingsHeight = static_cast<int>(height);
+    applyInputRegion();
+}
+
+void DockVisibilityController::setPopupRect(qreal x, qreal y, qreal width, qreal height)
+{
+    m_popupX = static_cast<int>(x);
+    m_popupY = static_cast<int>(y);
+    m_popupWidth = static_cast<int>(width);
+    m_popupHeight = static_cast<int>(height);
     applyInputRegion();
 }
 

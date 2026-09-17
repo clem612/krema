@@ -1,0 +1,2 @@
+#include <QGuiApplication>
+#include <QWaylandApplication>

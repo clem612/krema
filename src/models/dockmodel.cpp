@@ -7,16 +7,20 @@
 #include "kdetasksproxymodel.h"
 #include "utils/identitymanager.h"
 
+#include <KIconLoader>
+#include <KService>
 #include <taskmanager/abstracttasksmodel.h>
 #include <taskmanager/activityinfo.h>
 #include <taskmanager/tasksmodel.h>
 #include <taskmanager/virtualdesktopinfo.h>
 
+#include <QDebug>
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QIcon>
 #include <QProcessEnvironment>
 #include <QScreen>
+#include <QStandardPaths>
 
 #include <algorithm>
 
@@ -77,8 +81,8 @@ QStringList iconCandidates(const QModelIndex &idx)
     const QString launcherName = desktopNameFromUrl(idx.data(HyprlandTasksModel::LauncherUrlWithoutIcon).toUrl());
 
     auto addCandidate = [&candidates](const QString &value) {
-        if (value.isEmpty()) {
-            return;
+        if (value.isEmpty() || value.toLower() == QLatin1String("wayland") || value.toLower() == QLatin1String("xwayland")) {
+            return; // Ignore generic fallback classes from Electron/XWayland apps to allow proper name-based resolution
         }
         if (!candidates.contains(value)) {
             candidates.push_back(value);
@@ -89,11 +93,22 @@ QStringList iconCandidates(const QModelIndex &idx)
         }
     };
 
+    // 0. The Ultimate Authority: KService Icon Field
+    // If the window maps to a known desktop file, the Icon= field inside it is absolute truth.
+    KService::Ptr service = KService::serviceByStorageId(launcherName + QLatin1String(".desktop"));
+    if (!service) {
+        service = KService::serviceByStorageId(stripped + QLatin1String(".desktop"));
+    }
+    if (service && !service->icon().isEmpty()) {
+        addCandidate(service->icon());
+    }
+
     // 1. Primary identification
-    addCandidate(appId);
+    // Prioritize the launcher name and display name for Electron/XWayland apps that might have generic appIds
+    addCandidate(launcherName);
     addCandidate(stripped);
     addCandidate(segment);
-    addCandidate(launcherName);
+    addCandidate(appId);
     addCandidate(display);
 
     // THE IDENTITY BRIDGE: Functional Constraints
@@ -246,9 +261,36 @@ QVariant DockModel::iconData(int index) const
     if (!idx.isValid())
         return {};
 
-    QString name = iconName(index);
-    if (QIcon::hasThemeIcon(name)) {
-        return QIcon::fromTheme(name);
+    const QStringList candidates = iconCandidates(idx);
+    qDebug() << "[ICON-DEBUG] iconData checking candidates for index" << index << ":" << candidates;
+    for (const QString &candidate : candidates) {
+        if (QIcon::hasThemeIcon(candidate)) {
+            qDebug() << "[ICON-DEBUG] FOUND via hasThemeIcon:" << candidate;
+            return QIcon::fromTheme(candidate);
+        }
+
+        // Fallback: KIconLoader is often smarter than QIcon
+        QString kIconPath = KIconLoader::global()->iconPath(candidate, -KIconLoader::SizeEnormous);
+        if (!kIconPath.isEmpty() && !kIconPath.endsWith(QLatin1String("unknown.svg")) && !kIconPath.endsWith(QLatin1String("unknown.png"))) {
+            qDebug() << "[ICON-DEBUG] FOUND via KIconLoader:" << kIconPath;
+            return QIcon(kIconPath);
+        }
+
+        // Extra fallback for AppImage 0x0
+        QString localFallback = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + QLatin1String("/icons/hicolor/0x0/apps/") + candidate
+            + QLatin1String(".png");
+        if (QFileInfo::exists(localFallback)) {
+            qDebug() << "[ICON-DEBUG] FOUND via localFallback:" << localFallback;
+            return QIcon(localFallback);
+        }
+
+        // Extra fallback for AppImage 0x0 (SVG)
+        QString localFallbackSvg = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + QLatin1String("/icons/hicolor/0x0/apps/") + candidate
+            + QLatin1String(".svg");
+        if (QFileInfo::exists(localFallbackSvg)) {
+            qDebug() << "[ICON-DEBUG] FOUND via localFallbackSvg:" << localFallbackSvg;
+            return QIcon(localFallbackSvg);
+        }
     }
 
     QString id = idx.data(HyprlandTasksModel::AppId).toString();
@@ -262,9 +304,11 @@ QVariant DockModel::iconData(int index) const
 
     const QVariant decoration = idx.data(Qt::DecorationRole);
     if (decoration.isValid() && !decoration.value<QIcon>().isNull()) {
+        qDebug() << "[ICON-DEBUG] FOUND via DecorationRole";
         return decoration;
     }
 
+    qDebug() << "[ICON-DEBUG] FAILED! Falling back to application-x-executable";
     return QIcon::fromTheme(QStringLiteral("application-x-executable"));
 }
 
@@ -279,6 +323,20 @@ QString DockModel::iconName(int index) const
     const QStringList candidates = iconCandidates(idx);
     for (const QString &candidate : candidates) {
         if (QIcon::hasThemeIcon(candidate)) {
+            return candidate;
+        }
+        QString kIconPath = KIconLoader::global()->iconPath(candidate, -KIconLoader::SizeEnormous);
+        if (!kIconPath.isEmpty() && !kIconPath.endsWith(QLatin1String("unknown.svg")) && !kIconPath.endsWith(QLatin1String("unknown.png"))) {
+            return candidate;
+        }
+        QString localFallback = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + QLatin1String("/icons/hicolor/0x0/apps/") + candidate
+            + QLatin1String(".png");
+        if (QFileInfo::exists(localFallback)) {
+            return candidate;
+        }
+        QString localFallbackSvg = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + QLatin1String("/icons/hicolor/0x0/apps/") + candidate
+            + QLatin1String(".svg");
+        if (QFileInfo::exists(localFallbackSvg)) {
             return candidate;
         }
     }
@@ -423,6 +481,45 @@ bool DockModel::isOnCurrentDesktop(int index) const
     const QVariant currentDesktop = m_virtualDesktopInfo->currentDesktop();
     const QVariantList desktops = idx.data(HyprlandTasksModel::VirtualDesktops).toList();
     return desktops.contains(currentDesktop);
+}
+
+bool DockModel::isActive(int index) const
+{
+    QModelIndex idx = tasksModel()->index(index, 0);
+    return idx.data(HyprlandTasksModel::IsActive).toBool();
+}
+
+bool DockModel::isMinimized(int index) const
+{
+    QModelIndex idx = tasksModel()->index(index, 0);
+    return idx.data(HyprlandTasksModel::IsMinimized).toBool();
+}
+
+QString DockModel::title(int index) const
+{
+    QModelIndex idx = tasksModel()->index(index, 0);
+    return idx.data(Qt::DisplayRole).toString();
+}
+
+bool DockModel::isChildActive(int parentIndex, int childIndex) const
+{
+    QModelIndex pIdx = tasksModel()->index(parentIndex, 0);
+    QModelIndex cIdx = tasksModel()->index(childIndex, 0, pIdx);
+    return cIdx.data(HyprlandTasksModel::IsActive).toBool();
+}
+
+bool DockModel::isChildMinimized(int parentIndex, int childIndex) const
+{
+    QModelIndex pIdx = tasksModel()->index(parentIndex, 0);
+    QModelIndex cIdx = tasksModel()->index(childIndex, 0, pIdx);
+    return cIdx.data(HyprlandTasksModel::IsMinimized).toBool();
+}
+
+QString DockModel::childTitle(int parentIndex, int childIndex) const
+{
+    QModelIndex pIdx = tasksModel()->index(parentIndex, 0);
+    QModelIndex cIdx = tasksModel()->index(childIndex, 0, pIdx);
+    return cIdx.data(Qt::DisplayRole).toString();
 }
 
 } // namespace krema

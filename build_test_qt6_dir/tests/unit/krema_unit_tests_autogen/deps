@@ -1,0 +1,7 @@
+krema_unit_tests_autogen/timestamp: \
+	/home/clem/Projects/krema/tests/unit/CMakeLists.txt \
+	/home/clem/Projects/krema/tests/unit/smoke_test.cpp \
+	/home/clem/Projects/krema/tests/unit/test_input_region.cpp \
+	/home/clem/Projects/krema/tests/unit/test_surface_geometry.cpp \
+	/home/clem/Projects/krema/tests/unit/test_zoom_calculator.cpp \
+	/usr/bin/cmake

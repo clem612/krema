@@ -1,0 +1,5 @@
+if(EXISTS "/home/clem/Projects/krema/build_test_qt6_dir/tests/unit/krema_unit_tests-b12d07c_tests.cmake")
+  include("/home/clem/Projects/krema/build_test_qt6_dir/tests/unit/krema_unit_tests-b12d07c_tests.cmake")
+else()
+  add_test(krema_unit_tests_NOT_BUILT-b12d07c krema_unit_tests_NOT_BUILT-b12d07c)
+endif()

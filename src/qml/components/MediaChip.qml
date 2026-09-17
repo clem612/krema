@@ -11,16 +11,42 @@ import com.bhyoo.krema 1.0
 Item {
     id: root
 
-    HoverHandler {
+    MouseArea {
         id: hoverHandler
+        anchors.fill: parent
+        hoverEnabled: true
+        acceptedButtons: Qt.NoButton // Let clicks fall through to child buttons
+        
+        property bool hovered: containsMouse
+        
         onHoveredChanged: {
             if (hovered) {
+                hideTimer.stop();
                 popupTimer.start();
             } else {
                 popupTimer.stop();
-                if (!mediaPopup.isHovered) {
-                    mediaPopup.close();
-                }
+                hideTimer.restart();
+            }
+        }
+        
+        onWheel: function(wheel) {
+            console.log("[MediaChip] Scrolled", wheel.angleDelta.y, "Player count:", Mpris.playerCount);
+            if (Mpris.playerCount > 1) {
+                Mpris.cyclePlayer(wheel.angleDelta.y > 0 ? -1 : 1);
+            } else {
+                console.log("[MediaChip] Cannot cycle: Only 1 player available");
+            }
+        }
+    }
+    
+    Timer {
+        id: hideTimer
+        interval: 300
+        onTriggered: {
+            console.log("[MediaChip] hideTimer triggered. chip hovered:", hoverHandler.hovered, "popup hovered:", (typeof mainMediaPopup !== "undefined" ? mainMediaPopup.isHovered : false));
+            if (!hoverHandler.hovered && typeof mainMediaPopup !== "undefined" && !mainMediaPopup.isHovered) {
+                console.log("[MediaChip] Hiding popup!");
+                mainMediaPopup.visible = false;
             }
         }
     }
@@ -30,17 +56,12 @@ Item {
         interval: 400
         onTriggered: {
             if (hoverHandler.hovered) {
-                mediaPopup.open();
+                if (typeof mainMediaPopup !== "undefined") { mainMediaPopup.chipHoverHandler = hoverHandler; mainMediaPopup.visible = true; }
             }
         }
     }
     
-    MediaPopup {
-        id: mediaPopup
-        chipHoverHandler: hoverHandler
-        y: -height - 10
-        x: (root.width - width) / 2
-    }
+
     
     // Only show if the setting is true AND there is a player
     visible: DockSettings.showMediaChip && Mpris.hasPlayer

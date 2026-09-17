@@ -101,6 +101,10 @@ ScreenSettings::ScreenSettings(const QString &screenName, KremaSettings *fallbac
         if (!m_group.hasKey(QStringLiteral("PanelLengthMode")))
             Q_EMIT panelLengthModeChanged();
     });
+    connect(m_fallback, &KremaSettings::IslandLayoutChanged, this, [this]() {
+        if (!m_group.hasKey(QStringLiteral("IslandLayout")))
+            Q_EMIT islandLayoutChanged();
+    });
 }
 
 QString ScreenSettings::screenName() const
@@ -191,6 +195,11 @@ int ScreenSettings::maxLength() const
 int ScreenSettings::panelLengthMode() const
 {
     return readWithFallback(QStringLiteral("PanelLengthMode"), m_fallback->panelLengthMode());
+}
+
+QString ScreenSettings::islandLayout() const
+{
+    return readWithFallback(QStringLiteral("IslandLayout"), m_fallback->islandLayout());
 }
 
 QStringList ScreenSettings::pinnedLaunchers() const
@@ -301,6 +310,14 @@ void ScreenSettings::setPanelLengthMode(int mode)
     Q_EMIT panelLengthModeChanged();
 }
 
+void ScreenSettings::setIslandLayout(const QString &layout)
+{
+    if (m_group.hasKey(QStringLiteral("IslandLayout")) && m_group.readEntry(QStringLiteral("IslandLayout"), QString()) == layout)
+        return;
+    writeOverride(QStringLiteral("IslandLayout"), layout);
+    Q_EMIT islandLayoutChanged();
+}
+
 void ScreenSettings::clearOverrides()
 {
     m_group.deleteGroup();
@@ -323,6 +340,7 @@ void ScreenSettings::clearOverrides()
     Q_EMIT separatorWidthChanged();
     Q_EMIT maxLengthChanged();
     Q_EMIT panelLengthModeChanged();
+    Q_EMIT islandLayoutChanged();
 }
 
 void ScreenSettings::clearOverride(const QString &key)
@@ -361,6 +379,8 @@ void ScreenSettings::clearOverride(const QString &key)
             Q_EMIT maxLengthChanged();
         else if (key == QStringLiteral("PanelLengthMode"))
             Q_EMIT panelLengthModeChanged();
+        else if (key == QStringLiteral("IslandLayout"))
+            Q_EMIT islandLayoutChanged();
     }
 }
 

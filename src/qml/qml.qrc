@@ -11,6 +11,7 @@
         <file>components/IslandModule.qml</file>
         <file>components/MediaChip.qml</file>
         <file>components/MediaPopup.qml</file>
+        <file>EditModeOverlay.qml</file>
         <file>settings/BehaviorPage.qml</file>
         <file>settings/PreviewPage.qml</file>
         <file>settings/IconsPage.qml</file>

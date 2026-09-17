@@ -118,12 +118,8 @@ Item {
     implicitWidth: 840
     implicitHeight: 660
     onVisibleChanged: {
-        if (typeof DockVisibility !== "undefined")
-            DockVisibility.liveEditMode = root.visible;
-
         if (!root.visible && typeof DockSettings !== "undefined")
             DockSettings.save();
-
     }
 
     // --- Dynamic Theme Engine ---

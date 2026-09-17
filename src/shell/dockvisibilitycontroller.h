@@ -63,6 +63,9 @@ public:
     [[nodiscard]] bool isLiveEditMode() const;
     void setLiveEditMode(bool edit);
 
+    /// Set the geometry of the media popup window
+    Q_INVOKABLE void setPopupRect(qreal x, qreal y, qreal width, qreal height);
+
     // Q_INVOKABLE means we allow the QML file to talk to this specific function
     Q_INVOKABLE void setSettingsRect(qreal x, qreal y, qreal width, qreal height);
 
@@ -128,6 +131,11 @@ private:
     int m_settingsY = 0;
     int m_settingsWidth = 0;
     int m_settingsHeight = 0;
+
+    int m_popupX = 0;
+    int m_popupY = 0;
+    int m_popupWidth = 0;
+    int m_popupHeight = 0;
 
     void evaluateVisibility();
     void setVisible(bool visible);

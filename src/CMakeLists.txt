@@ -5,7 +5,42 @@ qt_add_resources(QML_RESOURCES qml/qml.qrc)
 
 kconfig_add_kcfg_files(KREMA_KCFG_SRCS GENERATE_MOC config/krema.kcfgc)
 
+find_program(WAYLAND_SCANNER_EXECUTABLE wayland-scanner REQUIRED)
+
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/hyprland-toplevel-export-v1-protocol.c
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} private-code < ${CMAKE_CURRENT_SOURCE_DIR}/protocols/hyprland-toplevel-export-v1.xml > ${CMAKE_CURRENT_BINARY_DIR}/hyprland-toplevel-export-v1-protocol.c
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/protocols/hyprland-toplevel-export-v1.xml
+)
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/hyprland-toplevel-export-v1-client-protocol.h
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} client-header < ${CMAKE_CURRENT_SOURCE_DIR}/protocols/hyprland-toplevel-export-v1.xml > ${CMAKE_CURRENT_BINARY_DIR}/hyprland-toplevel-export-v1-client-protocol.h
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/protocols/hyprland-toplevel-export-v1.xml
+)
+
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/wlr-foreign-toplevel-management-unstable-v1-protocol.c
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} private-code < ${CMAKE_CURRENT_SOURCE_DIR}/protocols/wlr-foreign-toplevel-management-unstable-v1.xml > ${CMAKE_CURRENT_BINARY_DIR}/wlr-foreign-toplevel-management-unstable-v1-protocol.c
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/protocols/wlr-foreign-toplevel-management-unstable-v1.xml
+)
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/wlr-foreign-toplevel-management-unstable-v1-client-protocol.h
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} client-header < ${CMAKE_CURRENT_SOURCE_DIR}/protocols/wlr-foreign-toplevel-management-unstable-v1.xml > ${CMAKE_CURRENT_BINARY_DIR}/wlr-foreign-toplevel-management-unstable-v1-client-protocol.h
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/protocols/wlr-foreign-toplevel-management-unstable-v1.xml
+)
+
+set_source_files_properties(
+    ${CMAKE_CURRENT_BINARY_DIR}/hyprland-toplevel-export-v1-protocol.c
+    ${CMAKE_CURRENT_BINARY_DIR}/hyprland-toplevel-export-v1-client-protocol.h
+    ${CMAKE_CURRENT_BINARY_DIR}/wlr-foreign-toplevel-management-unstable-v1-protocol.c
+    ${CMAKE_CURRENT_BINARY_DIR}/wlr-foreign-toplevel-management-unstable-v1-client-protocol.h
+    PROPERTIES GENERATED TRUE
+)
+
 add_library(krema_lib STATIC
+    ${CMAKE_CURRENT_BINARY_DIR}/hyprland-toplevel-export-v1-protocol.c
+    ${CMAKE_CURRENT_BINARY_DIR}/wlr-foreign-toplevel-management-unstable-v1-protocol.c
+    ${CMAKE_CURRENT_BINARY_DIR}/hyprland-toplevel-export-v1-client-protocol.h
     app/application.cpp
     app/application.h
 
@@ -16,6 +51,9 @@ add_library(krema_lib STATIC
     platform/waylanddockplatform.cpp
     platform/hyprlanddockplatform.h
     platform/hyprlanddockplatform.cpp
+    platform/hyprlandpreviewprovider.cpp
+    platform/hyprlandexportmanager.cpp
+    platform/hyprlandpreviewresponse.cpp
 
     utils/hyprlandipc.h
     utils/hyprlandipc.cpp

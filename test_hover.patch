@@ -1,0 +1,20 @@
+--- src/shell/dockvisibilitycontroller.cpp
++++ src/shell/dockvisibilitycontroller.cpp
+@@ -133,6 +133,7 @@
+ void DockVisibilityController::setHovered(bool hovered)
+ {
++    qDebug() << "[DOCKVISIBILITY] setHovered called with:" << hovered << "current m_hovered:" << m_hovered;
+     if (m_hovered == hovered)
+         return;
+     m_hovered = hovered;
+@@ -140,9 +141,12 @@
+     if (m_interactingCount == 0 || hovered)
+         applyInputRegion();
+     if (hovered) {
++        qDebug() << "[DOCKVISIBILITY] Starting show timer";
+         m_hideTimer.stop();
+         if (!m_visible)
+             m_showTimer.start();
+     } else {
++        qDebug() << "[DOCKVISIBILITY] Stopping show timer";
+         m_showTimer.stop();

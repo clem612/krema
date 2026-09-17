@@ -1,0 +1,2 @@
+set(__QT_DEPLOY_TARGET_test_qnative_FILE /home/clem/Projects/krema/test_qt6_wayland/test_qnative)
+set(__QT_DEPLOY_TARGET_test_qnative_TYPE EXECUTABLE)

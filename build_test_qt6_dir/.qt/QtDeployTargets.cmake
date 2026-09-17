@@ -1,0 +1,8 @@
+set(__QT_DEPLOY_TARGET_krema_lib_FILE /home/clem/Projects/krema/build_test_qt6_dir/lib/libkrema_lib.a)
+set(__QT_DEPLOY_TARGET_krema_lib_TYPE STATIC_LIBRARY)
+set(__QT_DEPLOY_TARGET_krema_FILE /home/clem/Projects/krema/build_test_qt6_dir/bin/krema)
+set(__QT_DEPLOY_TARGET_krema_TYPE EXECUTABLE)
+set(__QT_DEPLOY_TARGET_krema_unit_tests_FILE /home/clem/Projects/krema/build_test_qt6_dir/bin/krema_unit_tests)
+set(__QT_DEPLOY_TARGET_krema_unit_tests_TYPE EXECUTABLE)
+set(__QT_DEPLOY_TARGET_krema_icon_sandbox_FILE /home/clem/Projects/krema/build_test_qt6_dir/bin/krema_icon_sandbox)
+set(__QT_DEPLOY_TARGET_krema_icon_sandbox_TYPE EXECUTABLE)

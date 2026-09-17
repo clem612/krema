@@ -1,0 +1,7 @@
+<RCC>
+  <qresource prefix="/">
+    <file alias="qml/shaders/acrylic_overlay.frag.qsb">/home/clem/Projects/krema/build_test_qt6_dir/src/.qsb/qml/shaders/acrylic_overlay.frag.qsb</file>
+    <file alias="qml/shaders/outer_shadow.frag.qsb">/home/clem/Projects/krema/build_test_qt6_dir/src/.qsb/qml/shaders/outer_shadow.frag.qsb</file>
+  </qresource>
+</RCC>
+

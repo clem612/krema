@@ -1,0 +1,10 @@
+krema_autogen/timestamp: \
+	/home/clem/Projects/krema/src/CMakeLists.txt \
+	/home/clem/Projects/krema/src/com.bhyoo.krema.autostart.desktop.in \
+	/home/clem/Projects/krema/src/com.bhyoo.krema.desktop.in \
+	/home/clem/Projects/krema/src/config/krema.kcfgc \
+	/home/clem/Projects/krema/src/main.cpp \
+	/home/clem/Projects/krema/src/qml/qml.qrc \
+	/usr/lib/cmake/Qt6Core/Qt6CoreConfigureFileTemplate.in \
+	/usr/lib/cmake/Qt6Core/Qt6CoreResourceInit.in.cpp \
+	/usr/bin/cmake

@@ -34,6 +34,11 @@
       <max>1</max>
     </entry>
 
+    <entry name="IslandLayout" type="String">
+      <label>JSON string representing the island layout</label>
+      <default></default>
+    </entry>
+
     <entry name="IslandMargin" type="Int">
       <label>Symmetrical margin between the Glass Pill and the dock panel edges</label>
       <default>8</default>

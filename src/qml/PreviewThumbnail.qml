@@ -119,16 +119,29 @@ Item {
             }
         }
 
-        // Fallback: icon (when PipeWire not ready or minimized)
+        // Hyprland static snapshot fallback (uses grim)
+        Image {
+            id: hyprlandPreview
+            anchors.fill: parent
+            anchors.margins: parent.border.width > 0 ? 2 : 0
+            source: (!pipeWireItem.ready && root.winId && !root.isMinimized) ? "image://hyprpreview/" + root.winId : ""
+            visible: status === Image.Ready
+            asynchronous: true
+            cache: false
+            fillMode: Image.PreserveAspectCrop
+        }
+
+        // Fallback: large beautiful icon (when PipeWire not ready, no grim screenshot, or minimized)
         Kirigami.Icon {
             anchors.centerIn: parent
-            width: Kirigami.Units.iconSizes.large
-            height: Kirigami.Units.iconSizes.large
-	    source: {
-                    let data = DockModel.iconData(root.parentIndex)
-                    return data ? data : "application-x-executable"
+            width: 64
+            height: 64
+            source: {
+                let data = DockModel.iconData(root.parentIndex)
+                return data ? data : "application-x-executable"
             }
-            visible: !pipeWireItem.ready
+            visible: !pipeWireItem.ready && hyprlandPreview.status !== Image.Ready
+            opacity: 0.8
         }
 
         // Minimized overlay

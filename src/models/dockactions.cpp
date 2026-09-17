@@ -27,7 +27,20 @@ DockActions::DockActions(DockModel *model, QObject *parent)
 void DockActions::activate(int index)
 {
     if (m_model->isHyprland()) {
-        m_model->hyprTasksModel()->requestActivate(index);
+        auto *tasksModel = m_model->hyprTasksModel();
+        const QModelIndex idx = tasksModel->index(index, 0);
+        if (!idx.isValid())
+            return;
+
+        const bool isLauncher = idx.data(HyprlandTasksModel::IsLauncher).toBool();
+        const bool isWindow = idx.data(HyprlandTasksModel::IsWindow).toBool();
+
+        if (isWindow) {
+            tasksModel->requestActivate(index);
+        } else if (isLauncher) {
+            tasksModel->requestActivate(index); // requestActivate handles new instance for empty tasks
+            Q_EMIT taskLaunching(index);
+        }
     } else {
         auto *tasksModel = m_model->kdeTasksModel();
         const QModelIndex idx = tasksModel->index(index, 0);

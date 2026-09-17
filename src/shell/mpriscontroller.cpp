@@ -37,48 +37,171 @@ MprisController::MprisController(QObject *parent)
                                           SLOT(onPropertiesChanged(QString, QVariantMap, QStringList)));
 }
 
+int MprisController::playerPriority(const QString &service)
+{
+    // Priority 0 = Music (preferred), Priority 1 = Browser/video (deprioritized)
+    static const QStringList browserPatterns = {
+        QStringLiteral("chromium"),
+        QStringLiteral("chrome"),
+        QStringLiteral("firefox"),
+        QStringLiteral("brave"),
+        QStringLiteral("vivaldi"),
+        QStringLiteral("edge"),
+        QStringLiteral("opera"),
+        QStringLiteral("webkit"),
+        QStringLiteral("plasma-browser-integration"),
+    };
+    const QString lower = service.toLower();
+    for (const auto &pat : browserPatterns) {
+        if (lower.contains(pat))
+            return 1;
+    }
+    return 0;
+}
+
+QString MprisController::playerDisplayName(const QString &service)
+{
+    // "org.mpris.MediaPlayer2.spotify" → "Spotify"
+    // "org.mpris.MediaPlayer2.firefox.instance_12345" → "Firefox"
+    if (service.isEmpty())
+        return QString();
+    QString name = service.mid(QStringLiteral("org.mpris.MediaPlayer2.").length());
+    // Strip instance suffixes like ".instance12345" or ".instanceXXX"
+    int dotPos = name.indexOf(QLatin1Char('.'));
+    if (dotPos > 0)
+        name = name.left(dotPos);
+    // Capitalize first letter
+    if (!name.isEmpty())
+        name[0] = name[0].toUpper();
+    return name;
+}
+
 void MprisController::updatePlayers()
 {
     QDBusReply<QStringList> reply = m_watcher->connection().interface()->registeredServiceNames();
     if (!reply.isValid())
         return;
 
-    QString playingService;
-    QString pausedService;
-    QString stoppedService;
+    // Collect all MPRIS services with their status and metadata
+    struct PlayerInfo {
+        QString service;
+        QString status; // "Playing", "Paused", "Stopped"
+        int priority; // 0 = music, 1 = browser
+        QString trackName;
+        bool hasArt;
+    };
+    QList<PlayerInfo> players;
+
+    bool hasPBI = false;
 
     for (const QString &service : reply.value()) {
-        if (service.startsWith(QLatin1String("org.mpris.MediaPlayer2."))) {
-            QDBusInterface iface(service,
-                                 QStringLiteral("/org/mpris/MediaPlayer2"),
-                                 QStringLiteral("org.freedesktop.DBus.Properties"),
-                                 QDBusConnection::sessionBus());
-            QDBusReply<QDBusVariant> statusReply =
-                iface.call(QStringLiteral("Get"), QStringLiteral("org.mpris.MediaPlayer2.Player"), QStringLiteral("PlaybackStatus"));
-            if (statusReply.isValid()) {
-                QString status = statusReply.value().variant().toString();
-                if (status == QLatin1String("Playing")) {
-                    playingService = service;
-                    break; // Found highest priority
-                } else if (status == QLatin1String("Paused") && pausedService.isEmpty()) {
-                    pausedService = service;
-                } else if (stoppedService.isEmpty()) {
-                    stoppedService = service;
-                }
-            } else if (stoppedService.isEmpty()) {
-                stoppedService = service;
+        if (!service.startsWith(QLatin1String("org.mpris.MediaPlayer2.")))
+            continue;
+
+        PlayerInfo info;
+        info.service = service;
+        info.priority = playerPriority(service);
+        info.status = QStringLiteral("Stopped");
+        info.hasArt = false;
+
+        QDBusInterface iface(service,
+                             QStringLiteral("/org/mpris/MediaPlayer2"),
+                             QStringLiteral("org.freedesktop.DBus.Properties"),
+                             QDBusConnection::sessionBus());
+
+        QDBusReply<QDBusVariant> statusReply =
+            iface.call(QStringLiteral("Get"), QStringLiteral("org.mpris.MediaPlayer2.Player"), QStringLiteral("PlaybackStatus"));
+        if (statusReply.isValid())
+            info.status = statusReply.value().variant().toString();
+
+        QDBusReply<QDBusVariant> metaReply = iface.call(QStringLiteral("Get"), QStringLiteral("org.mpris.MediaPlayer2.Player"), QStringLiteral("Metadata"));
+        if (metaReply.isValid()) {
+            QVariantMap meta;
+            QVariant metaVar = metaReply.value().variant();
+            if (metaVar.userType() == qMetaTypeId<QDBusArgument>()) {
+                meta = qdbus_cast<QVariantMap>(metaVar.value<QDBusArgument>());
+            } else if (metaVar.userType() == qMetaTypeId<QVariantMap>()) {
+                meta = metaVar.toMap();
             }
+            info.trackName = meta.value(QLatin1String("xesam:title")).toString().trimmed();
+            info.hasArt = !meta.value(QLatin1String("mpris:artUrl")).toString().isEmpty();
         }
+
+        // Ignore ghost players with no media
+        if (info.trackName.isEmpty())
+            continue;
+
+        if (service.contains(QLatin1String("plasma-browser-integration")))
+            hasPBI = true;
+
+        players.append(info);
     }
 
-    QString newService = playingService.isEmpty() ? (pausedService.isEmpty() ? stoppedService : pausedService) : playingService;
+    // Deduplicate: If plasma-browser-integration is present, native browser MPRIS usually duplicates it.
+    // We will remove native browser players if they have no album art (PBI usually provides art)
+    // AND they are a browser player.
+    if (hasPBI) {
+        players.erase(std::remove_if(players.begin(),
+                                     players.end(),
+                                     [](const PlayerInfo &p) {
+                                         return p.priority == 1 && !p.service.contains(QLatin1String("plasma-browser-integration")) && !p.hasArt;
+                                     }),
+                      players.end());
+    }
+
+    // Sort by: priority (music first) → status (Playing > Paused > Stopped) → hasArt (true > false)
+    auto statusWeight = [](const QString &s) -> int {
+        if (s == QLatin1String("Playing"))
+            return 0;
+        if (s == QLatin1String("Paused"))
+            return 1;
+        return 2;
+    };
+    std::sort(players.begin(), players.end(), [&](const PlayerInfo &a, const PlayerInfo &b) {
+        if (a.priority != b.priority)
+            return a.priority < b.priority;
+        int weightA = statusWeight(a.status);
+        int weightB = statusWeight(b.status);
+        if (weightA != weightB)
+            return weightA < weightB;
+        if (a.hasArt != b.hasArt)
+            return a.hasArt > b.hasArt; // true (1) > false (0), so we want true first
+        return false;
+    });
+
+    // Build the sorted service list
+    QStringList newList;
+    for (const auto &p : players)
+        newList.append(p.service);
+
+    bool listChanged = (newList != m_allPlayers);
+    m_allPlayers = newList;
+
+    // Select the best player (unless user manually cycled)
+    QString bestService = players.isEmpty() ? QString() : players.first().service;
+    QString newService = m_currentPlayerService;
+
+    if (m_userCycled) {
+        // Keep user's choice if it's still available
+        if (!m_allPlayers.contains(m_currentPlayerService)) {
+            m_userCycled = false;
+            newService = bestService;
+        }
+    } else {
+        newService = bestService;
+    }
+
+    if (listChanged)
+        Q_EMIT playerListChanged();
 
     if (newService != m_currentPlayerService) {
         m_currentPlayerService = newService;
+        m_currentPlayerUniqueName = QDBusConnection::sessionBus().interface()->serviceOwner(newService);
         m_hasPlayer = !m_currentPlayerService.isEmpty();
         Q_EMIT hasPlayerChanged();
+        if (listChanged)
+            Q_EMIT playerListChanged();
         if (m_hasPlayer) {
-            // Reconnect Seeked signal
             QDBusConnection::sessionBus().connect(m_currentPlayerService,
                                                   QStringLiteral("/org/mpris/MediaPlayer2"),
                                                   QStringLiteral("org.mpris.MediaPlayer2.Player"),
@@ -109,6 +232,35 @@ void MprisController::updatePlayers()
     }
 }
 
+void MprisController::cyclePlayer(int direction)
+{
+    if (m_allPlayers.size() <= 1)
+        return;
+
+    int idx = m_allPlayers.indexOf(m_currentPlayerService);
+    if (idx < 0)
+        idx = 0;
+
+    idx = (idx + direction + m_allPlayers.size()) % m_allPlayers.size();
+
+    m_userCycled = true;
+    QString newService = m_allPlayers.at(idx);
+    if (newService != m_currentPlayerService) {
+        m_currentPlayerService = newService;
+        m_currentPlayerUniqueName = QDBusConnection::sessionBus().interface()->serviceOwner(newService);
+        m_hasPlayer = true;
+        Q_EMIT hasPlayerChanged();
+        Q_EMIT playerListChanged();
+        QDBusConnection::sessionBus().connect(m_currentPlayerService,
+                                              QStringLiteral("/org/mpris/MediaPlayer2"),
+                                              QStringLiteral("org.mpris.MediaPlayer2.Player"),
+                                              QStringLiteral("Seeked"),
+                                              this,
+                                              SLOT(onSeeked(qlonglong)));
+        fetchPlayerProperties();
+    }
+}
+
 void MprisController::onServiceOwnerChanged(const QString &serviceName, const QString &oldOwner, const QString &newOwner)
 {
     if (serviceName.startsWith(QLatin1String("org.mpris.MediaPlayer2."))) {
@@ -119,8 +271,22 @@ void MprisController::onServiceOwnerChanged(const QString &serviceName, const QS
 
 void MprisController::onPropertiesChanged(const QString &interface, const QVariantMap &changedProps, const QStringList &invalidatedProps)
 {
-    // Ignore signals from other services if they happen to share the path
+    // Ignore non-Player interfaces
     if (interface != QLatin1String("org.mpris.MediaPlayer2.Player")) {
+        return;
+    }
+
+    // Identify which service sent this signal via the D-Bus message sender
+    QString sender;
+    if (calledFromDBus()) {
+        sender = message().service();
+    }
+
+    // If a non-current player changed status, just re-evaluate player selection
+    if (!sender.isEmpty() && sender != m_currentPlayerUniqueName) {
+        if (changedProps.contains(QLatin1String("PlaybackStatus"))) {
+            updatePlayers();
+        }
         return;
     }
 
@@ -130,6 +296,7 @@ void MprisController::onPropertiesChanged(const QString &interface, const QVaria
 
     if (changedProps.contains(QLatin1String("PlaybackStatus"))) {
         QString status = changedProps.value(QLatin1String("PlaybackStatus")).toString();
+        qDebug() << "[MPRIS] Current player status:" << playerDisplayName(m_currentPlayerService) << status;
         bool isP = (status == QLatin1String("Playing"));
         if (isP != m_isPlaying) {
             m_isPlaying = isP;
@@ -140,6 +307,8 @@ void MprisController::onPropertiesChanged(const QString &interface, const QVaria
             } else {
                 m_positionTimer->stop();
                 updatePosition();
+                // When current player stops/pauses, re-evaluate to find a better player
+                updatePlayers();
             }
         }
     }
@@ -249,6 +418,12 @@ void MprisController::fetchPlayerProperties()
         m_canControl = ctrlReply.value().variant().toBool();
         Q_EMIT canControlChanged();
     }
+
+    QDBusReply<QDBusVariant> volReply = iface.call(QStringLiteral("Get"), QStringLiteral("org.mpris.MediaPlayer2.Player"), QStringLiteral("Volume"));
+    if (volReply.isValid()) {
+        m_volume = volReply.value().variant().toDouble();
+        Q_EMIT volumeChanged();
+    }
 }
 
 void MprisController::playPause()
@@ -326,13 +501,18 @@ void MprisController::setVolume(double volume)
                          QStringLiteral("/org/mpris/MediaPlayer2"),
                          QStringLiteral("org.freedesktop.DBus.Properties"),
                          QDBusConnection::sessionBus());
-    iface.call(QDBus::NoBlock,
-               QStringLiteral("Set"),
-               QStringLiteral("org.mpris.MediaPlayer2.Player"),
-               QStringLiteral("Volume"),
-               QVariant::fromValue(QDBusVariant(QVariant(volume))));
-    m_volume = volume;
-    Q_EMIT volumeChanged();
+
+    QDBusMessage reply = iface.call(QStringLiteral("Set"),
+                                    QStringLiteral("org.mpris.MediaPlayer2.Player"),
+                                    QStringLiteral("Volume"),
+                                    QVariant::fromValue(QDBusVariant(QVariant(volume))));
+
+    if (reply.type() == QDBusMessage::ErrorMessage) {
+        qWarning() << "[MPRIS] Failed to set volume:" << reply.errorMessage();
+    } else {
+        m_volume = volume;
+        Q_EMIT volumeChanged();
+    }
 }
 
 void MprisController::setShuffle(bool shuffle)

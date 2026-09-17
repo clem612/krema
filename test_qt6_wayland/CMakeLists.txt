@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.16)
+project(test2)
+find_package(Qt6 COMPONENTS Core Gui WaylandClient REQUIRED)
+add_executable(test_qnative test_qnative.cpp)
+target_link_libraries(test_qnative PRIVATE Qt6::Core Qt6::Gui Qt6::WaylandClient)

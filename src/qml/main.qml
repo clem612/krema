@@ -22,6 +22,12 @@ Item {
     Accessible.role: Accessible.ToolBar
     Accessible.name: i18n("Krema Dock")
 
+    // Global hover tracker to robustly track mouse position without getting blocked by child MouseAreas
+    HoverHandler {
+        id: globalHover
+        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+    }
+
     // --- DEBUG PROTOCOL (Rule 12) ---
     readonly property bool _debugAll: Qt.application.arguments.indexOf("--debug-all") !== -1
     readonly property bool _debugConfig: KremaDebug.configEnabled
@@ -43,7 +49,36 @@ Item {
     // --- Phase 2: Tier 2 Island Alias Functions ---
     property var _currentDockRepeater: null
     property int appIconCount: _currentDockRepeater ? _currentDockRepeater.count : 0
+
+    property var parsedIslandLayout: {
+        try {
+            let layoutStr = typeof DockView !== "undefined" && DockView.screenSettings ? DockView.screenSettings.islandLayout : ""
+            if (!layoutStr || layoutStr.trim() === "") {
+                return [{id: "app-island", zone: typeof DockView !== "undefined" && DockView.screenSettings ? DockView.screenSettings.alignment : 0}]
+            }
+            return JSON.parse(layoutStr)
+        } catch(e) {
+            return [{id: "app-island", zone: typeof DockView !== "undefined" && DockView.screenSettings ? DockView.screenSettings.alignment : 0}]
+        }
+    }
+
+    // Helper to get an icon specifically from the AppIsland
     function getAppIcon(index) { return _currentDockRepeater ? _currentDockRepeater.itemAt(index) : null }
+
+    function getIslandsForZone(zoneIndex) {
+        let islands = []
+        if (typeof DockModel === "undefined" || !DockModel.islandsVariant) return islands;
+        let all = DockModel.islandsVariant
+        for (let i = 0; i < all.length; i++) {
+            let islandId = all[i].islandId
+            let config = parsedIslandLayout.find(c => c.id === islandId)
+            let z = config ? config.zone : 0
+            if (z === zoneIndex) {
+                islands.push(all[i])
+            }
+        }
+        return islands
+    }
 
     // State Tracking: Monitor zoom slider changes
     Connections {
@@ -66,6 +101,9 @@ Item {
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
 
         onExited: {
+            // Don't hide dock if media popup is active
+            if (typeof mainMediaPopup !== "undefined" && mainMediaPopup.visible) return;
+
             if (!PreviewController.visible) {
                 dockPanel.mouseX = -1
                 dockPanel.mouseY = -1
@@ -234,6 +272,17 @@ Item {
                 }
             }
 
+            // FIX: Media Popup keeps dock alive when cursor is inside popup bounds
+            if (!isInside && typeof mainMediaPopup !== "undefined" && mainMediaPopup.visible) {
+                let px = mainMediaPopup.x;
+                let py = mainMediaPopup.y;
+                let pw = mainMediaPopup.width;
+                let ph = mainMediaPopup.height;
+                if (mouse.x >= px && mouse.x <= px + pw && mouse.y >= py && mouse.y <= py + ph) {
+                    isInside = true;
+                }
+            }
+
             DockVisibility.setHovered(isInside);
 
             if (!isInside) {
@@ -264,9 +313,8 @@ Item {
                 // Primary Axis Filter: Is the mouse within the visual width of this icon?
                 // By using the actual visual position (x/y) instead of an unscaled grid,
                 // the hitbox perfectly follows the icon as it shifts away during parabolic zoom.
-                let visualCenter = DockView.isVertical 
-                    ? (dockPanel.y + dockRow.y + item.y + (item.height / 2))
-                    : (dockPanel.x + dockRow.x + item.x + (item.width / 2));
+                let pt = item.mapToItem(root, item.width / 2, item.height / 2);
+                let visualCenter = DockView.isVertical ? pt.y : pt.x;
                 
                 let zoomedSize = DockView.isVertical ? item.height : item.width;
                 let slotStart = visualCenter - (zoomedSize / 2);
@@ -366,12 +414,8 @@ Item {
             if (!item) continue
 
             // Compute icon's actual visual center in root coordinates
-            let visualCenter
-            if (DockView.isVertical) {
-                visualCenter = dockPanel.y + dockRow.y + item.y + item.height / 2
-            } else {
-                visualCenter = dockPanel.x + dockRow.x + item.x + item.width / 2
-            }
+            let pt = item.mapToItem(root, item.width / 2, item.height / 2)
+            let visualCenter = DockView.isVertical ? pt.y : pt.x
 
             let distance = Math.abs(mPos - visualCenter)
             item.zoomFactor = 1.0 + (maxZoom - 1.0) * Math.exp(-(distance * distance) / (2.0 * sigma2))
@@ -530,7 +574,10 @@ Item {
     function computeExternalDropIndex(dropX) {
         for (let i = 0; i < appIconCount; i++) {
             let item = getAppIcon(i)
-            if (item && dropX >= dockRow.x + item.x && dropX <= dockRow.x + item.x + item.width) return i
+            if (!item) continue
+            let ptStart = item.mapToItem(root, 0, 0)
+            let ptEnd = item.mapToItem(root, item.width, 0)
+            if (dropX >= ptStart.x && dropX <= ptEnd.x) return i
         }
         return -1
     }
@@ -800,10 +847,8 @@ Item {
                 return (dockPanel.height - totalH) / 2
             }
 
-            Repeater {
-                id: islandRepeater
-                model: DockModel.islandsVariant
-                
+            Component {
+                id: islandDelegate
                 IslandModule {
                     id: currentIsland
                     islandData: modelData
@@ -812,71 +857,104 @@ Item {
                         id: dockRepeater
                         model: currentIsland.islandData.tasksModel
                         Component.onCompleted: root._currentDockRepeater = dockRepeater
-                AppIcon {
-                    // --- Interaction: virtualCenter (The mathematical center of a slot per Rule 3) ---
-                    readonly property real virtualCenter: {
-                        let slot = iconSize + dockRow.baseSpacing, total = (appIconCount * slot) - dockRow.baseSpacing
-                        let start = (DockView.isVertical ? root.height : root.width) / 2 - (total / 2)
-                        return start + (index * slot) + (iconSize / 2)
-                    }
-
-                    onCurrentScaleChanged: dockRow.layoutTrigger++
-
-                    // --- State-Aware Layout (Rule 15) ---
-                    // [STABILITY]: Use stable grid when idle to prevent startup gaps.
-                    // [INTERACTION]: Use recursive displacement when zooming to push neighbors.
-                    // FIX: Uses stateless mathematical sum instead of p.x to prevent evaluation race conditions when resizing!
-                    x: {
-                        let trigger = dockRow.layoutTrigger
-                        if (DockView.isVertical) return (dockRow._maxIconThickness - width) / 2
-                        if (index === 0) return 0
                         
-                        let slotSize = iconSize + dockRow.baseSpacing
-                        if (root._zoomIntensity <= 0) return index * slotSize
-                        
-                        let sum = 0
-                        for (let j = 0; j < index; j++) {
-                            let it1 = getAppIcon(j)
-                            let it2 = getAppIcon(j+1)
-                            let sc1 = it1 ? it1.currentScale : 1.0
-                            let sc2 = it2 ? it2.currentScale : 1.0
-                            sum += (iconSize * sc1) + (dockRow.baseSpacing * (sc1 + sc2) / 2)
+                        AppIcon {
+                            // Local helper for this specific island
+                            function getLocalIcon(idx) { return dockRepeater.itemAt(idx) }
+                            readonly property int localAppIconCount: dockRepeater.count
+
+                            // --- Interaction: virtualCenter (The mathematical center of a slot per Rule 3) ---
+                            readonly property real virtualCenter: {
+                                let slot = iconSize + dockRow.baseSpacing
+                                let structuralOffset = index * slot
+                                return structuralOffset + (iconSize / 2)
+                            }
+
+                            onCurrentScaleChanged: dockRow.layoutTrigger++
+
+                            // --- State-Aware Layout (Rule 15) ---
+                            x: {
+                                let trigger = dockRow.layoutTrigger
+                                if (DockView.isVertical) return (dockRow._maxIconThickness - width) / 2
+                                if (index === 0) return 0
+                                
+                                let slotSize = iconSize + dockRow.baseSpacing
+                                if (root._zoomIntensity <= 0) return index * slotSize
+                                
+                                let sum = 0
+                                for (let j = 0; j < index; j++) {
+                                    let it1 = getLocalIcon(j)
+                                    let it2 = getLocalIcon(j+1)
+                                    let sc1 = it1 ? it1.currentScale : 1.0
+                                    let sc2 = it2 ? it2.currentScale : 1.0
+                                    sum += (iconSize * sc1) + (dockRow.baseSpacing * (sc1 + sc2) / 2)
+                                }
+                                return sum
+                            }
+                            y: {
+                                let trigger = dockRow.layoutTrigger
+                                if (!DockView.isVertical) return (dockRow._maxIconThickness - height) / 2
+                                if (index === 0) return 0
+
+                                let slotSize = iconSize + dockRow.baseSpacing
+                                if (root._zoomIntensity <= 0) return index * slotSize
+                                
+                                let sum = 0
+                                for (let j = 0; j < index; j++) {
+                                    let it1 = getLocalIcon(j)
+                                    let it2 = getLocalIcon(j+1)
+                                    let sc1 = it1 ? it1.currentScale : 1.0
+                                    let sc2 = it2 ? it2.currentScale : 1.0
+                                    sum += (iconSize * sc1) + (dockRow.baseSpacing * (sc1 + sc2) / 2)
+                                }
+                                return sum
+                            }
+
+                            z: (root.hoveredIndex === index) ? 1 : 0
+                            isHovered: (root.hoveredIndex === index)
+                            isKeyboardFocused: root.keyboardNavigating && root.hoveredIndex === index
+                            iconSize: DockView.screenSettings.iconSize
+                            maxZoomFactor: 1.0 + (DockView.screenSettings.maxZoomFactor - 1.0) * root._zoomIntensity
+
+                            spacing: DockSettings.iconSpacing
+                            
+                            // Re-map the virtualCenter to the root panel for the zoom engine
+                            itemCenterX: DockView.isVertical 
+                                ? (dockPanel.y + dockRow.y + virtualCenter) 
+                                : (dockPanel.x + dockRow.x + virtualCenter)
+
+                            isDragSource: root._dragActive && root._dragSourceIndex === index
+                            isExternalDropTarget: externalDropArea.containsDrag && externalDropArea.dropTargetIndex === index
                         }
-                        return sum
                     }
-                    y: {
-                        let trigger = dockRow.layoutTrigger
-                        if (!DockView.isVertical) return (dockRow._maxIconThickness - height) / 2
-                        if (index === 0) return 0
-
-                        let slotSize = iconSize + dockRow.baseSpacing
-                        if (root._zoomIntensity <= 0) return index * slotSize
-                        
-                        let sum = 0
-                        for (let j = 0; j < index; j++) {
-                            let it1 = getAppIcon(j)
-                            let it2 = getAppIcon(j+1)
-                            let sc1 = it1 ? it1.currentScale : 1.0
-                            let sc2 = it2 ? it2.currentScale : 1.0
-                            sum += (iconSize * sc1) + (dockRow.baseSpacing * (sc1 + sc2) / 2)
-                        }
-                        return sum
-                    }
-
-                    z: (root.hoveredIndex === index) ? 1 : 0
-                    isHovered: (root.hoveredIndex === index)
-                    isKeyboardFocused: root.keyboardNavigating && root.hoveredIndex === index
-                    iconSize: DockView.screenSettings.iconSize
-                    maxZoomFactor: 1.0 + (DockView.screenSettings.maxZoomFactor - 1.0) * root._zoomIntensity
-
-                    spacing: DockSettings.iconSpacing
-                    itemCenterX: virtualCenter
-                    isDragSource: root._dragActive && root._dragSourceIndex === index
-                    isExternalDropTarget: externalDropArea.containsDrag && externalDropArea.dropTargetIndex === index
                 }
             }
-            } // End IslandModule
-            } // End islandRepeater
+
+            // --- 3-Zone Scaffold ---
+            Loader {
+                id: zoneScaffold
+                sourceComponent: DockView.isVertical ? verticalScaffold : horizontalScaffold
+                
+                Component {
+                    id: horizontalScaffold
+                    Row {
+                        spacing: DockSettings.islandMargin * 2
+                        Repeater { id: startZone; model: root.getIslandsForZone(0); delegate: islandDelegate }
+                        Repeater { id: centerZone; model: root.getIslandsForZone(1); delegate: islandDelegate }
+                        Repeater { id: endZone; model: root.getIslandsForZone(2); delegate: islandDelegate }
+                    }
+                }
+                
+                Component {
+                    id: verticalScaffold
+                    Column {
+                        spacing: DockSettings.islandMargin * 2
+                        Repeater { id: startZone; model: root.getIslandsForZone(0); delegate: islandDelegate }
+                        Repeater { id: centerZone; model: root.getIslandsForZone(1); delegate: islandDelegate }
+                        Repeater { id: endZone; model: root.getIslandsForZone(2); delegate: islandDelegate }
+                    }
+                }
+            }
         }
         MediaChip {
             id: mediaChip
@@ -912,28 +990,34 @@ Item {
             x: { 
                 let trigger = dockRow.layoutTrigger
                 if (!visible) return 0
-                if (root._zoomIntensity <= 0) {
-                    let slotSize = DockView.screenSettings.iconSize + dockRow.baseSpacing
-                    return Math.round(DockView.isVertical ? dockRow.x + (dockRow.implicitWidth - width) / 2 : dockRow.x + (boundaryIndex * slotSize) + DockView.screenSettings.iconSize + (dockRow.baseSpacing / 2) - (width / 2))
-                }
                 let i = getAppIcon(boundaryIndex)
                 let n = getAppIcon(boundaryIndex + 1)
                 if (!i || !n) return 0
-                let g = dockRow.baseSpacing * (i.currentScale + n.currentScale) / 2
-                return Math.round(DockView.isVertical ? dockRow.x + (dockRow.implicitWidth - width) / 2 : dockRow.x + i.x + i.width + (g / 2) - (width / 2))
+                
+                if (DockView.isVertical) {
+                    let ptCenter = i.mapToItem(dockPanel, i.width / 2, 0)
+                    return ptCenter.x - (width / 2)
+                } else {
+                    let ptRight = i.mapToItem(dockPanel, i.width, 0)
+                    let ptLeft = n.mapToItem(dockPanel, 0, 0)
+                    return ptRight.x + (ptLeft.x - ptRight.x) / 2 - (width / 2)
+                }
             }
             y: { 
                 let trigger = dockRow.layoutTrigger
                 if (!visible) return 0
-                if (root._zoomIntensity <= 0) {
-                    let slotSize = DockView.screenSettings.iconSize + dockRow.baseSpacing
-                    return Math.round(DockView.isVertical ? dockRow.y + (boundaryIndex * slotSize) + DockView.screenSettings.iconSize + (dockRow.baseSpacing / 2) - (height / 2) : dockRow.y + (dockRow.implicitHeight - height) / 2)
-                }
                 let i = getAppIcon(boundaryIndex)
                 let n = getAppIcon(boundaryIndex + 1)
                 if (!i || !n) return 0
-                let g = dockRow.baseSpacing * (i.currentScale + n.currentScale) / 2
-                return Math.round(DockView.isVertical ? dockRow.y + i.y + i.height + (g / 2) - (height / 2) : dockRow.y + (dockRow.implicitHeight - height) / 2)
+                
+                if (!DockView.isVertical) {
+                    let ptCenter = i.mapToItem(dockPanel, 0, i.height / 2)
+                    return ptCenter.y - (height / 2)
+                } else {
+                    let ptBottom = i.mapToItem(dockPanel, 0, i.height)
+                    let ptTop = n.mapToItem(dockPanel, 0, 0)
+                    return ptBottom.y + (ptTop.y - ptBottom.y) / 2 - (height / 2)
+                }
             }
 
             Rectangle { anchors.fill: parent; visible: DockView.screenSettings.separatorStyle === 0; color: Kirigami.Theme.textColor; radius: width/2 }
@@ -988,7 +1072,7 @@ Item {
         target: DockActions
         function onTaskLaunching(index) {
             let it = getAppIcon(index); if(!it) return; root.announceLaunch(it.displayName)
-            if(it.model.IsWindow) it.manualLaunching = true
+            it.manualLaunching = true
         }
     }
 
@@ -1058,6 +1142,48 @@ Item {
         }
     }
 
+    // --- Media Popup ---
+    MediaPopup {
+        id: mainMediaPopup
+        z: 999
+        visible: false
+        globalHoverHandler: globalHover
+        
+        function updatePopupRegion() {
+            if (visible) {
+                console.log("[MediaPopup] Setting rect:", x, y, width, height);
+                DockVisibility.setPopupRect(x, y, width, height);
+            } else {
+                console.log("[MediaPopup] Clearing rect");
+                DockVisibility.setPopupRect(0, 0, 0, 0);
+            }
+        }
+        
+        onXChanged: updatePopupRegion()
+        onYChanged: updatePopupRegion()
+        onWidthChanged: updatePopupRegion()
+        onHeightChanged: updatePopupRegion()
+        onVisibleChanged: updatePopupRegion()
+        
+        // Position it relative to the media chip
+        x: {
+            if (typeof mediaChip === "undefined" || !mediaChip.visible) return 0;
+            // Abs X is dockPanel + dockRow + mediaChip + internal offsets
+            let chipAbsX = dockPanel.x + mediaChip.x;
+            return chipAbsX + (mediaChip.width - width) / 2;
+        }
+        
+        y: {
+            if (typeof mediaChip === "undefined" || !mediaChip.visible) return 0;
+            let chipAbsY = dockPanel.y + mediaChip.y;
+            
+            // The popup's bridge zone extends to touch the chip — no gap.
+            if (DockView.edge === 0) return chipAbsY + mediaChip.height; // Top
+            if (DockView.edge === 1) return chipAbsY - height; // Bottom
+            return chipAbsY - height;
+        }
+    }
+
     Rectangle {
         id: tooltipItem; Accessible.ignored: true; property bool show: false; visible: show && root.hoveredName.length > 0; onVisibleChanged: if(!visible) show = false
         
@@ -1096,20 +1222,34 @@ Item {
     }
 
 
+
+
     // --- Layer 8: Settings Dialog Container (Configuration UI) ---
     Loader {
         id: settingsUnifiedLoader
+        width: item ? item.implicitWidth : 0
+        height: item ? item.implicitHeight : 0
         x: { if(DockView.edge===2) return blueprintGhost.width; if(DockView.edge===3) return parent.width-blueprintGhost.width-width; return (parent.width-width)/2 }
         y: { if(DockView.edge===0) return blueprintGhost.height; if(DockView.edge===1) return parent.height-blueprintGhost.height-height; return (parent.height-height)/2 }
         active: SettingsController ? SettingsController.visible : false; visible: active; source: active ? "qrc:/qml/SettingsDialog.qml" : ""
         Connections {
             target: SettingsController || null
             function onVisibleChanged() {
-                if(DockVisibility) { if(SettingsController.visible){ DockVisibility.liveEditMode=true } else { DockVisibility.liveEditMode=false; DockVisibility.setSettingsRect(0,0,0,0) } }
+                if(DockVisibility && !SettingsController.visible) {
+                    DockVisibility.setSettingsRect(0,0,0,0)
+                    DockVisibility.liveEditMode = false // ensure it turns off when closing
+                }
             }
         }
         onXChanged: updateSettingsHitbox(); onYChanged: updateSettingsHitbox(); onWidthChanged: updateSettingsHitbox(); onHeightChanged: updateSettingsHitbox()
-        function updateSettingsHitbox() { if(item && active && DockVisibility) DockVisibility.setSettingsRect(x,y,width,height) }
+        function updateSettingsHitbox() { 
+            if(item && active && DockVisibility) {
+                console.log("[SETTINGS HITBOX] Updating to:", x, y, width, height)
+                DockVisibility.setSettingsRect(x,y,width,height) 
+            } else {
+                console.log("[SETTINGS HITBOX] Ignoring. item:", !!item, "active:", active, "DockVis:", !!DockVisibility)
+            }
+        }
         onLoaded: { if(item && SettingsController) { item.open(SettingsController.module); updateSettingsHitbox() } }
     }
 }

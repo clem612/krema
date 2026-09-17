@@ -89,6 +89,14 @@ public:
     /// Return the desktop entry name (AppId) for the task at @p index.
     Q_INVOKABLE QString appId(int index) const;
 
+    Q_INVOKABLE bool isActive(int index) const;
+    Q_INVOKABLE bool isMinimized(int index) const;
+    Q_INVOKABLE QString title(int index) const;
+
+    Q_INVOKABLE bool isChildActive(int parentIndex, int childIndex) const;
+    Q_INVOKABLE bool isChildMinimized(int parentIndex, int childIndex) const;
+    Q_INVOKABLE QString childTitle(int parentIndex, int childIndex) const;
+
     // Internal helpers for DockActions
     [[nodiscard]] TaskManager::TasksModel *kdeTasksModel() const;
     [[nodiscard]] HyprlandTasksModel *hyprTasksModel() const;

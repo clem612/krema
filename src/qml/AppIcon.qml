@@ -433,9 +433,15 @@ Item {
 
         interval: 500
         onTriggered: {
-            if (dockItem.manualLaunching)
+            if (dockItem.manualLaunching) {
                 dockItem.manualLaunching = false;
-
+                // If no OS startup signal arrived and no window appeared yet,
+                // assume slow app and keep bouncing until window arrives.
+                if (!dockItem._noOpOverride && dockItem._childCount === dockItem._childCountAtLaunch && !dockItem._isActive) {
+                    dockItem._waitingForWindow = true;
+                    maxLaunchTimer.restart();
+                }
+            }
         }
     }
 

@@ -56,6 +56,11 @@ QPixmap TaskIconProvider::requestPixmap(const QString &id, QSize *size, const QS
     QString originalId = iconName;
     const int targetSize = std::max(requestedSize.width() > 0 ? requestedSize.width() : 48, requestedSize.height() > 0 ? requestedSize.height() : 48);
 
+    if (iconName == u"org.quickshell"_s) {
+        iconName = u"ryotunes"_s;
+        originalId = iconName;
+    }
+
     QIcon icon;
     bool isDebug = QCoreApplication::arguments().contains(u"--debug-icons"_s);
 
@@ -171,10 +176,81 @@ QPixmap TaskIconProvider::requestPixmap(const QString &id, QSize *size, const QS
         }
     }
 
+    // 2.6 STAGE 2.6: Local hicolor search (AppImageLauncher puts icons in 0x0/apps/)
+    if (icon.isNull() || icon.availableSizes().isEmpty()) {
+        QString localBase = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + u"/icons/hicolor/"_s;
+        QStringList sizes =
+            {u"512x512/apps/"_s, u"256x256/apps/"_s, u"128x128/apps/"_s, u"64x64/apps/"_s, u"48x48/apps/"_s, u"0x0/apps/"_s, u"scalable/apps/"_s};
+
+        QString normalizedId = originalId;
+        normalizedId = normalizedId.replace(u'_', u'-').replace(u' ', u'-').toLower();
+
+        for (const QString &sz : sizes) {
+            // Exact match
+            for (const QString &ext : {u".png"_s, u".svg"_s}) {
+                QString path = localBase + sz + originalId + ext;
+                if (QFile::exists(path)) {
+                    icon = QIcon(path);
+                    if (dbgFile.isOpen())
+                        QTextStream(&dbgFile) << "-> FOUND LOCAL EXACT: " << path << "\n";
+                    break;
+                }
+            }
+            if (!icon.isNull() && !icon.availableSizes().isEmpty())
+                break;
+
+            // Suffix match: AppImageLauncher prefixes icons with appimagekit_HASH_
+            QDir appDir(localBase + sz);
+            if (appDir.exists()) {
+                QStringList entries = appDir.entryList({u"*.png"_s, u"*.svg"_s}, QDir::Files);
+                for (const QString &entry : entries) {
+                    // Match if the file ends with _originalId.ext (AppImageLauncher pattern)
+                    if (entry.endsWith(u"_"_s + originalId + u".png"_s, Qt::CaseInsensitive)
+                        || entry.endsWith(u"_"_s + originalId + u".svg"_s, Qt::CaseInsensitive)) {
+                        QString path = appDir.absoluteFilePath(entry);
+                        icon = QIcon(path);
+                        if (dbgFile.isOpen())
+                            QTextStream(&dbgFile) << "-> FOUND APPIMAGE SUFFIX: " << path << "\n";
+                        break;
+                    }
+                }
+            }
+            if (!icon.isNull() && !icon.availableSizes().isEmpty())
+                break;
+        }
+    }
+
     // 3. STAGE 3: Desktop File Bridge
     if (icon.isNull()) {
         QString desktopFile = iconName + u".desktop"_s;
         QStringList paths = QStandardPaths::locateAll(QStandardPaths::ApplicationsLocation, desktopFile);
+
+        // 3.1: If exact desktop file not found, search by StartupWMClass or Icon suffix
+        if (paths.isEmpty()) {
+            QStringList appDirs = QStandardPaths::standardLocations(QStandardPaths::ApplicationsLocation);
+            for (const QString &dir : appDirs) {
+                QDirIterator it(dir, {u"*.desktop"_s}, QDir::Files);
+                while (it.hasNext()) {
+                    QString path = it.next();
+                    QSettings s(path, QSettings::IniFormat);
+                    s.beginGroup(u"Desktop Entry"_s);
+                    QString wmClass = s.value(u"StartupWMClass"_s).toString();
+                    QString iconField = s.value(u"Icon"_s).toString();
+                    QString oldIcon = s.value(u"X-AppImage-Old-Icon"_s).toString();
+
+                    if (wmClass.compare(iconName, Qt::CaseInsensitive) == 0 || wmClass.compare(originalId, Qt::CaseInsensitive) == 0
+                        || oldIcon.compare(iconName, Qt::CaseInsensitive) == 0 || iconField.endsWith(u"_"_s + iconName, Qt::CaseInsensitive)) {
+                        paths.append(path);
+                        if (dbgFile.isOpen())
+                            QTextStream(&dbgFile) << "-> FOUND DESKTOP VIA WMClass/Icon: " << path << "\n";
+                        break;
+                    }
+                }
+                if (!paths.isEmpty())
+                    break;
+            }
+        }
+
         if (!paths.isEmpty()) {
             QSettings settings(paths.first(), QSettings::IniFormat);
             settings.beginGroup(u"Desktop Entry"_s);
@@ -188,8 +264,27 @@ QPixmap TaskIconProvider::requestPixmap(const QString &id, QSize *size, const QS
                     icon = resolveSteamIconLocal(realIcon.startsWith(u"steam_app_") ? realIcon.mid(10) : realIcon.mid(11));
                 } else {
                     icon = QIcon::fromTheme(realIcon);
-                    if (icon.isNull() || icon.availableSizes().isEmpty())
+                    if (icon.isNull() || icon.availableSizes().isEmpty()) {
+                        // Try direct file path or local icon search for AppImage hashed names
                         icon = QIcon(realIcon);
+                        if (icon.isNull() || icon.availableSizes().isEmpty()) {
+                            // Search local hicolor for the hashed icon name
+                            QString localBase = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + u"/icons/hicolor/"_s;
+                            for (const QString &sz : {u"256x256/apps/"_s, u"128x128/apps/"_s, u"0x0/apps/"_s, u"scalable/apps/"_s}) {
+                                for (const QString &ext : {u".png"_s, u".svg"_s}) {
+                                    QString path = localBase + sz + realIcon + ext;
+                                    if (QFile::exists(path)) {
+                                        icon = QIcon(path);
+                                        if (dbgFile.isOpen())
+                                            QTextStream(&dbgFile) << "-> FOUND DESKTOP ICON FILE: " << path << "\n";
+                                        break;
+                                    }
+                                }
+                                if (!icon.isNull() && !icon.availableSizes().isEmpty())
+                                    break;
+                            }
+                        }
+                    }
                 }
             }
         }

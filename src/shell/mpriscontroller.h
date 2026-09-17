@@ -4,6 +4,7 @@
 #pragma once
 
 #include <QDBusConnection>
+#include <QDBusContext>
 #include <QDBusServiceWatcher>
 #include <QObject>
 #include <QString>
@@ -12,7 +13,7 @@
 namespace krema
 {
 
-class MprisController : public QObject
+class MprisController : public QObject, protected QDBusContext
 {
     Q_OBJECT
     Q_PROPERTY(bool hasPlayer READ hasPlayer NOTIFY hasPlayerChanged)
@@ -26,6 +27,9 @@ class MprisController : public QObject
     Q_PROPERTY(double volume READ volume WRITE setVolume NOTIFY volumeChanged)
     Q_PROPERTY(bool shuffle READ shuffle WRITE setShuffle NOTIFY shuffleChanged)
     Q_PROPERTY(QString loopStatus READ loopStatus WRITE setLoopStatus NOTIFY loopStatusChanged)
+    Q_PROPERTY(int playerCount READ playerCount NOTIFY playerListChanged)
+    Q_PROPERTY(int currentPlayerIndex READ currentPlayerIndex NOTIFY playerListChanged)
+    Q_PROPERTY(QString currentPlayerName READ currentPlayerName NOTIFY playerListChanged)
 
 public:
     explicit MprisController(QObject *parent = nullptr);
@@ -81,9 +85,23 @@ public:
     void setShuffle(bool shuffle);
     void setLoopStatus(const QString &loopStatus);
 
+    int playerCount() const
+    {
+        return m_allPlayers.size();
+    }
+    int currentPlayerIndex() const
+    {
+        return m_allPlayers.indexOf(m_currentPlayerService);
+    }
+    QString currentPlayerName() const
+    {
+        return playerDisplayName(m_currentPlayerService);
+    }
+
     Q_INVOKABLE void playPause();
     Q_INVOKABLE void next();
     Q_INVOKABLE void previous();
+    Q_INVOKABLE void cyclePlayer(int direction);
 
 Q_SIGNALS:
     void hasPlayerChanged();
@@ -94,6 +112,7 @@ Q_SIGNALS:
     void volumeChanged();
     void shuffleChanged();
     void loopStatusChanged();
+    void playerListChanged();
 
 private Q_SLOTS:
     void updatePlayers();
@@ -104,12 +123,17 @@ private Q_SLOTS:
 
 private:
     void fetchPlayerProperties();
+    static int playerPriority(const QString &service);
+    static QString playerDisplayName(const QString &service);
 
     QDBusServiceWatcher *m_watcher = nullptr;
-    QString m_currentPlayerService;
+    QStringList m_allPlayers;
+    bool m_userCycled = false;
 
     bool m_hasPlayer = false;
     bool m_isPlaying = false;
+    QString m_currentPlayerService;
+    QString m_currentPlayerUniqueName;
     QString m_trackName;
     QString m_artistName;
     QString m_albumArtUrl;

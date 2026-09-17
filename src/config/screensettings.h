@@ -45,6 +45,7 @@ class ScreenSettings : public QObject
     Q_PROPERTY(int separatorWidth READ separatorWidth WRITE setSeparatorWidth NOTIFY separatorWidthChanged)
     Q_PROPERTY(int maxLength READ maxLength WRITE setMaxLength NOTIFY maxLengthChanged)
     Q_PROPERTY(int panelLengthMode READ panelLengthMode WRITE setPanelLengthMode NOTIFY panelLengthModeChanged)
+    Q_PROPERTY(QString islandLayout READ islandLayout WRITE setIslandLayout NOTIFY islandLayoutChanged)
 
 public:
     explicit ScreenSettings(const QString &screenName, KremaSettings *fallback, QObject *parent = nullptr);
@@ -70,6 +71,7 @@ public:
     [[nodiscard]] int separatorWidth() const;
     [[nodiscard]] int maxLength() const;
     [[nodiscard]] int panelLengthMode() const;
+    [[nodiscard]] QString islandLayout() const;
 
 public Q_SLOTS:
     void setIconSize(int size);
@@ -88,6 +90,7 @@ public Q_SLOTS:
     void setSeparatorWidth(int width);
     void setMaxLength(int length);
     void setPanelLengthMode(int mode);
+    void setIslandLayout(const QString &layout);
 
     void clearOverride(const QString &key);
     void clearOverrides();
@@ -111,6 +114,7 @@ Q_SIGNALS:
     void separatorWidthChanged();
     void maxLengthChanged();
     void panelLengthModeChanged();
+    void islandLayoutChanged();
 
 private:
     /// Read a value from per-screen group, falling back to the global default.

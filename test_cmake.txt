@@ -1,0 +1,12 @@
+find_program(WAYLAND_SCANNER_EXECUTABLE wayland-scanner)
+
+add_custom_command(
+    OUTPUT hyprland-toplevel-export-v1-protocol.c
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} private-code < ${CMAKE_CURRENT_SOURCE_DIR}/protocols/hyprland-toplevel-export-v1.xml > ${CMAKE_CURRENT_BINARY_DIR}/hyprland-toplevel-export-v1-protocol.c
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/protocols/hyprland-toplevel-export-v1.xml
+)
+add_custom_command(
+    OUTPUT hyprland-toplevel-export-v1-client-protocol.h
+    COMMAND ${WAYLAND_SCANNER_EXECUTABLE} client-header < ${CMAKE_CURRENT_SOURCE_DIR}/protocols/hyprland-toplevel-export-v1.xml > ${CMAKE_CURRENT_BINARY_DIR}/hyprland-toplevel-export-v1-client-protocol.h
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/protocols/hyprland-toplevel-export-v1.xml
+)

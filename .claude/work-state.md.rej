@@ -1,0 +1,11 @@
+--- .claude/work-state.md
++++ .claude/work-state.md
+@@ -10,7 +10,7 @@
+ - [x] Investigate hit-test Wayland Surface mismatch.
+ - [x] Prove `triggerDepth` expansion resolves the "Ghost Hover".
+ - [x] Mathematically prove visibility works in a headless KWin Wayland simulation.
+-- [ ] Debug AutoHide / Dodge Windows logic (Bug #42).
++- [x] Debug and fix AutoHide / Dodge Windows logic (Bug #42) by un-sticking `m_hovered` state on QML `onExited`.
+ 
+ ## 📖 Recent History (Current Session)
+ - **The Ghost Hover Bug (Bug #41):** Wayland surfaces truncate pointer hit-testing to the visible layer pixels unless `triggerDepth` explicitly claims input region over the transparent space. Fixed by scaling `triggerDepth` dynamically to 64px during hover state.

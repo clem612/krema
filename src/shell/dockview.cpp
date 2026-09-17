@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krema Contributors
 
 #include "dockview.h"
+#include "../platform/hyprlandpreviewprovider.h"
 #include "config/screensettings.h"
 #include "dockvisibilitycontroller.h"
 #include "krema.h"
@@ -48,6 +49,7 @@ void DockView::initialize(QAbstractItemModel *tasksModel,
     m_iconProvider = new TaskIconProvider(m_settings->iconNormalization());
     m_iconProvider->setIndicatorOffset(m_settings->indicatorOffset());
     engine()->addImageProvider(QStringLiteral("taskicon"), m_iconProvider);
+    engine()->addImageProvider(QStringLiteral("hyprpreview"), new HyprlandPreviewProvider());
 
     connect(KIconLoader::global(), &KIconLoader::iconChanged, this, [this]() {
         m_iconProvider->clearCache();
@@ -105,14 +107,8 @@ void DockView::updateSize()
 
     const QRect screenGeo = screen() ? screen()->geometry() : QRect();
 
-    int surfaceSize;
-    if (m_visibilityController && m_visibilityController->liveEditMode()) {
-        int baseDim = isVertical() ? screenGeo.width() : screenGeo.height();
-        surfaceSize = (baseDim / 4) - 90 + 800;
-    } else {
-        // We use 600px to ensure long tooltips are never clipped by the Wayland surface boundaries.
-        surfaceSize = userH + maxZoomExt + 600;
-    }
+    // We use 900px to ensure the 660px Settings Dialog and long tooltips are never clipped by the Wayland surface boundaries.
+    int surfaceSize = userH + maxZoomExt + 900;
 
     surfaceSize += floatingPadding();
 

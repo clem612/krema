@@ -53,28 +53,19 @@ Item {
             return
         }
 
-        // Get ALL window IDs from the parent task (like Plasma does).
-        let parentModelIdx = DockModel.tasksModel.index(parentIdx, 0)
-        let allWinIds = DockModel.tasksModel.data(
-            parentModelIdx, TaskManager.AbstractTasksModel.WinIdList) || []
+        // Get ALL window IDs from the parent task
+        let allWinIds = DockModel.windowIds(parentIdx) || []
         parentWinIds = allWinIds
 
         let childCount = DockModel.childCount(parentIdx)
 
         // === Single window (not grouped): parent row IS the window ===
-        // KDE TasksModel tree: single window → rowCount(idx) = 0 (no children)
-        // Group (2+ windows) → rowCount(idx) = N (N children)
         if (childCount === 0) {
             if (allWinIds.length > 0) {
                 let entry = {
-                    title: DockModel.tasksModel.data(
-                        parentModelIdx, Qt.DisplayRole) || "",
-                    isMinimized: DockModel.tasksModel.data(
-                        parentModelIdx,
-                        TaskManager.AbstractTasksModel.IsMinimized) || false,
-                    isActive: DockModel.tasksModel.data(
-                        parentModelIdx,
-                        TaskManager.AbstractTasksModel.IsActive) || false,
+                    title: DockModel.title(parentIdx),
+                    isMinimized: DockModel.isMinimized(parentIdx),
+                    isActive: DockModel.isActive(parentIdx),
                     childIndex: -1  // sentinel: use parent row directly
                 }
                 if (childWindowModel.count > 0) {
@@ -93,21 +84,14 @@ Item {
             }
         } else {
             // === Grouped (2+ windows): use child rows ===
-            // Use the lesser of childCount and winId count to avoid undefined winIds
-            // when WinIdList hasn't been updated yet (async mismatch).
-            // dataChanged signal will fire when WinIdList updates, triggering another rebuild.
             let maxCount = Math.min(childCount, allWinIds.length)
 
-            // Incremental update: set() preserves existing delegates (and their
-            // PipeWire streams), append() adds new ones, remove() trims excess.
+            // Incremental update: set() preserves existing delegates
             for (let i = 0; i < maxCount; i++) {
-                let childModelIndex = DockModel.tasksModel.makeModelIndex(parentIdx, i)
                 let entry = {
-                    title: DockModel.tasksModel.data(childModelIndex, Qt.DisplayRole) || "",
-                    isMinimized: DockModel.tasksModel.data(
-                        childModelIndex, TaskManager.AbstractTasksModel.IsMinimized) || false,
-                    isActive: DockModel.tasksModel.data(
-                        childModelIndex, TaskManager.AbstractTasksModel.IsActive) || false,
+                    title: DockModel.childTitle(parentIdx, i),
+                    isMinimized: DockModel.isChildMinimized(parentIdx, i),
+                    isActive: DockModel.isChildActive(parentIdx, i),
                     childIndex: i
                 }
 
@@ -223,21 +207,6 @@ Item {
             anchors.fill: parent
             anchors.margins: Kirigami.Units.largeSpacing
             spacing: Kirigami.Units.smallSpacing
-
-            // App name header (width capped to thumbnail row)
-            QQC2.Label {
-                Layout.fillWidth: true
-                Layout.maximumWidth: groupedRow.implicitWidth
-                text: PreviewController.appName
-                font.weight: Font.Bold
-                elide: Text.ElideRight
-                horizontalAlignment: Text.AlignHCenter
-            }
-
-            // Separator
-            Kirigami.Separator {
-                Layout.fillWidth: true
-            }
 
             // Grouped windows: horizontal row of thumbnails
             Row {

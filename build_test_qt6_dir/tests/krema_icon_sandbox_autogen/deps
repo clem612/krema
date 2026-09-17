@@ -1,0 +1,9 @@
+krema_icon_sandbox_autogen/timestamp: \
+	/home/clem/Projects/krema/tests/CMakeLists.txt \
+	/home/clem/Projects/krema/tests/sandbox_main.cpp \
+	/usr/lib/cmake/Catch2/Catch.cmake \
+	/usr/lib/cmake/Catch2/Catch2Config.cmake \
+	/usr/lib/cmake/Catch2/Catch2ConfigVersion.cmake \
+	/usr/lib/cmake/Catch2/Catch2Targets-noconfig.cmake \
+	/usr/lib/cmake/Catch2/Catch2Targets.cmake \
+	/usr/bin/cmake

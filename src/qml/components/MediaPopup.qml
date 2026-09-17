@@ -3,14 +3,25 @@ import QtQuick.Controls as QQC2
 import QtQuick.Layouts
 import QtQuick.Effects
 import org.kde.kirigami as Kirigami
+import com.bhyoo.krema 1.0
 
 Item {
     id: popup
     visible: false
     width: 320
-    height: popupLayout.implicitHeight + 32
+    
+    // The bridge is a transparent hover zone that connects the popup to the chip below,
+    // eliminating the dead zone where the cursor would lose hover.
+    property real bridgeHeight: Kirigami.Units.largeSpacing + 8
+    height: popupLayout.implicitHeight + 32 + bridgeHeight
     
     // Transparent background, we will draw our own glass pill
+    function formatTime(microsecs) {
+        var secs = Math.floor(microsecs / 1000000);
+        var m = Math.floor(secs / 60);
+        var s = secs % 60;
+        return m + ":" + (s < 10 ? "0" : "") + s;
+    }
     
     
     
@@ -18,12 +29,49 @@ Item {
     
 
     property QtObject chipHoverHandler
-    property bool isHovered: popupHoverHandler.hovered
+    property QtObject globalHoverHandler
+    
+    property bool isHovered: {
+        if (popupHoverHandler.hovered) return true;
+        if (globalHoverHandler && globalHoverHandler.hovered) {
+            let mx = globalHoverHandler.point.position.x;
+            let my = globalHoverHandler.point.position.y;
+            return (mx >= x && mx <= x + width && my >= y && my <= y + height);
+        }
+        return false;
+    }
+    
+    // Block background clicks/scrolls from falling through to the dock
+    TapHandler {
+        acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+        onTapped: {} // Consume the tap
+    }
+    
+    WheelHandler {
+        onWheel: function(event) { event.accepted = true; } // Consume scrolls
+    }
     
     HoverHandler {
         id: popupHoverHandler
-        onHoveredChanged: {
-            if (!hovered && chipHoverHandler && !chipHoverHandler.hovered) {
+    }
+    
+    onIsHoveredChanged: {
+        console.log("[MediaPopup] isHovered changed:", isHovered);
+        if (!isHovered) {
+            popupHideTimer.restart();
+        } else {
+            popupHideTimer.stop();
+        }
+    }
+    
+    Timer {
+        id: popupHideTimer
+        interval: 300
+        onTriggered: {
+            console.log("[MediaPopup] popupHideTimer triggered. popup hovered:", popup.isHovered, "chip:", (chipHoverHandler ? chipHoverHandler.hovered : false));
+            
+            if (!popup.isHovered && chipHoverHandler && !chipHoverHandler.hovered) {
+                console.log("[MediaPopup] Hiding popup!");
                 popup.visible = false;
             }
         }
@@ -31,7 +79,10 @@ Item {
     
     Rectangle {
         id: bgRect
-        anchors.fill: parent
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
+        height: parent.height - popup.bridgeHeight
         color: Qt.rgba(0.1, 0.1, 0.1, 0.9)
         radius: 12
         border.color: Qt.rgba(1, 1, 1, 0.1)
@@ -57,7 +108,9 @@ Item {
                     id: maskRect
                     anchors.fill: parent
                     radius: 8
+                    color: "black"
                     visible: false
+                    layer.enabled: true
                 }
                 
                 Image {
@@ -115,13 +168,6 @@ Item {
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 8
-                
-                function formatTime(microsecs) {
-                    var secs = Math.floor(microsecs / 1000000);
-                    var m = Math.floor(secs / 60);
-                    var s = secs % 60;
-                    return m + ":" + (s < 10 ? "0" : "") + s;
-                }
                 
                 QQC2.Label {
                     text: formatTime(Mpris.position)
@@ -190,8 +236,9 @@ Item {
                 
                 Kirigami.Icon {
                     source: Mpris.volume === 0 ? "audio-volume-muted" : "audio-volume-high"
-                    width: 16
-                    height: 16
+                    Layout.preferredWidth: 16
+                    Layout.preferredHeight: 16
+                    opacity: 0.7
                 }
                 
                 QQC2.Slider {
@@ -200,6 +247,36 @@ Item {
                     to: 1.0
                     value: Mpris.volume
                     onMoved: Mpris.volume = value
+                    
+                    // Sleek minimal style
+                    background: Rectangle {
+                        x: parent.leftPadding
+                        y: parent.topPadding + parent.availableHeight / 2 - height / 2
+                        implicitWidth: 200
+                        implicitHeight: 4
+                        width: parent.availableWidth
+                        height: implicitHeight
+                        radius: 2
+                        color: Qt.rgba(1, 1, 1, 0.1)
+
+                        Rectangle {
+                            width: parent.parent.visualPosition * parent.width
+                            height: parent.height
+                            color: Kirigami.Theme.highlightColor
+                            radius: 2
+                        }
+                    }
+
+                    handle: Rectangle {
+                        x: parent.leftPadding + parent.visualPosition * (parent.availableWidth - width)
+                        y: parent.topPadding + parent.availableHeight / 2 - height / 2
+                        implicitWidth: 12
+                        implicitHeight: 12
+                        radius: 6
+                        color: parent.pressed ? Qt.lighter(Kirigami.Theme.highlightColor, 1.2) : Kirigami.Theme.highlightColor
+                        border.color: Qt.rgba(0, 0, 0, 0.2)
+                        border.width: 1
+                    }
                 }
             }
         }

@@ -64,6 +64,23 @@ QString IdentityManager::normalizeAppId(const QString &appId)
         }
     }
 
+    // 5. AppImageLauncher Resolver (Fallback for AppImage prefixed files)
+    // AppImageLauncher prefixes desktop files and icons with appimagekit_MD5_...
+    for (const auto &srv : all) {
+        // Check if the icon ends with the id (e.g. appimagekit_1234_neko-desktop-electron)
+        if (srv->icon().compare(id, Qt::CaseInsensitive) == 0 || srv->icon().endsWith(QLatin1String("_") + id, Qt::CaseInsensitive)) {
+            QString result = stripDesktopSuffix(srv->storageId());
+            s_resolutionCache.insert(appId, result);
+            return result;
+        }
+        // Check X-AppImage-Old-Icon property
+        if (srv->property<QString>(QStringLiteral("X-AppImage-Old-Icon")).compare(id, Qt::CaseInsensitive) == 0) {
+            QString result = stripDesktopSuffix(srv->storageId());
+            s_resolutionCache.insert(appId, result);
+            return result;
+        }
+    }
+
     s_resolutionCache.insert(appId, id);
     return id;
 }
