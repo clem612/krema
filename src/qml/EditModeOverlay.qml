@@ -12,7 +12,7 @@ Item {
     
     Rectangle {
         anchors.fill: parent
-        color: Qt.rgba(0, 0, 0, 0.5)
+        color: Qt.rgba(0, 0, 0, 0.2)
         opacity: root.visible ? 1.0 : 0.0
         Behavior on opacity { NumberAnimation { duration: Kirigami.Units.shortDuration } }
     }

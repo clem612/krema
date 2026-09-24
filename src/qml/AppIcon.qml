@@ -469,6 +469,28 @@ Item {
         }
     }
 
+    // --- Tile Background (Perfect Square) ---
+    Rectangle {
+        id: tileBackground
+        
+        // Base size on the dynamic width/height of the icon slot (which accounts for zoom)
+        property real currentBaseSize: DockView.isVertical ? parent.height : parent.width
+        
+        // Ensure squares never touch by using the exact spacing minus a 4px breathing gap
+        property real squareSize: currentBaseSize + Math.max(0, dockItem.spacing - 4)
+        
+        width: squareSize
+        height: squareSize
+        anchors.centerIn: parent
+        
+        radius: DockSettings.islandCornerRadius > 0 ? 8 : 4
+        color: Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, dockItem.isHovered ? 0.1 : 0.03)
+        border.color: Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.1)
+        border.width: 1
+        
+        Behavior on color { ColorAnimation { duration: 150 } }
+    }
+
     // Application icon
     // Rule 1: The Fixed Floor (Grounded by Gravity)
     // The icon sits in the 'Inside World' above the indicators.

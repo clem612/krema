@@ -319,17 +319,27 @@ Item {
                 let zoomedSize = DockView.isVertical ? item.height : item.width;
                 let slotStart = visualCenter - (zoomedSize / 2);
                 let slotEnd = visualCenter + (zoomedSize / 2);
+                
+                // Buffer includes the tile background's extension into the spacing
+                let buffer = Math.max(5, DockSettings.iconSpacing / 2 + 1);
+                if (root.hoveredIndex === i) {
+                    buffer += 12; // Hysteresis to prevent layout shift flapping
+                }
 
-                if (mPos >= slotStart - 5 && mPos <= slotEnd + 5) {
+                if (mPos >= slotStart - buffer && mPos <= slotEnd + buffer) {
                     let localPos = item.iconImage.mapFromItem(dockMouseArea, mouse.x, mouse.y);
 
                     // Secondary Axis Precision: Distance from visual icon center
-                    let dx = localPos.x - (item.iconSize / 2)
-                    let dy = localPos.y - (item.iconSize / 2)
-                    let dist = Math.sqrt(dx*dx + dy*dy)
+                    let dx = Math.abs(localPos.x - (item.iconSize / 2));
+                    let dy = Math.abs(localPos.y - (item.iconSize / 2));
 
-                    // Trigger hover ONLY if over actual icon pixels
-                    if (dist <= (item.iconSize / 2)) {
+                    // Trigger hover if inside the square tile (bounding box) instead of strict circle
+                    let limit = (item.iconSize / 2) + 4;
+                    if (root.hoveredIndex === i) {
+                        limit += 12; // Hysteresis for the secondary axis
+                    }
+                    
+                    if (dx <= limit && dy <= limit) {
                         hitIndex = i;
                         break;
                     }

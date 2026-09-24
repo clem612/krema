@@ -43,3 +43,30 @@
 
 ### 3. The Proposal & Trial
 - **Trial 1 (Success):** Removed the `m_liveEditMode` conditional restriction entirely. The C++ backend now safely verifies `m_settingsWidth > 0` (which is natively managed by the QML loader bounding logic) and reliably passes the correct Settings hit-box to the compositor.
+
+## Bug Report: The Zoom Hover Loop (Flapping) & Tile Background Offset
+**Status:** 🟢 Fixed
+**Reported:** 2026-09-24 (After adding experimental square tile backgrounds)
+
+### 1. Identified Logic
+- `main.qml` handles primary axis hover via `slotStart` and `slotEnd` mapped to `item.width`.
+- Secondary axis hover relies on a strict circular radius: `dist <= (item.iconSize / 2)`.
+- `updateZoomFactors()` calculates the zoom magnitude based on `Math.abs(mPos - visualCenter)`.
+- The dock centers itself (`dockRow.x`) dynamically by calculating `childrenRect.width`.
+
+### 2. Root Cause
+- When the experimental square tile backgrounds were added, the visual footprint of the app became a square larger than the image circle. 
+- The user logically hovered the corner of the square. The hit-tester rejected the mouse because `dist > iconSize/2`.
+- When rejected, `zoomFactor` dropped to 1.0, shrinking the dock.
+- When the dock shrank, `dockRow.x` shifted right to re-center.
+- This dynamic shift pushed the icon back *underneath* the stationary mouse.
+- The hit-tester triggered again, zoomed the dock, shifted it left, and dropped the mouse again.
+- This created a violent 60fps mathematical feedback loop (Flapping).
+- (Additionally, an intermediate attempt to use a static mathematical grid broke multi-island coordinate offsets, causing the zoom center to jump randomly. This was reverted).
+
+### 3. The Proposal & Trial
+- **Trial 1 (Success):** 
+  - Restored `updateZoomFactors` to use the dynamic `visualCenter` mapping to preserve coordinate alignment.
+  - Replaced the strict circular secondary hit-tester with a square bounding box (`dx <= limit && dy <= limit`).
+  - **The True Fix (Hysteresis):** Injected a +12px mathematical hysteresis buffer into both the primary and secondary hit-test limits *only* when the icon is actively hovered. 
+  - This "dead zone" absorbs the dynamic layout shift, completely breaking the binary feedback loop.

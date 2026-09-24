@@ -23,6 +23,9 @@
         <file>settings/MonitorPage.qml</file>
         <file>settings/VirtualDesktopsPage.qml</file>
         <file>settings/AboutPage.qml</file>
+        <file>settings/AppearancePage.qml</file>
+        <file>settings/DimensionsPage.qml</file>
+        <file>settings/TasksPage.qml</file>
 	<file>components/KremaComboBox.qml</file>
     </qresource>
 </RCC>

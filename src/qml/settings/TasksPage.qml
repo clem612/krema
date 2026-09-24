@@ -1,4 +1,4 @@
 import QtQuick
 import QtQuick.Controls as QQC2
 import com.bhyoo.krema 1.0
-QQC2.ScrollView { QQC2.Label { text: "Behavior Page (WIP)" } }
+QQC2.ScrollView { QQC2.Label { text: "Tasks Page (WIP)" } }

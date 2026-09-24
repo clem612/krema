@@ -29,9 +29,10 @@ Item {
         anchors.fill: parent
         // Rule 18: Island Glass - Premium Visual Separation
         
-        color: typeof DockVisibility !== "undefined" && DockVisibility.liveEditMode ? Qt.rgba(0, 0, 0, 0.4) : Qt.rgba(255, 255, 255, 0.05)
-        border.color: typeof DockVisibility !== "undefined" && DockVisibility.liveEditMode ? Kirigami.Theme.highlightColor : Qt.rgba(255, 255, 255, 0.1)
-        border.width: typeof DockVisibility !== "undefined" && DockVisibility.liveEditMode ? 2 : 1
+        property bool isLiveEdit: typeof DockVisibility !== "undefined" && DockVisibility.liveEditMode
+        color: isLiveEdit ? Qt.rgba(0, 0, 0, 0.45) : (DockSettings.backgroundStyle === 1 ? Qt.rgba(Kirigami.Theme.backgroundColor.r, Kirigami.Theme.backgroundColor.g, Kirigami.Theme.backgroundColor.b, 0.5) : Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.08))
+        border.color: isLiveEdit ? Kirigami.Theme.highlightColor : (DockSettings.rimLightEnabled ? Qt.rgba(1, 1, 1, DockSettings.rimLightOpacity) : "transparent")
+        border.width: isLiveEdit ? 2 : (DockSettings.rimLightEnabled ? 1 : 0)
         radius: DockSettings.islandCornerRadius === 0 ? Math.min(width, height) / 2 : DockSettings.islandCornerRadius
         visible: container.children.length > 0
     }
@@ -40,33 +41,52 @@ Item {
     Rectangle {
         id: dragHandle
         anchors.centerIn: parent
-        width: Math.max(container.width + 16, 48)
-        height: Math.max(container.height + 16, 48)
-        radius: parent.radius
+        // 10% larger than the island itself
+        property real marginExpansion: parent.height * 0.10
+        width: parent.width + marginExpansion
+        height: parent.height + marginExpansion
+        radius: DockSettings.islandCornerRadius === 0 ? Math.min(width, height) / 2 : DockSettings.islandCornerRadius + (marginExpansion / 2)
         color: "transparent"
         border.color: "white"
         border.width: 1
         // Simulate dashed line (not natively supported in Rectangle without canvas/shader, so we just use opacity)
-        opacity: typeof DockVisibility !== "undefined" && DockVisibility.liveEditMode ? 0.8 : 0.0
+        opacity: typeof DockVisibility !== "undefined" && DockVisibility.liveEditMode ? 0.85 : 0.0
         visible: opacity > 0
         Behavior on opacity { NumberAnimation { duration: Kirigami.Units.shortDuration } }
         
-        QQC2.Label {
-            text: "Drag to move"
+        Kirigami.Icon {
             anchors.centerIn: parent
+            width: 24; height: 24
+            source: "transform-move"
             color: "white"
-            font.bold: true
-            style: Text.Outline
-            styleColor: "black"
         }
 
-        MouseArea {
-            anchors.fill: parent
-            cursorShape: Qt.OpenHandCursor
-            onPressed: cursorShape = Qt.ClosedHandCursor
-            onReleased: cursorShape = Qt.OpenHandCursor
-            // Real drag logic will go here
+        Item {
+            id: dragDummy
+            x: 0; y: 0
+            
+            Behavior on x { enabled: !dragArea.drag.active; NumberAnimation { duration: 250; easing.type: Easing.OutBack } }
+            Behavior on y { enabled: !dragArea.drag.active; NumberAnimation { duration: 250; easing.type: Easing.OutBack } }
         }
+        
+        MouseArea {
+            id: dragArea
+            anchors.fill: parent
+            cursorShape: drag.active ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+            
+            drag.target: dragDummy
+            drag.axis: DockView.isVertical ? Drag.YAxis : Drag.XAxis
+            
+            onReleased: {
+                dragDummy.x = 0
+                dragDummy.y = 0
+            }
+        }
+    }
+
+    transform: Translate {
+        x: dragDummy.x
+        y: dragDummy.y
     }
 
     Item {

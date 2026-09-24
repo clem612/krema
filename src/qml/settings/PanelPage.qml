@@ -39,42 +39,6 @@ QQC2.ScrollView {
             return size + floor + ind + gap + floor
         }
 
-        // --- SECTION 0: LAYOUT EDITING ---
-        ColumnLayout {
-            Layout.fillWidth: true
-            spacing: 8
-            
-            QQC2.Label { 
-                text: i18n("Layout Configuration")
-                color: theme.textDim
-                font.bold: true; font.letterSpacing: 1.1; font.pixelSize: 12
-                Layout.leftMargin: 8
-            }
-            
-            KremaCard {
-                RowLayout {
-                    Layout.fillWidth: true
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: 2
-                        QQC2.Label { text: i18n("Enable Advanced Edit Mode"); color: theme.text; font.bold: true }
-                        QQC2.Label { 
-                            text: i18n("Draws bounding boxes around zones and allows you to drag and drop islands to customize your layout."); 
-                            color: theme.textDim; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true
-                        }
-                    }
-                    QQC2.Switch {
-                        checked: typeof DockVisibility !== "undefined" ? DockVisibility.liveEditMode : false
-                        onToggled: {
-                            if (typeof DockVisibility !== "undefined") {
-                                DockVisibility.liveEditMode = checked
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
         // --- SECTION 1: PHYSICAL GEOMETRY ---
         ColumnLayout {
             Layout.fillWidth: true

@@ -6,7 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
-- **Fixed:** Media Chip will now prioritize the actively playing media player instead of binding to idle players (like background Chromium instances), fixing the "No Media" bug.
+- **UI Polish:** Replaced rigid background overlays with text-color-based contrast layers, rebuilt the Settings window controls, and added experimental "breathing room" square tiles behind app icons.
+- **Hit-Test Hysteresis:** Resolved a violent zoom loop (flapping) caused by layout shifts during hover by implementing a state-based +12px hysteresis dead zone.
+
 
 
 ### Fixed
