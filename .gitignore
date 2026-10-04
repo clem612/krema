@@ -226,3 +226,25 @@ build/
 .gemini/
 gha-creds-*.json
 .omo/
+
+# ============================================================
+# UPSTREAM FIREWALL — NEVER commit these to any upstream PR
+# These are personal session files for AI-assisted development.
+# They live on clem-master only. See GEMINI.md Rule #17.
+# ============================================================
+GEMINI.md
+CLAUDE.md
+ARCHITECTURE Mandate.md
+ROADMAP.md
+.claude/
+docs/research/
+docs/bugs_report.md
+plans/
+tools/skills/
+krema-v2/
+audit_report.txt
+*.patch.py
+measure_image.py
+test_loop.qml
+test_socket.py
+test_model.py

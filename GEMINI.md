@@ -128,3 +128,16 @@ To prevent "Ghost" bugs and maintain architectural clarity, every visual layer (
 - Refer to `docs/research/variables/README.md` for the documentation protocol.
 - Documentation must include: Name, Owner, Purpose, Consumers, and relevant Architectural Links (e.g., Rule IDs).
 - Updates to variable documentation must be included in the same turn the code change is applied.
+
+## 17. The Upstream Firewall Mandate (ABSOLUTE — No Exceptions)
+- **Zero AI Artifacts Upstream:** You are strictly forbidden from including any personal session files, AI context files, or internal development artifacts in any commit or PR submitted to `isac322/krema` (or any upstream fork). This is an absolute rule with no exceptions.
+- **Prohibited Files (NEVER upstream):**
+  - `GEMINI.md`, `CLAUDE.md`, `ARCHITECTURE Mandate.md`, `ROADMAP.md`
+  - `.claude/` directory (work-state, rules, research, plans)
+  - `docs/research/` directory
+  - `krema-v2/` (second project tree)
+  - Any `*.py`, `*.sh`, or scratch scripts not part of the official build system
+  - `audit_report.txt`, `plans/`, `tools/skills/`
+- **Personal Branch Only:** All the above files live exclusively on `clem-master`. They must never be cherry-picked or included in any branch that will be pushed to upstream as a PR.
+- **The Rule of One:** Every upstream PR must touch ONE concern only (one bug fix, one feature). It must not bundle unrelated changes. isac322 explicitly requested this after PR #15 was blocked for bundling 82 commits.
+- **Pre-Submission Checklist:** Before opening any upstream PR, verify with `git diff origin/master --name-only` that no prohibited files appear in the diff.

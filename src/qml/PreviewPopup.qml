@@ -204,8 +204,8 @@ Item {
 
         ColumnLayout {
             id: popupContent
-            anchors.fill: parent
-            anchors.margins: Kirigami.Units.largeSpacing
+            x: Kirigami.Units.largeSpacing
+            y: Kirigami.Units.largeSpacing
             spacing: Kirigami.Units.smallSpacing
 
             // Grouped windows: horizontal row of thumbnails

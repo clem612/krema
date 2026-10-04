@@ -33,14 +33,7 @@ Item {
     readonly property bool _debugConfig: KremaDebug.configEnabled
     readonly property bool _debugGeom: KremaDebug.geomEnabled
 
-    Timer {
-        running: true
-        interval: 3000
-        onTriggered: {
-            console.log("[TEST] Timer triggered! Simulating edge hover.")
-            if (typeof DockVisibility !== "undefined") DockVisibility.setHovered(true)
-        }
-    }
+
 
     readonly property bool _debugHit: _debugAll || Qt.application.arguments.indexOf("--debug-hit") !== -1
     readonly property bool _debugZoom: _debugAll || Qt.application.arguments.indexOf("--debug-zoom") !== -1
